@@ -1,0 +1,3 @@
+<Project>
+  <!-- Empty file to stop MSBuild from searching up and potentially importing unwanted targets -->
+</Project>

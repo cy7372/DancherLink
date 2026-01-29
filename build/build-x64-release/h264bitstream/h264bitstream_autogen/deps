@@ -1,0 +1,8 @@
+h264bitstream_autogen/timestamp: \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/CMakeLists.txt \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/h264bitstream/h264_nal.c \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/h264bitstream/h264_sei.c \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/h264bitstream/h264_sei.h \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/h264bitstream/h264_stream.c \
+	C:/Users/CyYu/Programs/DancherLink-qt/h264bitstream/h264bitstream/h264_stream.h \
+	C:/Program\ Files/Microsoft\ Visual\ Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe

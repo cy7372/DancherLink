@@ -1,0 +1,73 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj": {}
+  },
+  "projects": {
+    "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj": {
+      "version": "1.0.2.65",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+        "projectName": "DancherLink",
+        "projectPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+        "packagesPath": "C:\\Users\\CyYu\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\build\\build-x64-release\\",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "configFilePaths": [
+          "C:\\Users\\CyYu\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "native"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "native": {
+            "targetAlias": "native",
+            "projectReferences": {}
+          }
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "native": {
+          "targetAlias": "native",
+          "dependencies": {
+            "WixToolset.Firewall.wixext": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            },
+            "WixToolset.Heat": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            },
+            "WixToolset.Util.wixext": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            }
+          }
+        }
+      },
+      "runtimes": {
+        "win": {
+          "#import": []
+        },
+        "win-arm64": {
+          "#import": []
+        },
+        "win-x64": {
+          "#import": []
+        },
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

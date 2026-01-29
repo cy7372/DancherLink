@@ -1,0 +1,234 @@
+{
+	"AUTOGEN_COMMAND_LINE_LENGTH_MAX" : 32000,
+	"BUILD_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/moonlight-common-c_autogen",
+	"CMAKE_BINARY_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release",
+	"CMAKE_CURRENT_BINARY_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c",
+	"CMAKE_CURRENT_SOURCE_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c",
+	"CMAKE_EXECUTABLE" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
+	"CMAKE_LIST_FILES" : 
+	[
+		"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/CMakeLists.txt"
+	],
+	"CMAKE_SOURCE_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt",
+	"CROSS_CONFIG" : false,
+	"DEP_FILE" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/moonlight-common-c_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "moonlight-common-c_autogen/timestamp",
+	"HEADERS" : 
+	[
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/reedsolomon/rs.h",
+			"MU",
+			"3GYF3GVT74/moc_rs.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/ByteBuffer.h",
+			"MU",
+			"UVLADIE3JM/moc_ByteBuffer.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/LinkedBlockingQueue.h",
+			"MU",
+			"UVLADIE3JM/moc_LinkedBlockingQueue.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/Platform.h",
+			"MU",
+			"UVLADIE3JM/moc_Platform.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/PlatformCrypto.h",
+			"MU",
+			"UVLADIE3JM/moc_PlatformCrypto.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/PlatformSockets.h",
+			"MU",
+			"UVLADIE3JM/moc_PlatformSockets.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtpAudioQueue.h",
+			"MU",
+			"UVLADIE3JM/moc_RtpAudioQueue.cpp",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtpVideoQueue.h",
+			"MU",
+			"UVLADIE3JM/moc_RtpVideoQueue.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/moonlight-common-c_autogen/include",
+	"MOC_COMPILATION_FILE" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/moonlight-common-c_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"HAS_SOCKLEN_T",
+		"NDEBUG",
+		"WIN32",
+		"_CRT_SECURE_NO_WARNINGS",
+		"moonlight_common_c_EXPORTS"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/reedsolomon",
+		"C:/Users/CyYu/Programs/DancherLink-qt/libs/windows/include/x64",
+		"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src",
+		"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/enet/include"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT",
+		"Q_GADGET_EXPORT",
+		"Q_ENUM_NS"
+	],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : [],
+	"MOC_PREDEFS_FILE" : "",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 16,
+	"PARSE_CACHE_FILE" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/CMakeFiles/moonlight-common-c_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "C:/Qt/6.10.1/msvc2022_64/bin/moc.exe",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 10,
+	"SETTINGS_FILE" : "C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/moonlight-common-c/moonlight-common-c/CMakeFiles/moonlight-common-c_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/reedsolomon/rs.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/AudioStream.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/ByteBuffer.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/Connection.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/ConnectionTester.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/ControlStream.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/FakeCallbacks.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/InputStream.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/LinkedBlockingQueue.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/Misc.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/Platform.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/PlatformCrypto.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/PlatformSockets.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RecorderCallbacks.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtpAudioQueue.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtpVideoQueue.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtspConnection.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/RtspParser.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/SdpGenerator.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/SimpleStun.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/VideoDepacketizer.c",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/CyYu/Programs/DancherLink-qt/moonlight-common-c/moonlight-common-c/src/VideoStream.c",
+			"MU",
+			null
+		]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : [],
+	"UIC_UI_FILES" : [],
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "AhhdF6TUFwc=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\CyYu\\.nuget\\packages\\wixtoolset.firewall.wixext\\6.0.2\\wixtoolset.firewall.wixext.6.0.2.nupkg.sha512",
+    "C:\\Users\\CyYu\\.nuget\\packages\\wixtoolset.heat\\6.0.2\\wixtoolset.heat.6.0.2.nupkg.sha512",
+    "C:\\Users\\CyYu\\.nuget\\packages\\wixtoolset.util.wixext\\6.0.2\\wixtoolset.util.wixext.6.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}

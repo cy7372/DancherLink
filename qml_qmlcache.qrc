@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<RCC>
+    <qresource prefix="/">
+        <file alias="gui/main.qml">app/gui/main.qml</file>
+        <file alias="gui/PcView.qml">app/gui/PcView.qml</file>
+        <file alias="gui/AppView.qml">app/gui/AppView.qml</file>
+        <file alias="gui/SettingsView.qml">app/gui/SettingsView.qml</file>
+        <file alias="gui/StreamSegue.qml">app/gui/StreamSegue.qml</file>
+        <file alias="gui/GamepadMapper.qml">app/gui/GamepadMapper.qml</file>
+        <file alias="gui/QuitSegue.qml">app/gui/QuitSegue.qml</file>
+        <file alias="gui/NavigableToolButton.qml">app/gui/NavigableToolButton.qml</file>
+        <file alias="gui/NavigableItemDelegate.qml">app/gui/NavigableItemDelegate.qml</file>
+        <file alias="gui/NavigableMenuItem.qml">app/gui/NavigableMenuItem.qml</file>
+        <file alias="gui/CliQuitStreamSegue.qml">app/gui/CliQuitStreamSegue.qml</file>
+        <file alias="gui/CliStartStreamSegue.qml">app/gui/CliStartStreamSegue.qml</file>
+        <file alias="gui/AutoResizingComboBox.qml">app/gui/AutoResizingComboBox.qml</file>
+        <file alias="gui/NavigableMenu.qml">app/gui/NavigableMenu.qml</file>
+        <file alias="gui/ErrorMessageDialog.qml">app/gui/ErrorMessageDialog.qml</file>
+        <file alias="gui/NavigableMessageDialog.qml">app/gui/NavigableMessageDialog.qml</file>
+        <file alias="gui/NavigableDialog.qml">app/gui/NavigableDialog.qml</file>
+        <file alias="gui/CenteredGridView.qml">app/gui/CenteredGridView.qml</file>
+        <file alias="gui/CliPair.qml">app/gui/CliPair.qml</file>
+    </qresource>
+</RCC>

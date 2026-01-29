@@ -1,0 +1,3 @@
+name=DancherLink
+icon=dancherlink.png
+run=dancherlink.sh

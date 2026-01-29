@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=DancherLink
+Comment=Stream games from your NVIDIA GameStream-enabled PC
+Exec=dancherlink
+Icon=dancherlink
+Terminal=false
+Type=Application
+Categories=Network;
+MimeType=x-scheme-handler/dancherlink;
+Keywords=nvidia;gamestream;stream;sunshine;remote play;
