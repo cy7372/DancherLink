@@ -39,6 +39,7 @@ full_log.txt
 .qtcreator/
 .trae/
 .github/
+!.github/workflows/
 
 # Server
 server/
