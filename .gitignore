@@ -40,6 +40,10 @@ full_log.txt
 .trae/
 .github/
 
+# Server
+server/
+
+
 # Libraries (Pre-built) - We usually ignore dll/lib, but if they are in libs/, we might want them.
 # However, standard practice is to ignore all binaries.
 # If you want to version control vendored libs, uncomment the exceptions below.
