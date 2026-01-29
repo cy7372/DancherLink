@@ -156,9 +156,15 @@ mkdir %INSTALLER_FOLDER%
 mkdir %SYMBOLS_FOLDER%
 
 echo Generating translations...
+if defined HOSTBIN_PATH (
+    set LRELEASE_CMD="%HOSTBIN_PATH%\lrelease.exe"
+) else (
+    set LRELEASE_CMD="%QT_PATH%\lrelease.exe"
+)
+
 pushd "%SOURCE_ROOT%\app\languages"
 for %%f in (*.ts) do (
-    "%QT_PATH%\lrelease.exe" "%%f"
+    %LRELEASE_CMD% "%%f"
     if !ERRORLEVEL! NEQ 0 goto Error
 )
 popd
