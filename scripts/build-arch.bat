@@ -44,9 +44,15 @@ if /I "%BUILD_CONFIG%"=="debug" (
 )
 
 rem Find Qt path to determine our architecture
+set QT_PATH_FOUND=0
 for /F %%i in ('where qmake') do (
     set QT_PATH=%%i
+    set QT_PATH_FOUND=1
     goto :FoundQt
+)
+if "%QT_PATH_FOUND%"=="0" (
+    echo Error: qmake not found in PATH!
+    exit /b 1
 )
 :FoundQt
 
@@ -124,8 +130,14 @@ if /I "%VC_ARCH%" NEQ "%PROCESSOR_ARCHITECTURE%" (
 
 rem Find Visual Studio and run vcvarsall.bat
 set VSWHERE="%SOURCE_ROOT%\scripts\vswhere.exe"
+set VS_FOUND=0
 for /f "usebackq delims=" %%i in (`%VSWHERE% -latest -property installationPath`) do (
     call "%%i\VC\Auxiliary\Build\vcvarsall.bat" %VC_ARCH%
+    set VS_FOUND=1
+)
+if "%VS_FOUND%"=="0" (
+    echo Error: Visual Studio not found!
+    exit /b 1
 )
 if !ERRORLEVEL! NEQ 0 goto Error
 

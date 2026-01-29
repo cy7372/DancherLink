@@ -19,12 +19,12 @@ jobs:
       matrix:
         include:
           # Windows
-          - os: windows-2025
-            qt_version: 6.10.1
-            qt_version_arm64: 6.10.0
+          - os: windows-2022
+            qt_version: 6.8.0
+            qt_version_arm64: 6.8.0
           # macOS
-          - os: macos-15
-            qt_version: 6.10.1
+          - os: macos-14
+            qt_version: 6.8.0
 
     runs-on: ${{ matrix.os }}
 
@@ -40,6 +40,10 @@ jobs:
         run: |
           brew install node
           npm install --global create-dmg
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
