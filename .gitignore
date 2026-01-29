@@ -13,6 +13,9 @@ full_log.txt
 *.exe
 .vscode/
 .idea/
+.qtcreator/
+.trae/
+.github/
 *.qm
 *.ts
 # Note: We do not ignore *.txt because CMakeLists.txt and others are important.
