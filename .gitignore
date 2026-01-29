@@ -1,3 +1,18 @@
-
-# IDE
-.trae/
+build/
+release/
+debug/
+*.user
+*.log
+*.err
+full_log.txt
+*.d
+*.o
+*.obj
+*.lib
+*.dll
+*.exe
+.vscode/
+.idea/
+*.qm
+*.ts
+# Note: We do not ignore *.txt because CMakeLists.txt and others are important.

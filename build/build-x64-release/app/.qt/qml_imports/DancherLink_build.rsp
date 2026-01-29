@@ -1,9 +1,0 @@
--rootPath
-C:/Users/CyYu/Programs/DancherLink-qt/app
--cmake-output
--output-file
-C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/app/.qt/qml_imports/DancherLink_build.cmake
--importPath
-C:/Users/CyYu/Programs/DancherLink-qt/build/build-x64-release/app
--importPath
-C:/Qt/6.10.1/msvc2022_64/qml

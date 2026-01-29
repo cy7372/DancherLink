@@ -1,4 +1,0 @@
-C:\Users\CyYu\Programs\DancherLink-qt\build\build-x64-release\DancherLink.wixproj.CoreCompileInputs.cache
-C:\Users\CyYu\Programs\DancherLink-qt\build\build-x64-release\DancherLink.msi
-C:\Users\CyYu\Programs\DancherLink-qt\build\build-x64-release\DancherLink.wixpdb
-C:\Users\CyYu\Programs\DancherLink-qt\build\build-x64-release\DancherLink.wixproj.BindTracking-neutral.txt
