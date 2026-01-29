@@ -55,6 +55,9 @@ server/
 *.so
 !libs/**
 
+# Tools in scripts
+!scripts/*.exe
+
 # Qt Translations (Source .ts should be kept, binary .qm ignored)
 *.qm
 # *.ts
