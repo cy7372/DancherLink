@@ -39,7 +39,7 @@ jobs:
   #     ci_version: ${{ needs.setup.outputs.ci_version }}
 
   build-windows-macos:
-    needs: setup
+    # needs: setup # No longer need setup for versioning in dev builds
     uses: ./.github/workflows/build-win-mac.yml
-    with:
-      ci_version: ${{ needs.setup.outputs.ci_version }}
+    # with:
+    #   ci_version: ${{ needs.setup.outputs.ci_version }}

@@ -7,7 +7,7 @@ on:
   workflow_call:
     inputs:
       ci_version:
-        required: true
+        required: false
         type: string
 
 jobs:
