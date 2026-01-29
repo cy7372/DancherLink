@@ -23,8 +23,8 @@ jobs:
             qt_version: 6.8.0
             qt_version_arm64: 6.8.0
           # macOS
-          - os: macos-14
-            qt_version: 6.8.0
+          # - os: macos-14
+          #   qt_version: 6.8.0
 
     runs-on: ${{ matrix.os }}
 
@@ -35,11 +35,11 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 1
 
-      - name: Install create-dmg (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install node
-          npm install --global create-dmg
+      # - name: Install create-dmg (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     brew install node
+      #     npm install --global create-dmg
 
       - name: Install Ninja (Windows)
         if: runner.os == 'Windows'
@@ -106,14 +106,14 @@ jobs:
           path: build/deploy-arm64-release/*
           if-no-files-found: error
 
-      - name: Upload Binaries (macOS)
-        uses: actions/upload-artifact@v5
-        if: runner.os == 'macOS'
-        with:
-          name: Moonlight-${{ runner.os }}-${{ env.CI_VERSION }}
-          path: build/installer-Release/*.dmg
-          compression-level: 0
-          if-no-files-found: error
+      # - name: Upload Binaries (macOS)
+      #   uses: actions/upload-artifact@v5
+      #   if: runner.os == 'macOS'
+      #   with:
+      #     name: Moonlight-${{ runner.os }}-${{ env.CI_VERSION }}
+      #     path: build/installer-Release/*.dmg
+      #     compression-level: 0
+      #     if-no-files-found: error
 
       - name: Upload Symbols
         uses: actions/upload-artifact@v5
