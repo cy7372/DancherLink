@@ -156,8 +156,12 @@ mkdir %INSTALLER_FOLDER%
 mkdir %SYMBOLS_FOLDER%
 
 echo Generating translations...
-%QT_PATH%\lrelease.exe %SOURCE_ROOT%\app\languages\*.ts
-if !ERRORLEVEL! NEQ 0 goto Error
+pushd "%SOURCE_ROOT%\app\languages"
+for %%f in (*.ts) do (
+    "%QT_PATH%\lrelease.exe" "%%f"
+    if !ERRORLEVEL! NEQ 0 goto Error
+)
+popd
 
 echo Configuring the project with CMake
 set "SOURCE_ROOT_CMAKE=%SOURCE_ROOT:\=/%"
