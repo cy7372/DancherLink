@@ -71,10 +71,7 @@ set(APP_SOURCES
 
 # Translations
 file(GLOB TS_FILES "languages/*.ts")
-qt6_add_lrelease(DancherLink
-    TS_FILES ${TS_FILES}
-    OUTPUT_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/languages"
-)
+qt6_add_lrelease(DancherLink TS_FILES ${TS_FILES})
 
 # Version
 file(STRINGS "version.txt" VERSION_STR)
