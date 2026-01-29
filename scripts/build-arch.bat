@@ -161,6 +161,7 @@ set "OPENSSL_ROOT_DIR=%SOURCE_ROOT%\libs\windows"
 pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
     -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% ^
+    -DCMAKE_VERBOSE_MAKEFILE=ON ^
     -DOPENSSL_ROOT_DIR="%SOURCE_ROOT_CMAKE%/libs/windows" ^
     -DOPENSSL_INCLUDE_DIR="%SOURCE_ROOT_CMAKE%/libs/windows/include" ^
     -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libcrypto.lib" ^
@@ -340,10 +341,8 @@ if exist "%SOURCE_ROOT%\server\" (
 )
 
 echo Build successful for DancherLink v%VERSION% %ARCH% binaries!
-powershell -c "(New-Object Media.SoundPlayer 'C:\Windows\Media\tada.wav').PlaySync();"
 exit /b 0
 
 :Error
 echo Build failed!
-powershell -c "(New-Object Media.SoundPlayer 'C:\Windows\Media\Windows Critical Stop.wav').PlaySync();"
 exit /b !ERRORLEVEL!
