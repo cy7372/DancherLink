@@ -155,6 +155,10 @@ mkdir %BUILD_FOLDER%
 mkdir %INSTALLER_FOLDER%
 mkdir %SYMBOLS_FOLDER%
 
+echo Generating translations...
+%QT_PATH%\lrelease.exe %SOURCE_ROOT%\app\languages\*.ts
+if !ERRORLEVEL! NEQ 0 goto Error
+
 echo Configuring the project with CMake
 set "SOURCE_ROOT_CMAKE=%SOURCE_ROOT:\=/%"
 set "OPENSSL_ROOT_DIR=%SOURCE_ROOT%\libs\windows"
