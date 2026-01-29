@@ -52,6 +52,7 @@ jobs:
           set-env: ${{ runner.os != 'Windows' }}
           add-tools-to-path: ${{ runner.os != 'Windows' }}
           version: ${{ matrix.qt_version }}
+          modules: 'qtmultimedia qttools qt5compat qtimageformats qtsvg'
 
       - name: Install Qt ARM64 (Windows)
         if: runner.os == 'Windows'
@@ -62,6 +63,7 @@ jobs:
           add-tools-to-path: false
           arch: win64_msvc2022_arm64_cross_compiled
           version: ${{ matrix.qt_version_arm64 }}
+          modules: 'qtmultimedia qttools qt5compat qtimageformats qtsvg'
 
       - name: Build x64 binaries (Windows)
         if: runner.os == 'Windows'
