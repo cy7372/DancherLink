@@ -158,8 +158,10 @@ mkdir %SYMBOLS_FOLDER%
 echo Generating translations...
 if defined HOSTBIN_PATH (
     set LRELEASE_CMD="%HOSTBIN_PATH%\lrelease.exe"
+    set QT_HOST_PATH_ARG=-DQT_HOST_PATH="!HOSTBIN_PATH!\.."
 ) else (
     set LRELEASE_CMD="%QT_PATH%\lrelease.exe"
+    set QT_HOST_PATH_ARG=
 )
 
 pushd "%SOURCE_ROOT%\app\languages"
@@ -176,6 +178,7 @@ pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
     -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% ^
     -DCMAKE_VERBOSE_MAKEFILE=ON ^
+    !QT_HOST_PATH_ARG! ^
     -DOPENSSL_ROOT_DIR="%SOURCE_ROOT_CMAKE%/libs/windows" ^
     -DOPENSSL_INCLUDE_DIR="%SOURCE_ROOT_CMAKE%/libs/windows/include" ^
     -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libcrypto.lib" ^
