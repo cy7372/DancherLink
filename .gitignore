@@ -1,21 +1,57 @@
+# C++ / Build
 build/
 release/
 debug/
-*.user
-*.log
-*.err
-full_log.txt
 *.d
 *.o
 *.obj
-*.lib
-*.dll
 *.exe
+*.exp
+*.ilk
+*.pdb
+*.idb
+*.suo
+*.sln
+*.vcxproj*
+*.user
+*.user.*
+
+# Qt
+Makefile*
+.qmake.stash
+.qmake.cache
+*.qm
+*.ui
+ui_*.h
+moc_*.cpp
+qrc_*.cpp
+object_script.*
+
+# Logs
+*.log
+*.err
+full_log.txt
+*.tmp
+
+# IDE & CI
 .vscode/
 .idea/
 .qtcreator/
 .trae/
 .github/
+
+# Libraries (Pre-built) - We usually ignore dll/lib, but if they are in libs/, we might want them.
+# However, standard practice is to ignore all binaries.
+# If you want to version control vendored libs, uncomment the exceptions below.
+*.dll
+*.lib
+*.a
+*.dylib
+*.so
+!libs/**
+
+# Qt Translations (Source .ts should be kept, binary .qm ignored)
 *.qm
-*.ts
+# *.ts
+
 # Note: We do not ignore *.txt because CMakeLists.txt and others are important.
