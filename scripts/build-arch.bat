@@ -177,7 +177,7 @@ set "SOURCE_ROOT_CMAKE=%SOURCE_ROOT:\=/%"
 if "%ARCH%"=="arm64" (
     set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/arm64"
 ) else (
-    set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include"
+    set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/x64"
 )
 
 pushd %BUILD_FOLDER%

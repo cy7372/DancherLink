@@ -39,7 +39,7 @@ if(WIN32)
     if(ARCH_DIR STREQUAL "arm64")
         set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include/arm64" CACHE PATH "OpenSSL Include Directory" FORCE)
     else()
-        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include" CACHE PATH "OpenSSL Include Directory" FORCE)
+        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include/x64" CACHE PATH "OpenSSL Include Directory" FORCE)
     endif()
 
     if(EXISTS "${OPENSSL_ROOT_DIR}/lib/${ARCH_DIR}/libcrypto.lib")
