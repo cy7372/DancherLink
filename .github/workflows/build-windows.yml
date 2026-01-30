@@ -1,0 +1,82 @@
+---
+name: Build - Windows
+permissions:
+  contents: write
+
+on:
+  workflow_call:
+    inputs:
+      ci_version:
+        required: false
+        type: string
+
+jobs:
+  build:
+    env:
+      CI_VERSION: ${{ inputs.ci_version }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        qt_version: ['6.8.0']
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          version: ${{ matrix.qt_version }}
+          modules: 'qtmultimedia qt5compat qtimageformats'
+
+      - name: Build x64 binaries
+        shell: cmd
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release x64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\${{ matrix.qt_version }}\msvc2022_64\bin
+
+      - name: Build Package
+        shell: cmd
+        run: scripts\generate-bundle.bat Release
+
+      - name: Upload Binaries (x64)
+        uses: actions/upload-artifact@v5
+        with:
+          name: Moonlight-Windows-x64-${{ env.CI_VERSION }}
+          path: |
+            build/deploy-x64-release/*
+            build/installer-x64-release/*.zip
+            build/installer-release/*.exe
+          if-no-files-found: error
+
+      - name: Release Nightly
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          files: |
+            build/installer-x64-release/*.zip
+            build/installer-release/*.exe
+          prerelease: true
+          overwrite: true
+          make_latest: false
+
+      - name: Upload Symbols
+        uses: actions/upload-artifact@v5
+        with:
+          name: zDevDbgSyms-Windows-${{ env.CI_VERSION }}
+          path: build/symbols-*/*.pdb
+          if-no-files-found: error
