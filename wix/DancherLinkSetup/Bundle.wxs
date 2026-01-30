@@ -18,7 +18,7 @@
           HelpUrl="https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide"
           UpdateUrl="https://github.com/moonlight-stream/moonlight-qt/releases"
           DisableModify="yes"
-          IconSourceFile="..\..\app\moonlight.ico">
+          IconSourceFile="..\..\app\dancherlink.ico">
 
     <bal:Condition Message="This version of DancherLink requires Windows 10 or later." Condition="VersionNT &gt;= v10.0" />
     <bal:Condition Message="This version of DancherLink requires a 64-bit version of Windows." Condition="NativeMachine &lt;&gt; 332" />
@@ -48,7 +48,7 @@
     <BootstrapperApplication>
       <bal:WixStandardBootstrapperApplication ShowVersion="yes"
                                               LicenseFile="license.rtf"
-                                              LogoFile="..\..\app\moonlight_wix.png"
+                                              LogoFile="..\..\app\dancherlink_wix.png"
                                               LaunchTarget="[InstallFolder]\DancherLink.exe"
                                               ThemeFile="RtfTheme.xml"
                                               Theme="rtfLicense" />
