@@ -1,7 +1,7 @@
 ---
 name: Build - Windows and macOS
 permissions:
-  contents: read
+  contents: write
 
 on:
   workflow_call:
