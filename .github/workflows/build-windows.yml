@@ -59,6 +59,7 @@ jobs:
             build/deploy-x64-release/*
             build/installer-x64-release/*.zip
             build/installer-release/*.exe
+            build/build-x64-release/*.msi
           if-no-files-found: error
 
       - name: Release Nightly
@@ -70,9 +71,21 @@ jobs:
           files: |
             build/installer-x64-release/*.zip
             build/installer-release/*.exe
+            build/build-x64-release/*.msi
           prerelease: true
           overwrite_files: true
           make_latest: false
+
+      - name: Release Stable
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/installer-x64-release/*.zip
+            build/installer-release/*.exe
+            build/build-x64-release/*.msi
+          prerelease: false
+          make_latest: true
 
       - name: Upload Symbols
         uses: actions/upload-artifact@v5
