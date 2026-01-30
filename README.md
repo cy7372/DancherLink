@@ -1,8 +1,17 @@
 # DancherLink
 
+[![Build - Windows](https://github.com/cy7372/DancherLink/actions/workflows/build-windows.yml/badge.svg)](https://github.com/cy7372/DancherLink/actions/workflows/build-windows.yml)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/cy7372/DancherLink)](https://github.com/cy7372/DancherLink/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/cy7372/DancherLink?include_prereleases&label=nightly)](https://github.com/cy7372/DancherLink/releases/tag/nightly)
+
 **DancherLink** is a specialized PC client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine), built upon the robust foundation of [Moonlight PC](https://moonlight-stream.org).
 
 It focuses on enhanced window management, stability during resolution changes, and a polished user experience on Windows.
+
+## Downloads
+
+*   **Stable Release**: [Latest Release](https://github.com/cy7372/DancherLink/releases/latest)
+*   **Nightly Build**: [Nightly Release](https://github.com/cy7372/DancherLink/releases/tag/nightly) (Updated with every commit to main)
 
 ## DancherLink Enhancements
 
@@ -47,18 +56,30 @@ DancherLink represents a comprehensive refactor of the Moonlight codebase, desig
 ## Building
 
 ### Windows Build Requirements
-* **Qt 6.7 SDK** or later
+* **Qt 6.8 SDK** or later (MSVC 2022 64-bit)
 * **CMake 3.16** or later
 * [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) (Community edition is fine)
-* Select **MSVC** option during Qt installation.
+* [Ninja](https://ninja-build.org/) (Recommended generator)
 * [7-Zip](https://www.7-zip.org/) (for packaging)
 
 ### Build Instructions
 To build a binary for use on non-development machines:
-1. Open a Qt command prompt.
-2. Run `scripts\build-arch.bat release` from the root of the repository.
+1. Open a "x64 Native Tools Command Prompt for VS 2022".
+2. Ensure Qt `bin` directory is in your `%PATH%`.
+3. Run `scripts\build-arch.bat Release x64` from the root of the repository.
 
-*Note: The project uses standard CMake, so you can also open it directly in IDEs like Qt Creator or Visual Studio that support CMake.*
+*Note: The project uses standard CMake, so you can also open it directly in IDEs like Qt Creator, Visual Studio, or Trae that support CMake.*
+
+## Release Process (Maintainers Only)
+
+To publish a new stable release:
+
+1.  Update the version number in `app/version.txt`.
+2.  Commit the change: `git commit -am "Bump version to X.Y.Z"`.
+3.  Create a git tag: `git tag vX.Y.Z`.
+4.  Push changes and tags: `git push && git push --tags`.
+
+GitHub Actions will automatically build and publish the release with the corresponding version number.
 
 ## Credits
 
