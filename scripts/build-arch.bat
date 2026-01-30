@@ -184,12 +184,12 @@ if "%ARCH%"=="arm64" (
     set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/x64"
 )
 
-rem Set Update URL for CI builds
-if "%CI%" neq "" (
-    set UPDATE_URL_ARG=-DUPDATE_SUBSCRIPTION_URL="https://raw.githubusercontent.com/cy7372/DancherLink/main/updates.json"
-) else (
+rem Set Update URL for CI builds (Disabled per user request)
+rem if "%CI%" neq "" (
+rem    set UPDATE_URL_ARG=-DUPDATE_SUBSCRIPTION_URL="https://raw.githubusercontent.com/cy7372/DancherLink/main/updates.json"
+rem ) else (
     set UPDATE_URL_ARG=
-)
+rem )
 
 pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
