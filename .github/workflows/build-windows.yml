@@ -71,7 +71,6 @@ jobs:
             build/installer-x64-release/*.zip
             build/installer-release/*.exe
           prerelease: true
-          overwrite: true
           make_latest: false
 
       - name: Upload Symbols
