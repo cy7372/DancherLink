@@ -102,8 +102,12 @@ set DEPLOY_FOLDER=%BUILD_ROOT%\deploy-%ARCH%-%BUILD_CONFIG%
 set INSTALLER_FOLDER=%BUILD_ROOT%\installer-%ARCH%-%BUILD_CONFIG%
 set SYMBOLS_FOLDER=%BUILD_ROOT%\symbols-%ARCH%-%BUILD_CONFIG%
 
-rem Increment version number in app/version.txt
-powershell -Command "$v = (Get-Content '%SOURCE_ROOT%\app\version.txt').Trim(); $parts = $v.Split('.'); $parts[-1] = [int]$parts[-1] + 1; $newV = $parts -join '.'; Set-Content '%SOURCE_ROOT%\app\version.txt' $newV -NoNewline; Write-Host 'Incremented version to' $newV"
+rem Increment version number in app/version.txt (Local build only)
+if "%CI%"=="" (
+    powershell -Command "$v = (Get-Content '%SOURCE_ROOT%\app\version.txt').Trim(); $parts = $v.Split('.'); $parts[-1] = [int]$parts[-1] + 1; $newV = $parts -join '.'; Set-Content '%SOURCE_ROOT%\app\version.txt' $newV -NoNewline; Write-Host 'Incremented version to' $newV"
+) else (
+    echo Running in CI environment, skipping version increment.
+)
 
 rem Sync version to RC file
 powershell -ExecutionPolicy Bypass -File "%SOURCE_ROOT%\scripts\update_rc_version.ps1" -VersionFile "%SOURCE_ROOT%\app\version.txt" -RcFile "%SOURCE_ROOT%\app\DancherLink_resource.rc"

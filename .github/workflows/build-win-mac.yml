@@ -97,8 +97,24 @@ jobs:
         if: runner.os == 'Windows'
         with:
           name: Moonlight-${{ runner.os }}-x64-${{ env.CI_VERSION }}
-          path: build/deploy-x64-release/*
+          path: |
+            build/deploy-x64-release/*
+            build/installer-x64-release/*.zip
+            build/installer-release/*.exe
           if-no-files-found: error
+
+      - name: Release Nightly
+        uses: softprops/action-gh-release@v2
+        if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          files: |
+            build/installer-x64-release/*.zip
+            build/installer-release/*.exe
+          prerelease: true
+          overwrite: true
+          make_latest: false
 
       # - name: Upload Binaries (Windows arm64)
       #   uses: actions/upload-artifact@v5
