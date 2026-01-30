@@ -23,21 +23,27 @@ endif()
 option(DISABLE_PREBUILTS "Disable usage of prebuilt libraries" OFF)
 
 # Architecture detection
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(ARCH_DIR "x64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64" OR CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
     set(ARCH_DIR "arm64")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(ARCH_DIR "x64")
 else()
     set(ARCH_DIR "x86")
 endif()
 
 if(WIN32)
     set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/windows")
-    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include" CACHE PATH "OpenSSL Include Directory" FORCE)
+    
+    if(ARCH_DIR STREQUAL "arm64")
+        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include/arm64" CACHE PATH "OpenSSL Include Directory" FORCE)
+    else()
+        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include" CACHE PATH "OpenSSL Include Directory" FORCE)
+    endif()
+
     if(EXISTS "${OPENSSL_ROOT_DIR}/lib/${ARCH_DIR}/libcrypto.lib")
         set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/${ARCH_DIR}/libcrypto.lib" CACHE FILEPATH "OpenSSL Crypto Library" FORCE)
         set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/${ARCH_DIR}/libssl.lib" CACHE FILEPATH "OpenSSL SSL Library" FORCE)
-        set(MOONLIGHT_OPENSSL_INCLUDE_DIR "${OPENSSL_INCLUDE_DIR}/${ARCH_DIR}" CACHE PATH "Moonlight OpenSSL Include" FORCE)
+        set(MOONLIGHT_OPENSSL_INCLUDE_DIR "${OPENSSL_INCLUDE_DIR}" CACHE PATH "Moonlight OpenSSL Include" FORCE)
     endif()
 endif()
 
