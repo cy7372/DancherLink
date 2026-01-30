@@ -184,12 +184,20 @@ if "%ARCH%"=="arm64" (
     set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/x64"
 )
 
+rem Set Update URL for CI builds
+if "%CI%" neq "" (
+    set UPDATE_URL_ARG=-DUPDATE_SUBSCRIPTION_URL="https://raw.githubusercontent.com/cy7372/DancherLink/main/updates.json"
+) else (
+    set UPDATE_URL_ARG=
+)
+
 pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
     -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% ^
     -DCMAKE_VERBOSE_MAKEFILE=ON ^
     -DARCH_DIR=%ARCH% ^
     !QT_HOST_PATH_ARG! ^
+    !UPDATE_URL_ARG! ^
     -DOPENSSL_INCLUDE_DIR=!OPENSSL_INC! ^
     -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libcrypto.lib" ^
     -DOPENSSL_SSL_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libssl.lib"

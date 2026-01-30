@@ -171,7 +171,11 @@ void StreamingPreferences::reload()
     uiDisplayMode = static_cast<UIDisplayMode>(settings.value(SER_UIDISPLAYMODE,
                                                static_cast<int>(settings.value(SER_STARTWINDOWED, true).toBool() ? UIDisplayMode::UI_WINDOWED
                                                                                                                  : UIDisplayMode::UI_MAXIMIZED)).toInt());
+#ifdef UPDATE_SUBSCRIPTION_URL_DEFAULT
+    updateSubscriptionUrl = settings.value(SER_UPDATE_SUBSCRIPTION_URL, QStringLiteral(UPDATE_SUBSCRIPTION_URL_DEFAULT)).toString();
+#else
     updateSubscriptionUrl = settings.value(SER_UPDATE_SUBSCRIPTION_URL, "").toString();
+#endif
     language = static_cast<Language>(settings.value(SER_LANGUAGE,
                                                     static_cast<int>(Language::LANG_AUTO)).toInt());
 

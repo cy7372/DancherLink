@@ -77,6 +77,11 @@ qt6_add_lrelease(DancherLink TS_FILES ${TS_FILES})
 file(STRINGS "version.txt" VERSION_STR)
 add_compile_definitions(VERSION_STR="${VERSION_STR}")
 
+# Add UPDATE_SUBSCRIPTION_URL definition if provided
+if(DEFINED UPDATE_SUBSCRIPTION_URL)
+    add_compile_definitions(UPDATE_SUBSCRIPTION_URL_DEFAULT="${UPDATE_SUBSCRIPTION_URL}")
+endif()
+
 # Executable
 qt6_add_executable(DancherLink WIN32 ${APP_SOURCES})
 
