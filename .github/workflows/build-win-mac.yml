@@ -54,16 +54,16 @@ jobs:
           version: ${{ matrix.qt_version }}
           modules: 'qtmultimedia qt5compat qtimageformats'
 
-      - name: Install Qt ARM64 (Windows)
-        if: runner.os == 'Windows'
-        uses: jurplel/install-qt-action@v4
-        with:
-          cache: true
-          set-env: false
-          add-tools-to-path: false
-          arch: win64_msvc2022_arm64_cross_compiled
-          version: ${{ matrix.qt_version_arm64 }}
-          modules: 'qtmultimedia qt5compat qtimageformats'
+      # - name: Install Qt ARM64 (Windows)
+      #   if: runner.os == 'Windows'
+      #   uses: jurplel/install-qt-action@v4
+      #   with:
+      #     cache: true
+      #     set-env: false
+      #     add-tools-to-path: false
+      #     arch: win64_msvc2022_arm64_cross_compiled
+      #     version: ${{ matrix.qt_version_arm64 }}
+      #     modules: 'qtmultimedia qt5compat qtimageformats'
 
       - name: Build x64 binaries (Windows)
         if: runner.os == 'Windows'
@@ -74,14 +74,14 @@ jobs:
         env:
           QT_PATH: ${{ runner.workspace }}\Qt\${{ matrix.qt_version }}\msvc2022_64\bin
 
-      - name: Build ARM64 binaries (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          set "PATH=%QT_PATH%;%PATH%"
-          scripts\build-arch.bat Release arm64
-        env:
-          QT_PATH: ${{ runner.workspace }}\Qt\${{ matrix.qt_version_arm64 }}\msvc2022_arm64\bin
+      # - name: Build ARM64 binaries (Windows)
+      #   if: runner.os == 'Windows'
+      #   shell: cmd
+      #   run: |
+      #     set "PATH=%QT_PATH%;%PATH%"
+      #     scripts\build-arch.bat Release arm64
+      #   env:
+      #     QT_PATH: ${{ runner.workspace }}\Qt\${{ matrix.qt_version_arm64 }}\msvc2022_arm64\bin
 
       - name: Build Package
         shell: pwsh
@@ -100,13 +100,13 @@ jobs:
           path: build/deploy-x64-release/*
           if-no-files-found: error
 
-      - name: Upload Binaries (Windows arm64)
-        uses: actions/upload-artifact@v5
-        if: runner.os == 'Windows'
-        with:
-          name: Moonlight-${{ runner.os }}-arm64-${{ env.CI_VERSION }}
-          path: build/deploy-arm64-release/*
-          if-no-files-found: error
+      # - name: Upload Binaries (Windows arm64)
+      #   uses: actions/upload-artifact@v5
+      #   if: runner.os == 'Windows'
+      #   with:
+      #     name: Moonlight-${{ runner.os }}-arm64-${{ env.CI_VERSION }}
+      #     path: build/deploy-arm64-release/*
+      #     if-no-files-found: error
 
       # - name: Upload Binaries (macOS)
       #   uses: actions/upload-artifact@v5

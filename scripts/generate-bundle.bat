@@ -52,11 +52,11 @@ if not exist "%BUILD_ROOT%\build-x64-%BUILD_CONFIG%\DancherLink.msi" (
     echo You must run 'build-arch.bat %BUILD_CONFIG% x64' first
     exit /b 1
 )
-if not exist "%BUILD_ROOT%\build-arm64-%BUILD_CONFIG%\DancherLink.msi" (
-    echo Unable to build bundle - missing binaries for %BUILD_CONFIG% arm64
-    echo You must run 'build-arch.bat %BUILD_CONFIG% arm64' first
-    exit /b 1
-)
+rem if not exist "%BUILD_ROOT%\build-arm64-%BUILD_CONFIG%\DancherLink.msi" (
+rem    echo Unable to build bundle - missing binaries for %BUILD_CONFIG% arm64
+rem    echo You must run 'build-arch.bat %BUILD_CONFIG% arm64' first
+rem    exit /b 1
+rem )
 
 echo Cleaning output directories
 rmdir /s /q %BUILD_FOLDER%
