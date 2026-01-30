@@ -173,14 +173,19 @@ popd
 
 echo Configuring the project with CMake
 set "SOURCE_ROOT_CMAKE=%SOURCE_ROOT:\=/%"
-set "OPENSSL_ROOT_DIR=%SOURCE_ROOT%\libs\windows"
+
+if "%ARCH%"=="arm64" (
+    set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/arm64"
+) else (
+    set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include"
+)
+
 pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
     -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% ^
     -DCMAKE_VERBOSE_MAKEFILE=ON ^
     !QT_HOST_PATH_ARG! ^
-    -DOPENSSL_ROOT_DIR="%SOURCE_ROOT_CMAKE%/libs/windows" ^
-    -DOPENSSL_INCLUDE_DIR="%SOURCE_ROOT_CMAKE%/libs/windows/include" ^
+    -DOPENSSL_INCLUDE_DIR=!OPENSSL_INC! ^
     -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libcrypto.lib" ^
     -DOPENSSL_SSL_LIBRARY:FILEPATH="%SOURCE_ROOT_CMAKE%/libs/windows/lib/%ARCH%/libssl.lib"
 if !ERRORLEVEL! NEQ 0 goto Error
