@@ -42,7 +42,7 @@ ApplicationWindow {
         if (SystemProperties.hasDesktopEnvironment) {
             if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_MAXIMIZED) {
                 // Set visibility to Maximized directly
-                window.visibility = Window.Maximized
+                window.showMaximized()
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
                 window.showFullScreen()
