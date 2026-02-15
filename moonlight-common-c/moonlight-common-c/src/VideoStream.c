@@ -92,6 +92,12 @@ static void VideoReceiveThreadProc(void* context) {
     int waitingForVideoMs;
     bool encrypted;
 
+    // Network diagnostics counters
+    uint64_t totalPacketsReceived = 0;
+    uint64_t lastDiagTimeMs = 0;
+    uint64_t diagIntervalPackets = 0;
+    #define NET_DIAG_INTERVAL_MS 5000  // Log every 5 seconds
+
     encrypted = !!(EncryptionFeaturesEnabled & SS_ENC_VIDEO);
     decryptedSize = StreamConfig.packetSize + MAX_RTP_HEADER_SIZE;
     minSize = sizeof(RTP_PACKET) + ((EncryptionFeaturesEnabled & SS_ENC_VIDEO) ? sizeof(ENC_VIDEO_HEADER) : 0);
@@ -229,6 +235,26 @@ static void VideoReceiveThreadProc(void* context) {
 
         queueStatus = RtpvAddPacket(&rtpQueue, packet, err, (PRTPV_QUEUE_ENTRY)&buffer[decryptedSize]);
 
+        // Network diagnostics: count packets and log periodically
+        totalPacketsReceived++;
+        diagIntervalPackets++;
+
+        if (receivedDataFromPeer) {
+            uint64_t nowMs = PltGetMillis();
+            if (lastDiagTimeMs == 0) {
+                lastDiagTimeMs = nowMs;
+            }
+            else if (nowMs - lastDiagTimeMs >= NET_DIAG_INTERVAL_MS) {
+                uint64_t packetsPerSec = (diagIntervalPackets * 1000) / (nowMs - lastDiagTimeMs);
+                Limelog("[NET_DIAG] Video packets: %llu total, %llu/sec avg, packetSize=%d\n",
+                        (unsigned long long)totalPacketsReceived,
+                        (unsigned long long)packetsPerSec,
+                        StreamConfig.packetSize);
+                diagIntervalPackets = 0;
+                lastDiagTimeMs = nowMs;
+            }
+        }
+
         if (queueStatus == RTPF_RET_QUEUED) {
             // The queue owns the buffer
             buffer = NULL;
@@ -318,6 +344,17 @@ int startVideoStream(void* rendererContext, int drFlags) {
     int err;
 
     firstFrameSocket = INVALID_SOCKET;
+
+    // Log network configuration for diagnostics
+    Limelog("[NET_DIAG] === Video Stream Configuration ===\n");
+    Limelog("[NET_DIAG] Resolution: %dx%d @ %d fps\n", StreamConfig.width, StreamConfig.height, StreamConfig.fps);
+    Limelog("[NET_DIAG] Packet size: %d bytes\n", StreamConfig.packetSize);
+    Limelog("[NET_DIAG] Bitrate: %d kbps\n", StreamConfig.bitrate);
+    Limelog("[NET_DIAG] RTP buffer: %d packets x %d bytes = %d bytes\n",
+            RTP_RECV_PACKETS_BUFFERED,
+            StreamConfig.packetSize + MAX_RTP_HEADER_SIZE,
+            RTP_RECV_PACKETS_BUFFERED * (StreamConfig.packetSize + MAX_RTP_HEADER_SIZE));
+    Limelog("[NET_DIAG] ==================================\n");
 
     // This must be called before the decoder thread starts submitting
     // decode units

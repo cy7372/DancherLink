@@ -117,7 +117,7 @@ static void dropFrameState(void) {
 
     // If we reach our limit, immediately request an IDR frame and reset
     if (consecutiveFrameDrops == CONSECUTIVE_DROP_LIMIT) {
-        Limelog("Reached consecutive drop limit\n");
+        Limelog("[NET_DIAG] CONSECUTIVE DROP LIMIT reached (%d frames), requesting IDR frame\n", CONSECUTIVE_DROP_LIMIT);
 
         // Restart the count
         consecutiveFrameDrops = 0;
@@ -804,13 +804,15 @@ static void processRtpPayload(PNV_VIDEO_PACKET videoPacket, int length,
         // Make sure this is the next consecutive frame
         if (isBefore32(nextFrameNumber, frameIndex)) {
             if (nextFrameNumber + 1 == frameIndex) {
-                Limelog("Network dropped 1 frame (frame %d)\n", frameIndex - 1);
+                Limelog("[NET_DIAG] FRAME DROP: 1 frame (frame %d), consecutive_drops=%d\n",
+                        frameIndex - 1, consecutiveFrameDrops + 1);
             }
             else {
-                Limelog("Network dropped %d frames (frames %d to %d)\n",
+                Limelog("[NET_DIAG] FRAME DROP: %d frames (frames %d to %d), consecutive_drops=%d\n",
                         frameIndex - nextFrameNumber,
                         nextFrameNumber,
-                        frameIndex - 1);
+                        frameIndex - 1,
+                        consecutiveFrameDrops + 1);
             }
 
             nextFrameNumber = frameIndex;

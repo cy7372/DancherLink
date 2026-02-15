@@ -1971,7 +1971,7 @@ bool Session::startConnectionAsync()
         m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
         m_StreamConfig.packetSize = m_Preferences->packetSize;
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Using custom packet size: %d bytes",
+                    "[NET_DIAG] Using custom packet size: %d bytes",
                     m_Preferences->packetSize);
     }
     else {
@@ -1985,16 +1985,22 @@ bool Session::startConnectionAsync()
             // This address is on-link, so treat it as a local address
             // even if it's not in RFC 1918 space or it's an IPv6 address.
             m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: LAN, packet size: %d bytes", m_StreamConfig.packetSize);
             break;
         case NvComputer::RI_VPN:
             // It looks like our route to this PC is over a VPN, so cap at 1024 bytes.
             // Treat it as remote even if the target address is in RFC 1918 address space.
             m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
             m_StreamConfig.packetSize = 1024;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: VPN, packet size: %d bytes", m_StreamConfig.packetSize);
             break;
         default:
             // If we don't have reachability info, let moonlight-common-c decide.
             m_StreamConfig.streamingRemotely = STREAM_CFG_AUTO;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: AUTO, packet size: %d bytes", m_StreamConfig.packetSize);
             break;
         }
     }

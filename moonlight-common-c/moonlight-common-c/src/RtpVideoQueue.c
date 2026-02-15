@@ -340,11 +340,14 @@ static int reconstructFrame(PRTP_VIDEO_QUEUE queue) {
     LC_ASSERT(ret == 0);
 
     if (queue->bufferDataPackets != queue->receivedDataPackets) {
-#ifdef FEC_VERBOSE
-        Limelog("Recovered %d video data shards from frame %d\n",
+        // Always log FEC recovery for network diagnostics
+        Limelog("[NET_DIAG] FEC RECOVERY frame %d: recovered %d shards, missing=%d, data=%d/%d, parity=%d/%d, fec_pct=%d%%\n",
+                queue->currentFrameNumber,
                 queue->bufferDataPackets - queue->receivedDataPackets,
-                queue->currentFrameNumber);
-#endif
+                queue->missingPackets,
+                queue->receivedDataPackets, queue->bufferDataPackets,
+                queue->receivedParityPackets, queue->bufferParityPackets,
+                queue->fecPercentage);
 
         // Report the final FEC status if we needed to perform a recovery
         reportFinalFrameFecStatus(queue);
@@ -602,13 +605,15 @@ int RtpvAddPacket(PRTP_VIDEO_QUEUE queue, PRTP_PACKET packet, int length, PRTPV_
             reportFinalFrameFecStatus(queue);
 
             if (queue->multiFecLastBlockNumber != 0) {
-                Limelog("Unrecoverable frame %d (block %d of %d): %d+%d=%d received < %d needed\n",
+                Limelog("[NET_DIAG] UNRECOVERABLE frame %d (block %d of %d): data=%d/%d, parity=%d/%d, missing=%d, fec_pct=%d%%\n",
                         queue->currentFrameNumber, queue->multiFecCurrentBlockNumber+1,
                         queue->multiFecLastBlockNumber+1,
-                        queue->receivedDataPackets,
-                        queue->receivedParityPackets,
-                        queue->pendingFecBlockList.count,
-                        queue->bufferDataPackets);
+                        queue->receivedDataPackets, queue->bufferDataPackets,
+                        queue->receivedParityPackets, queue->bufferParityPackets,
+                        queue->missingPackets, queue->fecPercentage);
+                Limelog("[NET_DIAG] Frame %d seq range: %d-%d, highest received: %d\n",
+                        queue->currentFrameNumber, queue->bufferLowestSequenceNumber,
+                        queue->bufferHighestSequenceNumber, queue->receivedHighestSequenceNumber);
 
                 // If we just missed a block of this frame rather than the whole thing,
                 // we must manually advance the queue to the next frame. Parsing this
@@ -630,11 +635,14 @@ int RtpvAddPacket(PRTP_VIDEO_QUEUE queue, PRTP_PACKET packet, int length, PRTPV_
                 }
             }
             else {
-                Limelog("Unrecoverable frame %d: %d+%d=%d received < %d needed\n",
-                        queue->currentFrameNumber, queue->receivedDataPackets,
-                        queue->receivedParityPackets,
-                        queue->pendingFecBlockList.count,
-                        queue->bufferDataPackets);
+                Limelog("[NET_DIAG] UNRECOVERABLE frame %d: data=%d/%d, parity=%d/%d, missing=%d, fec_pct=%d%%\n",
+                        queue->currentFrameNumber,
+                        queue->receivedDataPackets, queue->bufferDataPackets,
+                        queue->receivedParityPackets, queue->bufferParityPackets,
+                        queue->missingPackets, queue->fecPercentage);
+                Limelog("[NET_DIAG] Frame %d seq range: %d-%d, highest received: %d\n",
+                        queue->currentFrameNumber, queue->bufferLowestSequenceNumber,
+                        queue->bufferHighestSequenceNumber, queue->receivedHighestSequenceNumber);
             }
         }
 

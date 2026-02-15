@@ -391,6 +391,7 @@ SOCKET bindUdpSocket(int addressFamily, struct sockaddr_storage* localAddr, SOCK
         bufferSize = n3ds_max_buf_size;
 #endif
     if (bufferSize != 0) {
+        int requestedBufferSize = bufferSize;
         // We start at the requested recv buffer value and step down until we find
         // a value that the OS will accept.
         for (;;) {
@@ -414,21 +415,21 @@ SOCKET bindUdpSocket(int addressFamily, struct sockaddr_storage* localAddr, SOCK
             }
         }
 
-#if defined(LC_DEBUG)
+        // Always log buffer size info for network diagnostics
         if (err == 0) {
-            Limelog("Selected receive buffer size: %d\n", bufferSize);
+            Limelog("[NET_DIAG] UDP socket buffer: requested=%d, selected=%d\n", requestedBufferSize, bufferSize);
         }
         else {
-            Limelog("Unable to set receive buffer size: %d\n", LastSocketError());
+            Limelog("[NET_DIAG] UDP socket buffer: FAILED to set (requested=%d, error=%d)\n", requestedBufferSize, LastSocketError());
         }
 
         {
             SOCKADDR_LEN len = sizeof(bufferSize);
             if (getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char*)&bufferSize, &len) == 0) {
-                Limelog("Actual receive buffer size: %d\n", bufferSize);
+                // Note: Windows reports double the actual buffer size
+                Limelog("[NET_DIAG] UDP socket actual buffer size (OS reported): %d bytes\n", bufferSize);
             }
         }
-#endif
     }
 
     return s;

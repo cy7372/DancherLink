@@ -465,15 +465,23 @@ void connectionSawFrame(uint32_t frameIndex) {
         if (intervalTotalFrameCount != 0) {
             // Notify the client of connection status changes based on frame loss rate
             int frameLossPercent = 100 - (intervalGoodFrameCount * 100) / intervalTotalFrameCount;
+
+            // Log frame loss statistics for network diagnostics
+            Limelog("[NET_DIAG] Frame stats over last %d ms: good=%d, total=%d, loss=%d%%\n",
+                    CONN_STATUS_SAMPLE_PERIOD, intervalGoodFrameCount, intervalTotalFrameCount, frameLossPercent);
+
             if (lastConnectionStatusUpdate != CONN_STATUS_POOR &&
                     (frameLossPercent >= CONN_IMMEDIATE_POOR_LOSS_RATE ||
                      (frameLossPercent >= CONN_CONSECUTIVE_POOR_LOSS_RATE && lastIntervalLossPercentage >= CONN_CONSECUTIVE_POOR_LOSS_RATE))) {
                 // We require 2 consecutive intervals above CONN_CONSECUTIVE_POOR_LOSS_RATE or a single
                 // interval above CONN_IMMEDIATE_POOR_LOSS_RATE to notify of a poor connection.
+                Limelog("[NET_DIAG] Connection status: POOR (loss=%d%%, threshold=%d%%)\n",
+                        frameLossPercent, CONN_IMMEDIATE_POOR_LOSS_RATE);
                 ListenerCallbacks.connectionStatusUpdate(CONN_STATUS_POOR);
                 lastConnectionStatusUpdate = CONN_STATUS_POOR;
             }
             else if (frameLossPercent <= CONN_OKAY_LOSS_RATE && lastConnectionStatusUpdate != CONN_STATUS_OKAY) {
+                Limelog("[NET_DIAG] Connection status: OKAY (loss=%d%%)\n", frameLossPercent);
                 ListenerCallbacks.connectionStatusUpdate(CONN_STATUS_OKAY);
                 lastConnectionStatusUpdate = CONN_STATUS_OKAY;
             }
