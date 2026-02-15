@@ -102,16 +102,27 @@ void LogManager::initialize(bool suppressVerboseOutput)
     if (IS_UNSPECIFIED_HANDLE(oldConErr))
 #endif
     {
-        // Use human-readable datetime format for log filename
+        // Use human-readable datetime format with milliseconds to avoid collisions
         QString logFileName = QString("DancherLink-%1.log")
-            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
-        m_LoggerFile = new QFile(tempDir.filePath(logFileName));
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss-zzz"));
+
+        // Ensure the filename is unique by checking if it exists
+        QString fullPath = tempDir.filePath(logFileName);
+        int counter = 1;
+        while (QFile::exists(fullPath)) {
+            logFileName = QString("DancherLink-%1_%2.log")
+                .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"))
+                .arg(counter++);
+            fullPath = tempDir.filePath(logFileName);
+        }
+
+        m_LoggerFile = new QFile(fullPath);
         if (m_LoggerFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
             QTextStream(stderr) << "Redirecting log output to " << m_LoggerFile->fileName() << Qt::endl;
             m_LoggerStream.setDevice(m_LoggerFile);
         }
     }
-    
+
     // Prune the oldest existing logs if there are more than 10
     QStringList existingLogNames = tempDir.entryList(QStringList("DancherLink-*.log"), QDir::NoFilter, QDir::SortFlag::Time);
     for (qsizetype i = 10; i < existingLogNames.size(); i++) {
