@@ -220,6 +220,11 @@ static int reconstructFrame(PRTP_VIDEO_QUEUE queue) {
             // NB: We use totalPackets - neededPackets instead of just bufferParityPackets here because we require
             // one extra parity shard for recovery if we're in FEC validation mode.
             if (queue->missingPackets > totalPackets - neededPackets) {
+                Limelog("[NET_DIAG] FRAME LOST: frame %u, missing=%u, data=%u/%u, parity=%u/%u, fec_pct=%u%%, needed=%u, available=%u\n",
+                        queue->currentFrameNumber, queue->missingPackets,
+                        queue->receivedDataPackets, queue->bufferDataPackets,
+                        queue->receivedParityPackets, queue->bufferParityPackets,
+                        queue->fecPercentage, neededPackets, queue->pendingFecBlockList.count);
                 notifyFrameLost(queue->currentFrameNumber, true);
                 queue->reportedLostFrame = true;
             }

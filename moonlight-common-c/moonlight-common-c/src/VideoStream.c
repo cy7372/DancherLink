@@ -96,7 +96,11 @@ static void VideoReceiveThreadProc(void* context) {
     uint64_t totalPacketsReceived = 0;
     uint64_t lastDiagTimeMs = 0;
     uint64_t diagIntervalPackets = 0;
+    uint64_t lastPacketTimeMs = 0;
+    uint64_t maxPacketGapMs = 0;
+    uint64_t consecutiveTimeouts = 0;
     #define NET_DIAG_INTERVAL_MS 5000  // Log every 5 seconds
+    #define PACKET_GAP_WARNING_MS 100  // Warn if no packet for 100ms
 
     encrypted = !!(EncryptionFeaturesEnabled & SS_ENC_VIDEO);
     decryptedSize = StreamConfig.packetSize + MAX_RTP_HEADER_SIZE;
@@ -145,11 +149,19 @@ static void VideoReceiveThreadProc(void* context) {
                             receiveSize,
                             useSelect);
         if (err < 0) {
-            Limelog("Video Receive: recvUdpSocket() failed: %d\n", (int)LastSocketError());
+            Limelog("[NET_DIAG] Video Receive: recvUdpSocket() failed: %d\n", (int)LastSocketError());
             ListenerCallbacks.connectionTerminated(LastSocketFail());
             break;
         }
         else if  (err == 0) {
+            consecutiveTimeouts++;
+            // Log warning if we get multiple consecutive timeouts (indicates network issue)
+            if (consecutiveTimeouts >= 10 && receivedDataFromPeer) {
+                Limelog("[NET_DIAG] WARNING: %llu consecutive receive timeouts (no data for ~%llums)\n",
+                        (unsigned long long)consecutiveTimeouts,
+                        (unsigned long long)(consecutiveTimeouts * UDP_RECV_POLL_TIMEOUT_MS));
+            }
+
             if (!receivedDataFromPeer) {
                 // If we wait many seconds without ever receiving a video packet,
                 // assume something is broken and terminate the connection.
@@ -163,6 +175,30 @@ static void VideoReceiveThreadProc(void* context) {
 
             // Receive timed out; try again
             continue;
+        }
+
+        // Reset consecutive timeout counter on successful receive
+        if (consecutiveTimeouts > 0 && receivedDataFromPeer) {
+            Limelog("[NET_DIAG] Receive recovered after %llu timeouts (~%llums gap)\n",
+                    (unsigned long long)consecutiveTimeouts,
+                    (unsigned long long)(consecutiveTimeouts * UDP_RECV_POLL_TIMEOUT_MS));
+        }
+        consecutiveTimeouts = 0;
+
+        // Track packet receive timing for gap detection
+        if (receivedDataFromPeer) {
+            uint64_t nowMs = PltGetMillis();
+            if (lastPacketTimeMs > 0) {
+                uint64_t gapMs = nowMs - lastPacketTimeMs;
+                if (gapMs > maxPacketGapMs) {
+                    maxPacketGapMs = gapMs;
+                }
+                if (gapMs >= PACKET_GAP_WARNING_MS) {
+                    Limelog("[NET_DIAG] Large packet gap detected: %llums (max so far: %llums)\n",
+                            (unsigned long long)gapMs, (unsigned long long)maxPacketGapMs);
+                }
+            }
+            lastPacketTimeMs = nowMs;
         }
 
         if (!receivedDataFromPeer) {
@@ -246,11 +282,13 @@ static void VideoReceiveThreadProc(void* context) {
             }
             else if (nowMs - lastDiagTimeMs >= NET_DIAG_INTERVAL_MS) {
                 uint64_t packetsPerSec = (diagIntervalPackets * 1000) / (nowMs - lastDiagTimeMs);
-                Limelog("[NET_DIAG] Video packets: %llu total, %llu/sec avg, packetSize=%d\n",
+                Limelog("[NET_DIAG] Video packets: %llu total, %llu/sec avg, packetSize=%d, maxGap=%llums\n",
                         (unsigned long long)totalPacketsReceived,
                         (unsigned long long)packetsPerSec,
-                        StreamConfig.packetSize);
+                        StreamConfig.packetSize,
+                        (unsigned long long)maxPacketGapMs);
                 diagIntervalPackets = 0;
+                maxPacketGapMs = 0;  // Reset max gap for next interval
                 lastDiagTimeMs = nowMs;
             }
         }
