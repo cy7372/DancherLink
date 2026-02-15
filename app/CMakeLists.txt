@@ -114,6 +114,7 @@ if(WIN32)
         # DXVA2/D3D11VA
         streaming/video/ffmpeg-renderers/dxva2.cpp
         streaming/video/ffmpeg-renderers/d3d11va.cpp
+        streaming/video/ffmpeg-renderers/gpuopts.cpp
         streaming/video/ffmpeg-renderers/pacer/dxvsyncsource.cpp
         
         # LibPlacebo

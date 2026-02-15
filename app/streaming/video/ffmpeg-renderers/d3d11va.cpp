@@ -3,6 +3,7 @@
 
 #include "d3d11va.h"
 #include "dxutil.h"
+#include "gpuopts.h"
 #include "path.h"
 #include "utils.h"
 
@@ -63,6 +64,8 @@ D3D11VARenderer::D3D11VARenderer(int decoderSelectionPass)
       m_DevicesWithCodecSupport(0),
       m_LastColorTrc(AVCOL_TRC_UNSPECIFIED),
       m_AllowTearing(false),
+      m_AdapterLuid{},
+      m_VendorId(0),
       m_OverlayLock(0),
       m_HwDeviceContext(nullptr),
       m_HwFramesContext(nullptr),
@@ -205,6 +208,10 @@ bool D3D11VARenderer::createDeviceByAdapterIndex(int adapterIndex, bool* adapter
         // feature level 11.0 or later (Fermi, Terascale 2, or Ivy Bridge and later)
         m_DevicesWithFL11Support++;
     }
+
+    // Save adapter info for GPU optimizations
+    m_AdapterLuid = adapterDesc.AdapterLuid;
+    m_VendorId = adapterDesc.VendorId;
 
     hr = deviceContext.As(&m_DeviceContext);
     if (FAILED(hr)) {
@@ -526,6 +533,9 @@ bool D3D11VARenderer::initialize(PDECODER_PARAMETERS params)
         // This is fatal because we requested the waitable object flag
         return false;
     }
+
+    // Apply GPU optimizations (HAGS detection, GPU priority, etc.)
+    GpuOpts::applyGpuOptimizations(m_Device.Get(), m_AdapterLuid, m_VendorId);
 
     // Surfaces must be 16 pixel aligned for H.264 and 128 pixel aligned for everything else
     // https://github.com/FFmpeg/FFmpeg/blob/a234e5cd80224c95a205c1f3e297d8c04a1374c3/libavcodec/dxva2.c#L609-L616

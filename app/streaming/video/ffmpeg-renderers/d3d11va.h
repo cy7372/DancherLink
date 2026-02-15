@@ -80,6 +80,8 @@ private:
     AVColorTransferCharacteristic m_LastColorTrc;
 
     bool m_AllowTearing;
+    LUID m_AdapterLuid;
+    UINT m_VendorId;
 
     std::array<Microsoft::WRL::ComPtr<ID3D11PixelShader>, PixelShaders::_COUNT> m_VideoPixelShaders;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_VideoVertexBuffer;
