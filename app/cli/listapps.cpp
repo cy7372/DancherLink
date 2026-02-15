@@ -117,14 +117,14 @@ public:
     }
 
     void printApps(QVector<NvApp> apps) {
-        for (int i = 0; i < apps.length(); i++) {
+        for (qsizetype i = 0; i < apps.length(); i++) {
             fprintf(stdout, "%s\n", qPrintable(apps[i].name));
         }
     }
 
     void printAppsCSV(QVector<NvApp> apps) {
         fprintf(stdout, "Name, ID, HDR Support, App Collection Game, Hidden, Direct Launch, Boxart URL\n");
-        for (int i = 0; i < apps.length(); i++) {
+        for (qsizetype i = 0; i < apps.length(); i++) {
             printAppCSV(apps[i]);
         }
     }

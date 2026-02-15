@@ -241,6 +241,35 @@ void closeSocket(SOCKET s) {
 // These set "safe" host or link-local QoS options that we can unconditionally
 // set without having to worry about routers blockholing the traffic.
 static void setSocketQos(SOCKET s, int socketQosType) {
+#if defined(LC_WINDOWS)
+    DWORD dscpValue;
+    switch (socketQosType) {
+    case SOCK_QOS_TYPE_BEST_EFFORT:
+        dscpValue = 0;
+        break;
+    case SOCK_QOS_TYPE_AUDIO:
+        // DSCP 46 (Expedited Forwarding) - High priority audio
+        dscpValue = 46 << 2;
+        break;
+    case SOCK_QOS_TYPE_VIDEO:
+        // DSCP 34 (AF41) - Multimedia Conferencing
+        dscpValue = 34 << 2;
+        break;
+    default:
+        Limelog("Unknown QoS type: %d\n", socketQosType);
+        return;
+    }
+
+    // Attempt to set IP_TOS for IPv4
+    // Note: This requires the "DisableUserTOSSetting" registry key to be 0
+    // at HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters
+    // We ignore errors because this often fails on consumer Windows versions
+    setsockopt(s, IPPROTO_IP, IP_TOS, (char*)&dscpValue, sizeof(dscpValue));
+
+    // Attempt to set Traffic Class for IPv6
+    setsockopt(s, IPPROTO_IPV6, IPV6_TCLASS, (char*)&dscpValue, sizeof(dscpValue));
+#endif
+
 #ifdef SO_NET_SERVICE_TYPE
     int value;
     switch (socketQosType) {

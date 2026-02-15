@@ -31,10 +31,4 @@ public:
 
     static
     int getDrmFd(bool preferRenderNode);
-
-    static
-    void enterAsyncLoggingMode();
-
-    static
-    void exitAsyncLoggingMode();
 };

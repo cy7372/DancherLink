@@ -48,14 +48,31 @@ Page {
         StreamingPreferences.save()
     }
 
+    property color groupTitleColor: "#87CEEB" // SkyBlue
+
+    Component {
+        id: groupBoxLabel
+        Label {
+            text: parent.title
+            color: groupTitleColor
+            font.pointSize: 12
+            font.bold: true
+            elide: Text.ElideRight
+            padding: 0
+            bottomPadding: 5
+        }
+    }
+
+    property bool isWideLayout: settingsPage.width > 850
+
     Flickable {
         id: flickable
         anchors.fill: parent
 
         boundsBehavior: Flickable.OvershootBounds
 
-        contentWidth: settingsColumn1.width > settingsColumn2.width ? settingsColumn1.width : settingsColumn2.width
-        contentHeight: settingsColumn1.height > settingsColumn2.height ? settingsColumn1.height : settingsColumn2.height
+        contentWidth: settingsPage.width
+        contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height) : (settingsColumn1.height + settingsColumn2.height)
 
         ScrollBar.vertical: ScrollBar {
             anchors {
@@ -110,14 +127,15 @@ Page {
         Column {
             padding: 10
             id: settingsColumn1
-            width: settingsPage.width / 2
+            width: isWideLayout ? settingsPage.width / 2 : settingsPage.width
             spacing: 15
 
             GroupBox {
                 id: basicSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Basic Settings") + "</font>"
+                title: qsTr("Basic Settings")
+                label: groupBoxLabel.createObject(basicSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -873,7 +891,8 @@ Page {
                 id: audioSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Audio Settings") + "</font>"
+                title: qsTr("Audio Settings")
+                label: groupBoxLabel.createObject(audioSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -982,7 +1001,8 @@ Page {
                 id: hostSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Host Settings") + "</font>"
+                title: qsTr("Host Settings")
+                label: groupBoxLabel.createObject(hostSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -1022,7 +1042,8 @@ Page {
                 id: uiSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("UI Settings") + "</font>"
+                title: qsTr("UI Settings")
+                label: groupBoxLabel.createObject(uiSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -1062,128 +1083,12 @@ Page {
                                 val: StreamingPreferences.LANG_AUTO
                             }
                             ListElement {
-                                text: "Deutsch" // German
-                                val: StreamingPreferences.LANG_DE
-                            }
-                            ListElement {
                                 text: "English"
                                 val: StreamingPreferences.LANG_EN
                             }
                             ListElement {
-                                text: "Français" // French
-                                val: StreamingPreferences.LANG_FR
-                            }
-                            ListElement {
                                 text: "简体中文" // Simplified Chinese
                                 val: StreamingPreferences.LANG_ZH_CN
-                            }
-                            ListElement {
-                                text: "Norwegian Bokmål"
-                                val: StreamingPreferences.LANG_NB_NO
-                            }
-                            ListElement {
-                                text: "Русский" // Russian
-                                val: StreamingPreferences.LANG_RU
-                            }
-                            ListElement {
-                                text: "Español" // Spanish
-                                val: StreamingPreferences.LANG_ES
-                            }
-                            ListElement {
-                                text: "日本語" // Japanese
-                                val: StreamingPreferences.LANG_JA
-                            }
-                            ListElement {
-                                text: "Tiếng Việt" // Vietnamese
-                                val: StreamingPreferences.LANG_VI
-                            }
-                            ListElement {
-                                text: "ภาษาไทย" // Thai
-                                val: StreamingPreferences.LANG_TH
-                            }
-                            ListElement {
-                                text: "한국어" // Korean
-                                val: StreamingPreferences.LANG_KO
-                            }
-                            ListElement {
-                                text: "Magyar" // Hungarian
-                                val: StreamingPreferences.LANG_HU
-                            }
-                            ListElement {
-                                text: "Nederlands" // Dutch
-                                val: StreamingPreferences.LANG_NL
-                            }
-                            ListElement {
-                                text: "Svenska" // Swedish
-                                val: StreamingPreferences.LANG_SV
-                            }
-                            ListElement {
-                                text: "Türkçe" // Turkish
-                                val: StreamingPreferences.LANG_TR
-                            }
-                            /* ListElement {
-                                text: "Українська" // Ukrainian
-                                val: StreamingPreferences.LANG_UK
-                            } */
-                            ListElement {
-                                text: "繁體中文" // Traditional Chinese
-                                val: StreamingPreferences.LANG_ZH_TW
-                            }
-                            ListElement {
-                                text: "Português" // Portuguese
-                                val: StreamingPreferences.LANG_PT
-                            }
-                            /* ListElement {
-                                text: "Português do Brasil" // Brazilian Portuguese
-                                val: StreamingPreferences.LANG_PT_BR
-                            } */
-                            ListElement {
-                                text: "Ελληνικά" // Greek
-                                val: StreamingPreferences.LANG_EL
-                            }
-                            ListElement {
-                                text: "Italiano" // Italian
-                                val: StreamingPreferences.LANG_IT
-                            }
-                            /* ListElement {
-                                text: "हिन्दी, हिंदी" // Hindi
-                                val: StreamingPreferences.LANG_HI
-                            } */
-                            ListElement {
-                                text: "Język polski" // Polish
-                                val: StreamingPreferences.LANG_PL
-                            }
-                            ListElement {
-                                text: "Čeština" // Czech
-                                val: StreamingPreferences.LANG_CS
-                            }
-                            /* ListElement {
-                                text: "עברית" // Hebrew
-                                val: StreamingPreferences.LANG_HE
-                            } */
-                            /* ListElement {
-                                text: "کوردیی ناوەندی" // Central Kurdish
-                                val: StreamingPreferences.LANG_CKB
-                            } */
-                            /* ListElement {
-                                text: "Lietuvių kalba" // Lithuanian
-                                val: StreamingPreferences.LANG_LT
-                            } */
-                            /* ListElement {
-                                text: "Eesti" // Estonian
-                                val: StreamingPreferences.LANG_ET
-                            } */
-                            ListElement {
-                                text: "Български" // Bulgarian
-                                val: StreamingPreferences.LANG_BG
-                            }
-                            /* ListElement {
-                                text: "Esperanto"
-                                val: StreamingPreferences.LANG_EO
-                            } */
-                            ListElement {
-                                text: "தமிழ்" // Tamil
-                                val: StreamingPreferences.LANG_TA
                             }
                         }
                         // ::onActivated must be used, as it only listens for when the index is changed by a human
@@ -1321,17 +1226,19 @@ Page {
 
         Column {
             padding: 10
-            rightPadding: 20
-            anchors.left: settingsColumn1.right
+            rightPadding: isWideLayout ? 20 : 10
+            anchors.left: isWideLayout ? settingsColumn1.right : parent.left
+            anchors.top: isWideLayout ? parent.top : settingsColumn1.bottom
             id: settingsColumn2
-            width: settingsPage.width / 2
+            width: isWideLayout ? settingsPage.width / 2 : settingsPage.width
             spacing: 15
 
             GroupBox {
                 id: updateSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Update Settings") + "</font>"
+                title: qsTr("Update Settings")
+                label: groupBoxLabel.createObject(updateSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -1358,7 +1265,11 @@ Page {
                         width: parent.width
                         placeholderText: "https://example.com/updates.json"
                         text: StreamingPreferences.updateSubscriptionUrl
-                        onEditingFinished: {
+                        
+                        // Use onTextEdited instead of onEditingFinished to update the model in real-time
+                        // This prevents the case where clicking the button steals focus and the
+                        // onEditingFinished signal fires AFTER the onClicked handler reads the old value.
+                        onTextEdited: {
                             StreamingPreferences.updateSubscriptionUrl = text
                         }
                     }
@@ -1367,8 +1278,13 @@ Page {
                         text: qsTr("Check for Updates Now")
                         onClicked: {
                             // Ensure preference is updated before checking
-                            StreamingPreferences.updateSubscriptionUrl = subscriptionUrlField.text
-                            console.log("SettingsView: Check for updates clicked. URL: " + subscriptionUrlField.text)
+                            // The onTextEdited handler already updates the preference, but we do this for safety
+                            // in case the user pasted and clicked immediately without triggering onTextEdited somehow (unlikely but safe)
+                            if (subscriptionUrlField.text !== StreamingPreferences.updateSubscriptionUrl) {
+                                StreamingPreferences.updateSubscriptionUrl = subscriptionUrlField.text
+                            }
+                            
+                            console.log("SettingsView: Check for updates clicked. URL: " + StreamingPreferences.updateSubscriptionUrl)
                             AutoUpdateChecker.start(true)
                         }
                     }
@@ -1379,7 +1295,8 @@ Page {
                 id: inputSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Input Settings") + "</font>"
+                title: qsTr("Input Settings")
+                label: groupBoxLabel.createObject(inputSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -1527,7 +1444,8 @@ Page {
                 id: gamepadSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Gamepad Settings") + "</font>"
+                title: qsTr("Gamepad Settings")
+                label: groupBoxLabel.createObject(gamepadSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {
@@ -1602,7 +1520,8 @@ Page {
                 id: advancedSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
                 padding: 12
-                title: "<font color=\"skyblue\">" + qsTr("Advanced Settings") + "</font>"
+                title: qsTr("Advanced Settings")
+                label: groupBoxLabel.createObject(advancedSettingsGroupBox)
                 font.pointSize: 12
 
                 Column {

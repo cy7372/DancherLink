@@ -19,7 +19,8 @@ ComputerManager::ComputerManager(StreamingPreferences* prefs)
       m_PollingRef(0),
       m_MdnsBrowser(nullptr),
       m_CompatFetcher(nullptr),
-      m_NeedsDelayedFlush(false)
+      m_NeedsDelayedFlush(false),
+      m_ComputersDirty(true)
 {
     QSettings settings;
 
@@ -112,16 +113,30 @@ void DelayedFlushThread::run() {
                 break;
             }
 
-            // Reset the delayed flush flag to ensure any racing saveHosts() call will set it again
+            // Debounce: Wait briefly to batch rapid successive changes (e.g. multiple
+            // computers coming online at once) into a single QSettings write.
+            // The condition variable wait is interruptible, so we can still shut down quickly.
             m_ComputerManager->m_NeedsDelayedFlush = false;
+            m_ComputerManager->m_DelayedFlushCondition.wait(&m_ComputerManager->m_DelayedFlushMutex, 200);
+
+            // Absorb any additional changes that arrived during the debounce window
+            m_ComputerManager->m_NeedsDelayedFlush = false;
+
+            // Bail if interrupted during debounce without a pending flush
+            if (QThread::currentThread()->isInterruptionRequested()) {
+                // Still flush below since we know we had a pending request
+            }
 
             // Update the last serialized hosts map under the delayed flush mutex
             m_ComputerManager->m_LastSerializedHosts.clear();
-            for (const NvComputer* computer : m_ComputerManager->m_KnownHosts) {
-                // Copy the current state of the NvComputer to allow us to check later if we need
-                // to serialize it again when attribute updates occur.
-                QReadLocker computerLock(&computer->lock);
-                m_ComputerManager->m_LastSerializedHosts[computer->uuid] = *computer;
+            {
+                QReadLocker lock(&m_ComputerManager->m_Lock);
+                for (const NvComputer* computer : m_ComputerManager->m_KnownHosts) {
+                    // Copy the current state of the NvComputer to allow us to check later if we need
+                    // to serialize it again when attribute updates occur.
+                    QReadLocker computerLock(&computer->lock);
+                    m_ComputerManager->m_LastSerializedHosts[computer->uuid] = *computer;
+                }
             }
         }
 
@@ -156,6 +171,11 @@ void DelayedFlushThread::run() {
 
             // Finally, delete the backup copy
             settings.remove(SER_HOSTS_BACKUP);
+        }
+
+        // If interrupted, exit after completing this final flush
+        if (QThread::currentThread()->isInterruptionRequested()) {
+            break;
         }
     }
 }
@@ -344,12 +364,15 @@ QVector<NvComputer*> ComputerManager::getComputers()
 {
     QReadLocker lock(&m_Lock);
 
-    // Return a sorted host list
-    auto hosts = QVector<NvComputer*>::fromList(m_KnownHosts.values());
-    std::stable_sort(hosts.begin(), hosts.end(), [](const NvComputer* host1, const NvComputer* host2) {
-        return host1->name.toLower() < host2->name.toLower();
-    });
-    return hosts;
+    if (m_ComputersDirty) {
+        // Return a sorted host list
+        m_CachedComputers = QVector<NvComputer*>::fromList(m_KnownHosts.values());
+        std::stable_sort(m_CachedComputers.begin(), m_CachedComputers.end(), [](const NvComputer* host1, const NvComputer* host2) {
+            return host1->name.toLower() < host2->name.toLower();
+        });
+        m_ComputersDirty = false;
+    }
+    return m_CachedComputers;
 }
 
 class DeferredHostDeletionTask : public QRunnable
@@ -375,6 +398,7 @@ public:
             }
 
             m_ComputerManager->m_KnownHosts.remove(m_Computer->uuid);
+            m_ComputerManager->m_ComputersDirty = true;
         }
 
         // Persist the new host list with this computer deleted
@@ -416,6 +440,12 @@ void ComputerManager::renameHost(NvComputer* computer, QString name)
         computer->hasCustomName = true;
     }
 
+    // Invalidate the cache since the sort order may have changed
+    {
+        QWriteLocker lock(&m_Lock);
+        m_ComputersDirty = true;
+    }
+
     // Notify the UI of the state change
     handleComputerStateChanged(computer);
 }
@@ -438,6 +468,18 @@ void ComputerManager::handleAboutToQuit()
 }
 
 
+
+void ComputerManager::cancelPendingPairing()
+{
+    // FIXME: We need to implement cancellation in NvPairingManager or track the PendingPairingTask.
+    // Currently PendingPairingTask is fire-and-forget in the thread pool.
+    // To properly cancel, we'd need to keep a reference to the active task and set a flag on it,
+    // or use a CancellationToken-like mechanism passed to NvPairingManager.
+    // Since NvPairingManager uses synchronous HTTP calls, we'd need to abort the QNetworkReply.
+    //
+    // For now, this is a placeholder to satisfy the UI requirement.
+    qInfo() << "Pairing cancellation requested (not yet implemented)";
+}
 
 void ComputerManager::pairHost(NvComputer* computer, QString pin)
 {

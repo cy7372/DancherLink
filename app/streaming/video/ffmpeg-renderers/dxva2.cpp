@@ -117,7 +117,7 @@ bool DXVA2Renderer::prepareDecoderContext(AVCodecContext* context, AVDictionary*
     )
 #endif
 
-    m_Pool = av_buffer_pool_init2(m_DecSurfaces.size(), this, ffPoolAlloc, nullptr);
+    m_Pool = av_buffer_pool_init2(static_cast<int>(m_DecSurfaces.size()), this, ffPoolAlloc, nullptr);
     if (!m_Pool) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "Failed create buffer pool");
@@ -268,7 +268,7 @@ bool DXVA2Renderer::initializeDecoder()
     }
 
     // Transfer ownership into ComPtrs
-    for (int i = 0; i < m_DecSurfaces.size(); i++) {
+    for (size_t i = 0; i < m_DecSurfaces.size(); i++) {
         m_DecSurfaces[i].Attach(m_DecSurfacesRaw[i]);
     }
 

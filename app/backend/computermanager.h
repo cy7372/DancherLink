@@ -414,6 +414,8 @@ public:
 
     void renameHost(NvComputer* computer, QString name);
 
+    Q_INVOKABLE void cancelPendingPairing();
+
     void clientSideAttributeUpdated(NvComputer* computer);
 
 signals:
@@ -455,6 +457,9 @@ private:
     QMutex m_DelayedFlushMutex; // Lock ordering: Must never be acquired while holding NvComputer lock
     QWaitCondition m_DelayedFlushCondition;
     bool m_NeedsDelayedFlush;
+
+    mutable QVector<NvComputer*> m_CachedComputers;
+    mutable bool m_ComputersDirty;
 
     friend class DeferredHostDeletionTask;
     friend class PendingPairingTask;
@@ -669,7 +674,7 @@ private:
         }
 
         // Create initial newComputer using HTTP serverinfo with no pinned cert
-        NvComputer* newComputer = new NvComputer(http, serverInfo);
+        std::unique_ptr<NvComputer> newComputer(new NvComputer(http, serverInfo));
 
         // Check if we have a record of this host UUID to pull the pinned cert
         NvComputer* existingComputer;
@@ -754,7 +759,7 @@ private:
             if (existingComputer != nullptr) {
                 // Fold it into the existing PC
                 bool changed = existingComputer->update(*newComputer);
-                delete newComputer;
+                // delete newComputer; // Handled by unique_ptr
 
                 // Drop the lock before notifying
                 m_ComputerManager->m_Lock.unlock();
@@ -772,21 +777,23 @@ private:
             }
             else {
                 // Store this in our active sets
-                m_ComputerManager->m_KnownHosts[newComputer->uuid] = newComputer;
+                NvComputer* rawComputer = newComputer.release();
+                m_ComputerManager->m_KnownHosts[rawComputer->uuid] = rawComputer;
+                m_ComputerManager->m_ComputersDirty = true;
 
                 // Start polling if enabled (write lock required)
-                m_ComputerManager->startPollingComputer(newComputer);
+                m_ComputerManager->startPollingComputer(rawComputer);
 
                 // Drop the lock before notifying
                 m_ComputerManager->m_Lock.unlock();
 
                 // If this wasn't added via mDNS but it is a RFC 1918 IPv4 address and not a VPN,
                 // go ahead and do the STUN request now to populate an external address.
-                if (!m_Mdns && addressIsSiteLocalV4 && newComputer->getActiveAddressReachability() != NvComputer::RI_VPN) {
+                if (!m_Mdns && addressIsSiteLocalV4 && rawComputer->getActiveAddressReachability() != NvComputer::RI_VPN) {
                     quint32 addr;
                     int err = LiFindExternalAddressIP4("stun.moonlight-stream.org", 3478, &addr);
                     if (err == 0) {
-                        newComputer->setRemoteAddress(QHostAddress(qFromBigEndian(addr)));
+                        rawComputer->setRemoteAddress(QHostAddress(qFromBigEndian(addr)));
                     }
                     else {
                         qWarning() << "STUN failed to get WAN address:" << err;
@@ -799,7 +806,7 @@ private:
                 }
 
                 // Tell our client about this new PC
-                emit computerStateChanged(newComputer);
+                emit computerStateChanged(rawComputer);
             }
         }
     }

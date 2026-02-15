@@ -145,10 +145,10 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
         }
 
         // m_FontData must stay around until the font is closed
-        m_Overlays[type].font = TTF_OpenFontRW(SDL_RWFromConstMem(m_FontData.constData(), m_FontData.size()),
+        m_Overlays[type].font = TTF_OpenFontRW(SDL_RWFromConstMem(m_FontData.constData(), static_cast<int>(m_FontData.size())),
                                                1,
                                                m_Overlays[type].fontSize);
-        m_Overlays[type].fontSymbol = TTF_OpenFontRW(SDL_RWFromConstMem(m_FontSymbolData.constData(), m_FontSymbolData.size()),
+        m_Overlays[type].fontSymbol = TTF_OpenFontRW(SDL_RWFromConstMem(m_FontSymbolData.constData(), static_cast<int>(m_FontSymbolData.size())),
                                                1,
                                                m_Overlays[type].fontSize);
 

@@ -12,6 +12,9 @@
 #include <QElapsedTimer>
 #include <QTemporaryFile>
 #include <QRegularExpression>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QWindow>
 
 #ifdef Q_OS_UNIX
 #include <sys/socket.h>
@@ -33,6 +36,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <SDL_syswm.h>
 #elif defined(Q_OS_LINUX)
 #include <openssl/ssl.h>
 #endif
@@ -49,220 +53,18 @@
 #include "backend/autoupdatechecker.h"
 #include "backend/computermanager.h"
 #include "backend/systemproperties.h"
+#include "backend/logmanager.h"
 #include "streaming/session.h"
+#include "streaming/streamutils.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
-
-// Log to file or console dynamically for Windows builds
-#define LOG_TO_FILE
-#elif !defined(QT_DEBUG) && defined(Q_OS_DARWIN)
-// Log to file for release Mac builds
-#define LOG_TO_FILE
-#else
-// Log to console for debug Mac builds
 #endif
 
 // StreamUtils::setAsyncLogging() exposes control of this to the Session
 // class to enable async logging once the stream has started.
-//
-// FIXME: Clean this up
-QAtomicInt g_AsyncLoggingEnabled;
-
-static QElapsedTimer s_LoggerTime;
-static QTextStream s_LoggerStream(stderr);
-static QThreadPool s_LoggerThread;
-static QMutex s_SyncLoggerMutex;
-static bool s_SuppressVerboseOutput;
-static QRegularExpression k_RikeyRegex("&rikey=\\w+");
-static QRegularExpression k_RikeyIdRegex("&rikeyid=[\\d-]+");
-#ifdef LOG_TO_FILE
-// Max log file size of 10 MB
-static const uint64_t k_MaxLogSizeBytes = 10 * 1024 * 1024;
-static QAtomicInteger<uint64_t> s_LogBytesWritten = 0;
-static QFile* s_LoggerFile;
-#endif
-
-class LoggerTask : public QRunnable
-{
-public:
-    LoggerTask(const QString& msg) : m_Msg(msg)
-    {
-        setAutoDelete(true);
-    }
-
-    void run() override
-    {
-        // QTextStream is not thread-safe, so we must lock. This will generally
-        // only contend in synchronous logging mode or during a transition
-        // between synchronous and asynchronous. Asynchronous won't contend in
-        // the common case because we only have a single logging thread.
-        QMutexLocker locker(&s_SyncLoggerMutex);
-        s_LoggerStream << m_Msg;
-        s_LoggerStream.flush();
-    }
-
-private:
-    QString m_Msg;
-};
-
-void logToLoggerStream(QString& message)
-{
-#if defined(QT_DEBUG) && defined(Q_OS_WIN32)
-    // Output log messages to a debugger if attached
-    if (IsDebuggerPresent()) {
-        thread_local QString lineBuffer;
-        lineBuffer += message;
-        if (message.endsWith('\n')) {
-            OutputDebugStringW(lineBuffer.toStdWString().c_str());
-            lineBuffer.clear();
-        }
-    }
-#endif
-
-    // Strip session encryption keys and IVs from the logs
-    message.replace(k_RikeyRegex, "&rikey=REDACTED");
-    message.replace(k_RikeyIdRegex, "&rikeyid=REDACTED");
-
-#ifdef LOG_TO_FILE
-    auto oldLogSize = s_LogBytesWritten.fetchAndAddRelaxed(message.size());
-    if (oldLogSize >= k_MaxLogSizeBytes) {
-        return;
-    }
-    else if (oldLogSize >= k_MaxLogSizeBytes - message.size()) {
-        // Write one final message
-        message = "Log size limit reached!";
-    }
-#endif
-
-    if (g_AsyncLoggingEnabled) {
-        // Queue the log message to be written asynchronously
-        s_LoggerThread.start(new LoggerTask(message));
-    }
-    else {
-        // Log the message immediately
-        LoggerTask(message).run();
-    }
-}
-
-void sdlLogToDiskHandler(void*, int category, SDL_LogPriority priority, const char* message)
-{
-    QString priorityTxt;
-
-    switch (priority) {
-    case SDL_LOG_PRIORITY_VERBOSE:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        priorityTxt = "Verbose";
-        break;
-    case SDL_LOG_PRIORITY_DEBUG:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        priorityTxt = "Debug";
-        break;
-    case SDL_LOG_PRIORITY_INFO:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        priorityTxt = "Info";
-        break;
-    case SDL_LOG_PRIORITY_WARN:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        priorityTxt = "Warn";
-        break;
-    case SDL_LOG_PRIORITY_ERROR:
-        priorityTxt = "Error";
-        break;
-    case SDL_LOG_PRIORITY_CRITICAL:
-        priorityTxt = "Critical";
-        break;
-    default:
-        priorityTxt = "Unknown";
-        break;
-    }
-
-    QTime logTime = QTime::fromMSecsSinceStartOfDay(s_LoggerTime.elapsed());
-    QString txt = QString("%1 - SDL %2 (%3): %4\n").arg(logTime.toString()).arg(priorityTxt).arg(category).arg(message);
-
-    logToLoggerStream(txt);
-}
-
-void qtLogToDiskHandler(QtMsgType type, const QMessageLogContext&, const QString& msg)
-{
-    QString typeTxt;
-
-    switch (type) {
-    case QtDebugMsg:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        typeTxt = "Debug";
-        break;
-    case QtInfoMsg:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        typeTxt = "Info";
-        break;
-    case QtWarningMsg:
-        if (s_SuppressVerboseOutput) {
-            return;
-        }
-        typeTxt = "Warning";
-        break;
-    case QtCriticalMsg:
-        typeTxt = "Critical";
-        break;
-    case QtFatalMsg:
-        typeTxt = "Fatal";
-        break;
-    }
-
-    QTime logTime = QTime::fromMSecsSinceStartOfDay(s_LoggerTime.elapsed());
-    QString txt = QString("%1 - Qt %2: %3\n").arg(logTime.toString()).arg(typeTxt).arg(msg);
-
-    logToLoggerStream(txt);
-}
-
-#ifdef HAVE_FFMPEG
-
-void ffmpegLogToDiskHandler(void* ptr, int level, const char* fmt, va_list vl)
-{
-    char lineBuffer[1024];
-    static int printPrefix = 1;
-
-    if ((level & 0xFF) > av_log_get_level()) {
-        return;
-    }
-    else if ((level & 0xFF) > AV_LOG_WARNING && s_SuppressVerboseOutput) {
-        return;
-    }
-
-    // We need to use the *previous* printPrefix value to determine whether to
-    // print the prefix this time. av_log_format_line() will set the printPrefix
-    // value to indicate whether the prefix should be printed *next time*.
-    bool shouldPrefixThisMessage = printPrefix != 0;
-
-    av_log_format_line(ptr, level, fmt, vl, lineBuffer, sizeof(lineBuffer), &printPrefix);
-
-    if (shouldPrefixThisMessage) {
-        QTime logTime = QTime::fromMSecsSinceStartOfDay(s_LoggerTime.elapsed());
-        QString txt = QString("%1 - FFmpeg: %2").arg(logTime.toString()).arg(lineBuffer);
-        logToLoggerStream(txt);
-    }
-    else {
-        QString txt = QString(lineBuffer);
-        logToLoggerStream(txt);
-    }
-}
-
-#endif
 
 #ifdef Q_OS_WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -280,8 +82,8 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo)
 
     WCHAR dmpFileName[MAX_PATH];
     swprintf_s(dmpFileName, L"%ls\\DancherLink-%I64u.dmp",
-               (PWCHAR)QDir::toNativeSeparators(Path::getLogDir()).utf16(), QDateTime::currentSecsSinceEpoch());
-    QString qDmpFileName = QString::fromUtf16((const char16_t*)dmpFileName);
+               reinterpret_cast<PWCHAR>(const_cast<unsigned short*>(QDir::toNativeSeparators(Path::getLogDir()).utf16())), QDateTime::currentSecsSinceEpoch());
+    QString qDmpFileName = QString::fromUtf16(reinterpret_cast<const char16_t*>(dmpFileName));
     HANDLE dumpHandle = CreateFileW(dmpFileName, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (dumpHandle != INVALID_HANDLE_VALUE) {
         MINIDUMP_EXCEPTION_INFORMATION info;
@@ -298,7 +100,7 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo)
         if (MiniDumpWriteDump(GetCurrentProcess(),
                                GetCurrentProcessId(),
                                dumpHandle,
-                               (MINIDUMP_TYPE)typeFlags,
+                               static_cast<MINIDUMP_TYPE>(typeFlags),
                                &info,
                                nullptr,
                                nullptr)) {
@@ -315,7 +117,7 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo)
     }
 
     // Sleep for a moment to allow the logging thread to finish up before crashing
-    if (g_AsyncLoggingEnabled) {
+    if (LogManager::instance()->isAsyncLoggingEnabled()) {
         Sleep(500);
     }
 
@@ -434,50 +236,13 @@ int main(int argc, char *argv[])
 
 #ifdef LOG_TO_FILE
     QDir tempDir(Path::getLogDir());
-
-#ifdef Q_OS_WIN32
-    // Only log to a file if the user didn't redirect stderr somewhere else
-    if (IS_UNSPECIFIED_HANDLE(oldConErr))
-#endif
-    {
-        s_LoggerFile = new QFile(tempDir.filePath(QString("DancherLink-%1.log").arg(QDateTime::currentSecsSinceEpoch())));
-        if (s_LoggerFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream(stderr) << "Redirecting log output to " << s_LoggerFile->fileName() << Qt::endl;
-            s_LoggerStream.setDevice(s_LoggerFile);
-        }
-    }
 #endif
 
-    // Serialize log messages on a single thread
-    s_LoggerThread.setMaxThreadCount(1);
-    s_LoggerTime.start();
-
-    // Register our logger with all libraries
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-    SDL_SetLogOutputFunction(sdlLogToDiskHandler, nullptr);
-#else
-    SDL_LogOutputFunction oldSdlLogFn;
-    void* oldSdlLogUserdata;
-    SDL_LogGetOutputFunction(&oldSdlLogFn, &oldSdlLogUserdata);
-    SDL_LogSetOutputFunction(sdlLogToDiskHandler, nullptr);
-#endif
-    qInstallMessageHandler(qtLogToDiskHandler);
-#ifdef HAVE_FFMPEG
-    av_log_set_callback(ffmpegLogToDiskHandler);
-#endif
+    LogManager::instance()->initialize(false);
 
 #ifdef Q_OS_WIN32
     // Create a crash dump when we crash on Windows
     SetUnhandledExceptionFilter(UnhandledExceptionHandler);
-#endif
-
-#ifdef LOG_TO_FILE
-    // Prune the oldest existing logs if there are more than 10
-    QStringList existingLogNames = tempDir.entryList(QStringList("DancherLink-*.log"), QDir::NoFilter, QDir::SortFlag::Time);
-    for (int i = 10; i < existingLogNames.size(); i++) {
-        qInfo() << "Removing old log file:" << existingLogNames.at(i);
-        QFile(tempDir.filePath(existingLogNames.at(i))).remove();
-    }
 #endif
 
 #if defined(Q_OS_WIN32)
@@ -502,15 +267,8 @@ int main(int argc, char *argv[])
     // NB: We can't use QGuiApplication::platformName() here because it is only
     // set once the QGuiApplication is created, which is too late to enable High DPI :(
     if (WMUtils::isRunningWindowManager()) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        // Enable High DPI support on Qt 5.x. It is always enabled on Qt 6.0
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
         // Enable fractional High DPI scaling on Qt 5.14 and later
         QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
     }
     else {
 #ifndef STEAM_LINK
@@ -578,16 +336,6 @@ int main(int argc, char *argv[])
     qputenv("QT_SSL_USE_TEMPORARY_KEYCHAIN", "1");
 #endif
 
-#if defined(Q_OS_WIN32) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    if (!qEnvironmentVariableIsSet("QT_OPENGL")) {
-        // On Windows, use ANGLE so we don't have to load OpenGL
-        // user-mode drivers into our app. OGL drivers (especially Intel)
-        // seem to crash Moonlight far more often than DirectX.
-        qputenv("QT_OPENGL", "angle");
-    }
-#endif
-
-#if !defined(Q_OS_WIN32) || QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     // Moonlight requires the non-threaded renderer because we depend
     // on being able to control the render thread by blocking in the
     // main thread (and pumping events from the main thread when needed).
@@ -597,7 +345,6 @@ int main(int argc, char *argv[])
     // NB: Windows defaults to the "windows" non-threaded render loop on
     // Qt 5 and the threaded render loop on Qt 6.
     qputenv("QSG_RENDER_LOOP", "basic");
-#endif
 
 #if defined(Q_OS_DARWIN) && defined(QT_DEBUG)
     // Enable Metal valiation for debug builds
@@ -693,6 +440,38 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
+    // Single instance check
+    // We try to connect to a local server to see if another instance is running
+    const QString serverName = "DancherLinkSingleInstance";
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    if (socket.waitForConnected(500)) {
+        // Another instance is running, so we'll send a message to wake it up
+        // and then exit this instance.
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Another instance is running. Waking it up and exiting.");
+
+#ifdef Q_OS_WIN32
+        // Allow the existing instance to come to the foreground
+        AllowSetForegroundWindow(ASFW_ANY);
+#endif
+
+        socket.write("wakeup");
+        socket.waitForBytesWritten(1000);
+        socket.disconnectFromServer();
+        return 0;
+    }
+
+    // Clear out any stale server left over from a crash
+    QLocalServer::removeServer(serverName);
+
+    // Create the server to listen for future instances
+    QLocalServer singleInstanceServer;
+    if (!singleInstanceServer.listen(serverName)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Failed to listen for single instance: %s",
+                    qPrintable(singleInstanceServer.errorString()));
+    }
+
 #ifndef STEAM_LINK
     // Force use of the KMSDRM backend for SDL when using Qt platform plugins
     // that directly draw to the display without a windowing system.
@@ -744,7 +523,7 @@ int main(int argc, char *argv[])
     switch (commandLineParserResult) {
     case GlobalCommandLineParser::ListRequested:
         // Don't log to the console since it will jumble the command output
-        s_SuppressVerboseOutput = true;
+        LogManager::instance()->setSuppressVerboseOutput(true);
         break;
     default:
         break;
@@ -940,6 +719,64 @@ int main(int argc, char *argv[])
         engine.load(QUrl(QStringLiteral("qrc:/gui/main.qml")));
         if (engine.rootObjects().isEmpty())
             return -1;
+
+        // Handle single instance wake up
+        QObject::connect(&singleInstanceServer, &QLocalServer::newConnection, &app, [&singleInstanceServer, &engine]() {
+            QLocalSocket* clientConnection = singleInstanceServer.nextPendingConnection();
+            if (!clientConnection) return;
+
+            // Check if we are currently streaming
+            if (Session::get()) {
+                SDL_Window* sdlWindow = Session::getSharedWindow();
+                if (sdlWindow) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Received wakeup signal during stream. Bringing SDL window to front.");
+                    
+                    SDL_RaiseWindow(sdlWindow);
+                    
+#ifdef Q_OS_WIN32
+                    SDL_SysWMinfo info;
+                    SDL_VERSION(&info.version);
+                    if (SDL_GetWindowWMInfo(sdlWindow, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
+                        HWND hwnd = info.info.win.window;
+                        if (hwnd) {
+                            if (IsIconic(hwnd)) {
+                                ShowWindow(hwnd, SW_RESTORE);
+                            }
+                            SetForegroundWindow(hwnd);
+                        }
+                    }
+#endif
+                    clientConnection->deleteLater();
+                    return;
+                }
+            }
+
+            // We've received a connection, which means another instance tried to start.
+            // Bring our window to the foreground.
+            if (!engine.rootObjects().isEmpty()) {
+                QObject* root = engine.rootObjects().first();
+                QWindow* window = qobject_cast<QWindow*>(root);
+                if (window) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Received wakeup signal. Bringing window to front.");
+                    
+#ifdef Q_OS_WIN32
+                    HWND hwnd = reinterpret_cast<HWND>(window->winId());
+                    if (hwnd) {
+                        // If the window is minimized, restore it
+                        if (IsIconic(hwnd)) {
+                            ShowWindow(hwnd, SW_RESTORE);
+                        }
+                        // Force it to the foreground
+                        SetForegroundWindow(hwnd);
+                    }
+#endif
+                    window->raise();
+                    window->requestActivate();
+                }
+            }
+            
+            clientConnection->deleteLater();
+        });
     }
 
     int err = app.exec();
@@ -948,29 +785,7 @@ int main(int argc, char *argv[])
     // sometimes freezing and blocking process exit.
     QThreadPool::globalInstance()->waitForDone(30000);
 
-    // Restore the default logger for all libraries before shutting down ours
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-    SDL_SetLogOutputFunction(SDL_GetDefaultLogOutputFunction(), nullptr);
-#else
-    SDL_LogSetOutputFunction(oldSdlLogFn, oldSdlLogUserdata);
-#endif
-    qInstallMessageHandler(nullptr);
-#ifdef HAVE_FFMPEG
-    av_log_set_callback(av_log_default_callback);
-#endif
-
-    // We should not be in async logging mode anymore
-    Q_ASSERT(g_AsyncLoggingEnabled == 0);
-
-    // Wait for pending log messages to be printed
-    s_LoggerThread.waitForDone();
-
-#ifdef Q_OS_WIN32
-    // Without an explicit flush, console redirection for the list command
-    // doesn't work reliably (sometimes the target file contains no text).
-    fflush(stderr);
-    fflush(stdout);
-#endif
+    LogManager::instance()->shutdown();
 
     return err;
 }

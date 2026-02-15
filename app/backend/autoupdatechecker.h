@@ -10,6 +10,7 @@ public:
     explicit AutoUpdateChecker(QObject *parent = nullptr);
 
     Q_INVOKABLE void start(bool isManual = false);
+    Q_INVOKABLE bool openUpdateUrl(QString url);
 
 signals:
     void updateAvailable(QString newVersion, QString url, bool isManual);
@@ -22,13 +23,14 @@ private slots:
     void onUpdateCheckFailed(const QString& errorMessage, bool isManual);
 
 private:
-    void parseStringToVersionQuad(QString& string, QVector<int>& version);
+    void parseStringToVersionQuad(const QString& string, QVector<int>& version);
 
-    int compareVersion(QVector<int>& version1, QVector<int>& version2);
+    int compareVersion(const QVector<int>& version1, const QVector<int>& version2);
 
     QString getPlatform();
 
     QVector<int> m_CurrentVersionQuad;
     QNetworkAccessManager* m_Nam;
     bool m_CheckInProgress;
+    QUrl m_ManifestUrl;
 };

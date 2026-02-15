@@ -112,6 +112,15 @@ CenteredGridView {
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
+        background: Rectangle {
+            color: parent.highlighted ? "#505050" : (parent.hovered ? "#404040" : "transparent")
+            border.color: parent.highlighted ? "#87CEEB" : "transparent"
+            border.width: parent.highlighted ? 2 : 0
+            radius: 8
+
+            Behavior on color { ColorAnimation { duration: 100 } }
+        }
+
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
@@ -301,7 +310,8 @@ CenteredGridView {
              qsTr("If your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.")
         standardButtons: Dialog.Cancel
         onRejected: {
-            // FIXME: We should interrupt pairing here
+            // Cancel the pending pairing operation in the model
+            computerModel.cancelPairing()
         }
     }
 

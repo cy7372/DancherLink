@@ -17,14 +17,8 @@ struct BioDeleter {
 };
 using ScopedBio = std::unique_ptr<BIO, BioDeleter>;
 
-struct X509Deleter {
-    void operator()(X509* x) { X509_free(x); }
-};
 using ScopedX509 = std::unique_ptr<X509, X509Deleter>;
 
-struct EvpPkeyDeleter {
-    void operator()(EVP_PKEY* k) { EVP_PKEY_free(k); }
-};
 using ScopedEvpPkey = std::unique_ptr<EVP_PKEY, EvpPkeyDeleter>;
 
 struct EvpMdCtxDeleter {
@@ -46,7 +40,7 @@ NvPairingManager::NvPairingManager(NvComputer* computer) :
     ScopedBio bio(BIO_new_mem_buf(cert.data(), -1));
     THROW_BAD_ALLOC_IF_NULL(bio);
 
-    m_Cert = PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr);
+    m_Cert.reset(PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
     if (m_Cert == nullptr)
     {
         throw std::runtime_error("Unable to load certificate");
@@ -56,7 +50,7 @@ NvPairingManager::NvPairingManager(NvComputer* computer) :
     bio.reset(BIO_new_mem_buf(pk.data(), -1));
     THROW_BAD_ALLOC_IF_NULL(bio);
 
-    m_PrivateKey = PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr);
+    m_PrivateKey.reset(PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
     if (m_PrivateKey == nullptr)
     {
         throw std::runtime_error("Unable to load private key");
@@ -65,8 +59,6 @@ NvPairingManager::NvPairingManager(NvComputer* computer) :
 
 NvPairingManager::~NvPairingManager()
 {
-    X509_free(m_Cert);
-    EVP_PKEY_free(m_PrivateKey);
 }
 
 QByteArray
@@ -93,7 +85,7 @@ NvPairingManager::encrypt(const QByteArray& plaintext, const QByteArray& key)
                       reinterpret_cast<unsigned char*>(ciphertext.data()),
                       &ciphertextLen,
                       reinterpret_cast<const unsigned char*>(plaintext.data()),
-                      plaintext.length());
+                      static_cast<int>(plaintext.length()));
     Q_ASSERT(ciphertextLen == ciphertext.length());
 
     return ciphertext;
@@ -115,7 +107,7 @@ NvPairingManager::decrypt(const QByteArray& ciphertext, const QByteArray& key)
                       reinterpret_cast<unsigned char*>(plaintext.data()),
                       &plaintextLen,
                       reinterpret_cast<const unsigned char*>(ciphertext.data()),
-                      ciphertext.length());
+                      static_cast<int>(ciphertext.length()));
     Q_ASSERT(plaintextLen == plaintext.length());
 
     return plaintext;
@@ -170,8 +162,8 @@ NvPairingManager::verifySignature(const QByteArray& data, const QByteArray& sign
     THROW_BAD_ALLOC_IF_NULL(mdctx);
 
     EVP_DigestVerifyInit(mdctx.get(), nullptr, EVP_sha256(), nullptr, pubKey.get());
-    EVP_DigestVerifyUpdate(mdctx.get(), data.data(), data.length());
-    int result = EVP_DigestVerifyFinal(mdctx.get(), reinterpret_cast<unsigned char*>(const_cast<char*>(signature.data())), signature.length());
+    EVP_DigestVerifyUpdate(mdctx.get(), data.data(), static_cast<size_t>(data.length()));
+    int result = EVP_DigestVerifyFinal(mdctx.get(), reinterpret_cast<unsigned char*>(const_cast<char*>(signature.data())), static_cast<size_t>(signature.length()));
 
     return result > 0;
 }
@@ -182,8 +174,8 @@ NvPairingManager::signMessage(const QByteArray& message)
     ScopedEvpMdCtx ctx(EVP_MD_CTX_create());
     THROW_BAD_ALLOC_IF_NULL(ctx);
 
-    EVP_DigestSignInit(ctx.get(), NULL, EVP_sha256(), NULL, m_PrivateKey);
-    EVP_DigestSignUpdate(ctx.get(), reinterpret_cast<unsigned char*>(const_cast<char*>(message.data())), message.length());
+    EVP_DigestSignInit(ctx.get(), NULL, EVP_sha256(), NULL, m_PrivateKey.get());
+    EVP_DigestSignUpdate(ctx.get(), reinterpret_cast<unsigned char*>(const_cast<char*>(message.data())), static_cast<size_t>(message.length()));
 
     size_t signatureLength = 0;
     EVP_DigestSignFinal(ctx.get(), NULL, &signatureLength);
@@ -284,10 +276,10 @@ NvPairingManager::pair(QString appVersion, QString pin, QSslCertificate& serverC
     ASN1_BIT_STRING *asnSignature = m_Cert->signature;
 #elif (OPENSSL_VERSION_NUMBER < 0x10100000L)
     ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, m_Cert);
+    X509_get0_signature(&asnSignature, NULL, m_Cert.get());
 #else
     const ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, m_Cert);
+    X509_get0_signature(&asnSignature, NULL, m_Cert.get());
 #endif
 
     challengeResponse.append(challengeResponseData.data() + hashLength, 16);

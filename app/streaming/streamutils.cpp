@@ -1,3 +1,9 @@
+#include <QGuiApplication>
+#include <QWindow>
+#include <QScreen>
+#include <QtMath>
+#include <QFile>
+
 #include "streamutils.h"
 
 #include <Qt>
@@ -442,16 +448,4 @@ int StreamUtils::getDrmFd(bool preferRenderNode)
 #endif
 
     return -1;
-}
-
-extern QAtomicInt g_AsyncLoggingEnabled;
-
-void StreamUtils::enterAsyncLoggingMode()
-{
-    g_AsyncLoggingEnabled.ref();
-}
-
-void StreamUtils::exitAsyncLoggingMode()
-{
-    g_AsyncLoggingEnabled.deref();
 }

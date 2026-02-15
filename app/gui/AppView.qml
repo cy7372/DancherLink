@@ -80,6 +80,15 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
+        background: Rectangle {
+            color: parent.highlighted ? "#505050" : (parent.hovered ? "#404040" : "transparent")
+            border.color: parent.highlighted ? "#87CEEB" : "transparent"
+            border.width: parent.highlighted ? 2 : 0
+            radius: 8
+
+            Behavior on color { ColorAnimation { duration: 100 } }
+        }
+
         Image {
             property bool isPlaceholder: false
 

@@ -71,7 +71,7 @@ void MappingManager::applyMappings()
     QByteArray mappingData = Path::readDataFile("gamecontrollerdb.txt");
     if (!mappingData.isEmpty()) {
         int newMappings = SDL_GameControllerAddMappingsFromRW(
-                    SDL_RWFromConstMem(mappingData.constData(), mappingData.size()), 1);
+                    SDL_RWFromConstMem(mappingData.constData(), static_cast<int>(mappingData.size())), 1);
 
         if (newMappings > 0) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,

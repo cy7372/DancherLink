@@ -42,6 +42,7 @@ ApplicationWindow {
         if (SystemProperties.hasDesktopEnvironment) {
             if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_MAXIMIZED) {
                 // Set visibility to Maximized directly
+                window.show()
                 window.showMaximized()
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
@@ -369,7 +370,7 @@ ApplicationWindow {
 
                 ToolTip.delay: 1000
                 ToolTip.timeout: 3000
-                ToolTip.visible: hovered || visible
+                ToolTip.visible: hovered
                 ToolTip.text: qsTr("Update Available")
 
                 // Invisible until we get a callback notifying us that
@@ -377,19 +378,21 @@ ApplicationWindow {
                 visible: false
 
                 onClicked: {
-                    if (SystemProperties.hasBrowser) {
-                        Qt.openUrlExternally(browserUrl);
-                    }
+                    updateDialog.open()
                 }
 
                 function updateAvailable(version, url, isManual)
                 {
                     updateButton.browserUrl = url
                     updateButton.visible = true
-                    
+
                     updateDialog.text = qsTr("A new version of DancherLink (%1) is available. Do you want to download it now?").arg(version)
                     updateDialog.updateUrl = url
-                    updateDialog.open()
+
+                    // Only auto-open for manual checks; automatic checks show the toolbar badge only
+                    if (isManual) {
+                        updateDialog.open()
+                    }
                 }
 
                 Keys.onDownPressed: {
@@ -398,8 +401,7 @@ ApplicationWindow {
             }
 
             NavigableToolButton {
-                // TODO: Implement gamepad mapping then unhide this button
-                visible: false
+                visible: true
 
                 ToolTip.delay: 1000
                 ToolTip.timeout: 3000
@@ -483,29 +485,6 @@ ApplicationWindow {
         onAccepted: Qt.quit()
     }
 
-    // HACK: This belongs in StreamSegue but keeping a dialog around after the parent
-    // dies can trigger bugs in Qt 5.12 that cause the app to crash. For now, we will
-    // host this dialog in a QML component that is never destroyed.
-    //
-    // To repro: Start a stream, cut the network connection to trigger the "Connection
-    // terminated" dialog, wait until the app grid times out back to the PC grid, then
-    // try to dismiss the dialog.
-    ErrorMessageDialog {
-        id: streamSegueErrorDialog
-
-        property bool quitAfter: false
-
-        onClosed: {
-            if (quitAfter) {
-                Qt.quit()
-            }
-
-            // StreamSegue assumes its dialog will be re-created each time we
-            // start streaming, so fake it by wiping out the text each time.
-            text = ""
-        }
-    }
-
     NavigableMessageDialog {
         id: updateDialog
         property string updateUrl
@@ -514,7 +493,22 @@ ApplicationWindow {
         title: qsTr("Update Available")
 
         onAccepted: {
-            Qt.openUrlExternally(updateUrl)
+            console.log("Attempting to open update URL: " + updateUrl)
+            if (!AutoUpdateChecker.openUpdateUrl(updateUrl)) {
+                console.warn("Failed to open update URL via AutoUpdateChecker: " + updateUrl)
+                
+                // Show an error dialog with the path
+                // Try to clean up the path for display
+                var displayPath = updateUrl
+                if (displayPath.startsWith("file:///")) {
+                    displayPath = displayPath.substring(8).replace(/\//g, "\\")
+                } else if (displayPath.startsWith("file://")) {
+                     displayPath = displayPath.substring(7).replace(/\//g, "\\")
+                }
+                
+                updateErrorDialog.text = qsTr("Failed to open update file. Please manually navigate to:\n%1").arg(displayPath)
+                updateErrorDialog.open()
+            }
         }
     }
 

@@ -299,3 +299,20 @@ int SdlGamepadKeyNavigation::getConnectedGamepads()
 
     return count;
 }
+
+QStringList SdlGamepadKeyNavigation::getGamepadNames()
+{
+    QStringList names;
+    if (!m_Enabled) {
+        return names;
+    }
+
+    int numJoysticks = SDL_NumJoysticks();
+    for (int i = 0; i < numJoysticks; i++) {
+        if (SDL_IsGameController(i)) {
+            const char* name = SDL_GameControllerNameForIndex(i);
+            names.append(name ? QString::fromUtf8(name) : QStringLiteral("Unknown Gamepad"));
+        }
+    }
+    return names;
+}

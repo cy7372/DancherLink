@@ -11,7 +11,12 @@
 
 // Don't try speculative RFI for 5 minutes after seeing
 // an out of order packet or incorrect prediction
-#define SPECULATIVE_RFI_COOLDOWN_PERIOD_US 300000000
+//
+// NB: We have disabled speculative RFI by default because it causes
+// black screen issues on some hardware decoders when the mode engages.
+// The benefit is marginal (milliseconds faster recovery on rare packet loss)
+// compared to the stability risk.
+#define SPECULATIVE_RFI_COOLDOWN_PERIOD_US UINT64_MAX
 
 // RTP packets use a 90 KHz presentation timestamp clock
 #define PTS_DIVISOR 90

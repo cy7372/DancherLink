@@ -1,6 +1,7 @@
 #include "session.h"
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
+#include "backend/logmanager.h"
 #include "backend/richpresencemanager.h"
 #include "backend/nvhttp.h"
 
@@ -21,9 +22,9 @@
 
 #ifdef Q_OS_WIN32
 // Scaling the icon down on Win32 looks dreadful, so render at lower res
-#define ICON_SIZE 32
+constexpr int ICON_SIZE = 32;
 #else
-#define ICON_SIZE 64
+constexpr int ICON_SIZE = 64;
 #endif
 
 // HACK: Remove once proper Dark Mode support lands in SDL
@@ -42,12 +43,15 @@
 #endif
 
 
-#define SDL_CODE_FLUSH_WINDOW_EVENT_BARRIER 100
-#define SDL_CODE_GAMECONTROLLER_RUMBLE 101
-#define SDL_CODE_GAMECONTROLLER_RUMBLE_TRIGGERS 102
-#define SDL_CODE_GAMECONTROLLER_SET_MOTION_EVENT_STATE 103
-#define SDL_CODE_GAMECONTROLLER_SET_CONTROLLER_LED 104
-#define SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS 105
+enum SdlUserEventCode {
+    SDL_CODE_FLUSH_WINDOW_EVENT_BARRIER = 100,
+    SDL_CODE_GAMECONTROLLER_RUMBLE = 101,
+    SDL_CODE_GAMECONTROLLER_RUMBLE_TRIGGERS = 102,
+    SDL_CODE_GAMECONTROLLER_SET_MOTION_EVENT_STATE = 103,
+    SDL_CODE_GAMECONTROLLER_SET_CONTROLLER_LED = 104,
+    SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS = 105,
+    SDL_CODE_RESOLUTION_DIALOG_RESULT = 106
+};
 
 #ifdef Q_OS_WIN32
 #include <imm.h>
@@ -67,6 +71,7 @@
 #include <QGuiApplication>
 #include <QCursor>
 #include <QScreen>
+#include <atomic>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QQuickOpenGLUtils>
@@ -78,10 +83,9 @@
 static SDL_Window* s_ResolutionDialogParentWindow = nullptr;
 
 // Global generation counter to track dialog validity
-static int s_ResolutionDialogGeneration = 0;
+static std::atomic<int> s_ResolutionDialogGeneration(0);
 
-// Define a custom user event code
-#define SDL_CODE_RESOLUTION_DIALOG_RESULT 106
+// Define a custom user event code is now in the enum above
 
 // Context to pass data to the thread
 struct ResolutionDialogContext {
@@ -133,12 +137,13 @@ static int ResolutionDialogThread(void* data) {
 
     // MB_SYSTEMMODAL | MB_TOPMOST ensures it appears above everything.
     // We use default message without appending help text
-    std::string message = ctx->message;
+    std::wstring message = QString::fromStdString(ctx->message).toStdWString();
+    std::wstring title = QString::fromStdString(ctx->title).toStdWString();
     
-    int result = MessageBoxA(
+    int result = MessageBoxW(
         parentHwnd, 
         message.c_str(), 
-        ctx->title.c_str(), 
+        title.c_str(), 
         MB_OKCANCEL | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND
     );
     
@@ -2322,24 +2327,30 @@ void Session::exec()
     m_InputHandler->setWindow(m_Window);
 
     // Load the PNG icon
-    QImage svgImage(QString(":/res/dancherlink.png"));
-    
-    // Scale it to the desired size if necessary
-    if (!svgImage.isNull() && (svgImage.width() != ICON_SIZE || svgImage.height() != ICON_SIZE)) {
-        svgImage = svgImage.scaled(ICON_SIZE, ICON_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-    
-    // Ensure format is correct for SDL
-    if (svgImage.format() != QImage::Format_RGBA8888) {
-        svgImage = svgImage.convertToFormat(QImage::Format_RGBA8888);
+    static QImage s_Icon;
+    if (s_Icon.isNull()) {
+        s_Icon = QImage(QString(":/res/dancherlink.png"));
+        
+        // Scale it to the desired size if necessary
+        if (!s_Icon.isNull() && (s_Icon.width() != ICON_SIZE || s_Icon.height() != ICON_SIZE)) {
+            s_Icon = s_Icon.scaled(ICON_SIZE, ICON_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+        
+        // Ensure format is correct for SDL
+        if (!s_Icon.isNull() && s_Icon.format() != QImage::Format_RGBA8888) {
+            s_Icon = s_Icon.convertToFormat(QImage::Format_RGBA8888);
+        }
     }
 
-    SDL_Surface* iconSurface = SDL_CreateRGBSurfaceWithFormatFrom((void*)svgImage.constBits(),
-                                                                  svgImage.width(),
-                                                                  svgImage.height(),
-                                                                  32,
-                                                                  4 * svgImage.width(),
-                                                                  SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* iconSurface = nullptr;
+    if (!s_Icon.isNull()) {
+        iconSurface = SDL_CreateRGBSurfaceWithFormatFrom((void*)s_Icon.constBits(),
+                                                         s_Icon.width(),
+                                                         s_Icon.height(),
+                                                         32,
+                                                         4 * s_Icon.width(),
+                                                         SDL_PIXELFORMAT_RGBA32);
+    }
 #ifndef Q_OS_DARWIN
     // Other platforms seem to preserve our Qt icon when creating a new window.
     if (iconSurface != nullptr) {
@@ -2408,7 +2419,7 @@ void Session::exec()
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
     // Switch to async logging mode when we enter the SDL loop
-    StreamUtils::enterAsyncLoggingMode();
+    LogManager::instance()->enterAsyncLoggingMode();
 
 #ifdef Q_OS_WIN32
     HPOWERNOTIFY hPowerNotify = NULL;
@@ -2698,7 +2709,7 @@ void Session::exec()
                         }
                     } else {
                          SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Ignoring resolution dialog result from old generation %d (current %d)", 
-                                     ctxReceived->generation, s_ResolutionDialogGeneration);
+                                     ctxReceived->generation, s_ResolutionDialogGeneration.load());
                     }
                     delete ctxReceived;
                 }
@@ -3298,12 +3309,6 @@ DispatchDeferredCleanup:
     // that haven't shown their message box yet.
     s_ResolutionDialogGeneration++;
 
-    // We moved the dialog cleanup logic to AFTER exitAsyncLoggingMode()
-    // because doing it here (before stopping the mic thread and uncapturing input)
-    // might be too early if the dialog thread is still spinning up or handling events?
-    // Actually, it doesn't matter much where it is, but putting it closer to window destruction
-    // feels safer. However, we also need to make sure we unregister power notifications.
-    
     if (hPowerNotify) {
         UnregisterPowerSettingNotification(hPowerNotify);
     }
@@ -3314,6 +3319,19 @@ DispatchDeferredCleanup:
         WTSUnRegisterSessionNotification(info.info.win.window);
     }
 #endif
+
+    // Flush any pending resolution dialog results or other events with allocated data to prevent memory leaks
+    SDL_Event pendingEvent;
+    while (SDL_PeepEvents(&pendingEvent, 1, SDL_GETEVENT, SDL_USEREVENT, SDL_USEREVENT) == 1) {
+        if (pendingEvent.user.code == SDL_CODE_RESOLUTION_DIALOG_RESULT) {
+            ResolutionDialogContext* ctx = (ResolutionDialogContext*)pendingEvent.user.data2;
+            delete ctx;
+        }
+        else if (pendingEvent.user.code == SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS) {
+            void* state = pendingEvent.user.data2;
+            SDL_free(state);
+        }
+    }
 
     if (m_MicThread != nullptr) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -3330,7 +3348,7 @@ DispatchDeferredCleanup:
     }
 
     // Switch back to synchronous logging mode
-    StreamUtils::exitAsyncLoggingMode();
+    LogManager::instance()->exitAsyncLoggingMode();
 
 #ifdef Q_OS_WIN32
     // CRITICAL: Ensure we don't spawn any new dialogs referencing the window we are about to destroy

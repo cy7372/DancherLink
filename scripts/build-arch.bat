@@ -2,7 +2,14 @@
 setlocal enableDelayedExpansion
 
 rem Setup Qt environment
-set PATH=C:\Qt\6.10.1\msvc2022_64\bin;%PATH%
+if defined QTDIR (
+    set PATH=%QTDIR%\bin;!PATH!
+) else (
+    rem Fallback default Qt path if QTDIR is not set
+    if exist "C:\Qt\6.10.1\msvc2022_64\bin" (
+        set PATH=C:\Qt\6.10.1\msvc2022_64\bin;!PATH!
+    )
+)
 where qmake.exe
 
 rem Add Winget links path for Ninja
@@ -61,7 +68,7 @@ set QT_PATH=%QT_PATH:\qmake.exe=%
 set QT_PATH=%QT_PATH:\qmake.bat=%
 set QT_PATH=%QT_PATH:\qmake.cmd=%
 
-echo QT_PATH=%QT_PATH%
+echo QT_PATH="%QT_PATH%"
 if not x%QT_PATH:_arm64=%==x%QT_PATH% (
     set ARCH=arm64
 
@@ -69,12 +76,12 @@ if not x%QT_PATH:_arm64=%==x%QT_PATH% (
     set HOSTBIN_PATH=%QT_PATH:_arm64=_64%
     echo HOSTBIN_PATH=!HOSTBIN_PATH!
 
-    if exist %QT_PATH%\windeployqt.exe (
+    if exist "%QT_PATH%\windeployqt.exe" (
         echo Using windeployqt.exe from QT_PATH
         set WINDEPLOYQT_CMD=windeployqt.exe
     ) else (
         echo Using windeployqt.exe from HOSTBIN_PATH
-        set WINDEPLOYQT_CMD=!HOSTBIN_PATH!\windeployqt.exe --qtpaths %QT_PATH%\qtpaths.bat
+        set WINDEPLOYQT_CMD="%HOSTBIN_PATH%\windeployqt.exe" --qtpaths "%QT_PATH%\qtpaths.bat"
     )
 ) else (
     if not x%QT_PATH:_64=%==x%QT_PATH% (
@@ -135,7 +142,7 @@ if /I "%VC_ARCH%" NEQ "%PROCESSOR_ARCHITECTURE%" (
 rem Find Visual Studio and run vcvarsall.bat
 set VSWHERE="%SOURCE_ROOT%\scripts\vswhere.exe"
 set VS_FOUND=0
-for /f "usebackq delims=" %%i in (`%VSWHERE% -latest -property installationPath`) do (
+for /f "usebackq delims=" %%i in (`""%SOURCE_ROOT%\scripts\vswhere.exe"" -latest -property installationPath`) do (
     call "%%i\VC\Auxiliary\Build\vcvarsall.bat" %VC_ARCH%
     set VS_FOUND=1
 )
@@ -146,7 +153,7 @@ if "%VS_FOUND%"=="0" (
 if !ERRORLEVEL! NEQ 0 goto Error
 
 rem Find VC redistributable DLLs
-for /f "usebackq delims=" %%i in (`%VSWHERE% -latest -find VC\Redist\MSVC\*\%ARCH%\Microsoft.VC*.CRT`) do set VC_REDIST_DLL_PATH=%%i
+for /f "usebackq delims=" %%i in (`""%SOURCE_ROOT%\scripts\vswhere.exe"" -latest -find VC\Redist\MSVC\*\%ARCH%\Microsoft.VC*.CRT`) do set VC_REDIST_DLL_PATH=%%i
 
 echo Cleaning output directories
 rmdir /s /q %DEPLOY_FOLDER%
@@ -162,7 +169,7 @@ mkdir %SYMBOLS_FOLDER%
 echo Generating translations...
 if defined HOSTBIN_PATH (
     set LRELEASE_CMD="%HOSTBIN_PATH%\lrelease.exe"
-    set QT_HOST_PATH_ARG=-DQT_HOST_PATH="!HOSTBIN_PATH!\.."
+    set QT_HOST_PATH_ARG=-DQT_HOST_PATH="%HOSTBIN_PATH%\.."
 ) else (
     set LRELEASE_CMD="%QT_PATH%\lrelease.exe"
     set QT_HOST_PATH_ARG=
@@ -184,12 +191,8 @@ if "%ARCH%"=="arm64" (
     set OPENSSL_INC="%SOURCE_ROOT_CMAKE%/libs/windows/include/x64"
 )
 
-rem Set Update URL for CI builds (Disabled per user request)
-rem if "%CI%" neq "" (
-rem    set UPDATE_URL_ARG=-DUPDATE_SUBSCRIPTION_URL="https://raw.githubusercontent.com/cy7372/DancherLink/main/updates.json"
-rem ) else (
-    set UPDATE_URL_ARG=
-rem )
+rem Set Update URL
+set UPDATE_URL_ARG=
 
 pushd %BUILD_FOLDER%
 cmake -S "%SOURCE_ROOT%" -B . -G "Ninja" ^
@@ -262,19 +265,11 @@ echo Copying GC mapping list
 copy %SOURCE_ROOT%\app\SDL_GameControllerDB\gamecontrollerdb.txt %DEPLOY_FOLDER%
 if !ERRORLEVEL! NEQ 0 goto Error
 
-if not x%QT_PATH:\5.=%==x%QT_PATH% (
-    echo Copying qt.conf for Qt 5
-    copy %SOURCE_ROOT%\app\qt_qt5.conf %DEPLOY_FOLDER%\qt.conf
-    if !ERRORLEVEL! NEQ 0 goto Error
-
-    rem Qt 5.15
-    set WINDEPLOYQT_ARGS=--no-qmltooling --no-virtualkeyboard
-) else (
-    rem Qt 6.5+
-    set WINDEPLOYQT_ARGS=--no-system-d3d-compiler --no-system-dxc-compiler --skip-plugin-types qmltooling,generic --no-ffmpeg
-    set WINDEPLOYQT_ARGS=!WINDEPLOYQT_ARGS! --no-quickcontrols2fusion --no-quickcontrols2imagine --no-quickcontrols2universal
-    set WINDEPLOYQT_ARGS=!WINDEPLOYQT_ARGS! --no-quickcontrols2fusionstyleimpl --no-quickcontrols2imaginestyleimpl --no-quickcontrols2universalstyleimpl --no-quickcontrols2windowsstyleimpl
-)
+rem Qt 6.5+
+set WINDEPLOYQT_ARGS=--no-system-d3d-compiler --no-system-dxc-compiler --skip-plugin-types qmltooling,generic --no-ffmpeg
+set WINDEPLOYQT_ARGS=!WINDEPLOYQT_ARGS! --no-quickcontrols2fusion --no-quickcontrols2imagine --no-quickcontrols2universal
+set WINDEPLOYQT_ARGS=!WINDEPLOYQT_ARGS! --no-quickcontrols2fusionstyleimpl --no-quickcontrols2imaginestyleimpl --no-quickcontrols2universalstyleimpl --no-quickcontrols2windowsstyleimpl
+set WINDEPLOYQT_ARGS=!WINDEPLOYQT_ARGS! --no-translations
 
 echo Deploying Qt dependencies
 rem Locate the built executable. Visual Studio generator puts it in app/Release/ or app/Debug/
@@ -296,11 +291,22 @@ if exist "%BUILD_FOLDER%\bin\%CMAKE_BUILD_TYPE%\DancherLink.exe" (
 %WINDEPLOYQT_CMD% --dir %DEPLOY_FOLDER% --%BUILD_CONFIG% --qmldir %SOURCE_ROOT%\app\gui --no-opengl-sw --no-compiler-runtime --no-sql %WINDEPLOYQT_ARGS% "!EXE_PATH!"
 if !ERRORLEVEL! NEQ 0 goto Error
 
+echo Deploying specific translations...
+if not exist "%DEPLOY_FOLDER%\translations" mkdir "%DEPLOY_FOLDER%\translations"
+if exist "%QT_PATH%\..\translations\qt_zh_CN.qm" (
+    copy "%QT_PATH%\..\translations\qt_zh_CN.qm" "%DEPLOY_FOLDER%\translations\"
+)
+if exist "%QT_PATH%\..\translations\qtbase_zh_CN.qm" (
+    copy "%QT_PATH%\..\translations\qtbase_zh_CN.qm" "%DEPLOY_FOLDER%\translations\"
+)
+if exist "%QT_PATH%\..\translations\qtquick_zh_CN.qm" (
+    copy "%QT_PATH%\..\translations\qtquick_zh_CN.qm" "%DEPLOY_FOLDER%\translations\"
+)
+if exist "%QT_PATH%\..\translations\qtmultimedia_zh_CN.qm" (
+    copy "%QT_PATH%\..\translations\qtmultimedia_zh_CN.qm" "%DEPLOY_FOLDER%\translations\"
+)
+
 echo Deleting unused styles
-rem Qt 5.x directories
-rmdir /s /q %DEPLOY_FOLDER%\QtQuick\Controls.2\Fusion
-rmdir /s /q %DEPLOY_FOLDER%\QtQuick\Controls.2\Imagine
-rmdir /s /q %DEPLOY_FOLDER%\QtQuick\Controls.2\Universal
 rem Qt 6.5+ directories
 rmdir /s /q %DEPLOY_FOLDER%\qml\QtQuick\Controls\Fusion
 rmdir /s /q %DEPLOY_FOLDER%\qml\QtQuick\Controls\Imagine
@@ -325,8 +331,6 @@ if "%ML_SYMBOL_STORE%" NEQ "" (
     
     if exist "%BUILD_FOLDER%\bin\DancherLink.exe" (
         symstore add /r /f %BUILD_FOLDER%\bin\DancherLink.exe /s %ML_SYMBOL_STORE% /t DancherLink
-    ) else (
-        symstore add /r /f %BUILD_FOLDER%\app\%BUILD_CONFIG%\Moonlight.exe /s %ML_SYMBOL_STORE% /t DancherLink
     )
     if !ERRORLEVEL! NEQ 0 goto Error
 )
@@ -340,19 +344,11 @@ cmd /c "msbuild -Restore %SOURCE_ROOT%\wix\DancherLink\DancherLink.wixproj /p:Co
 if !ERRORLEVEL! NEQ 0 goto Error
 
 echo Copying application binary to deployment directory
-rem The qmake build still outputs Moonlight.exe because the target name is defined in app.pro
-rem and we haven't changed the qmake TARGET variable yet, or we only changed the installer name.
-rem Let's check which file exists and copy/rename it.
-
 if exist "%BUILD_FOLDER%\bin\DancherLink.exe" (
     copy %BUILD_FOLDER%\bin\DancherLink.exe %DEPLOY_FOLDER%
 ) else (
-    if exist "%BUILD_FOLDER%\bin\Moonlight.exe" (
-        copy %BUILD_FOLDER%\bin\Moonlight.exe %DEPLOY_FOLDER%\DancherLink.exe
-    ) else (
-        echo Could not find compiled executable!
-        goto Error
-    )
+    echo Could not find compiled executable!
+    goto Error
 )
 if !ERRORLEVEL! NEQ 0 goto Error
 
@@ -370,8 +366,10 @@ if !ERRORLEVEL! NEQ 0 goto Error
 if exist "%SOURCE_ROOT%\server\" (
     if exist "%SOURCE_ROOT%\server\update_version.py" (
         echo Updating server\updates.json
-        python "%SOURCE_ROOT%\server\update_version.py" "%VERSION%" "%ARCH%" "%BUILD_CONFIG%"
+        python "%SOURCE_ROOT%\server\update_version.py" "%VERSION%" "%ARCH%" "%BUILD_CONFIG%" "%SOURCE_ROOT%"
         if !ERRORLEVEL! NEQ 0 goto Error
+    ) else (
+        echo Warning: server\update_version.py not found, skipping updates.json update.
     )
 )
 

@@ -66,7 +66,9 @@ D3D11VARenderer::D3D11VARenderer(int decoderSelectionPass)
       m_OverlayLock(0),
       m_HwDeviceContext(nullptr),
       m_HwFramesContext(nullptr),
-      m_Hwnd(NULL)
+      m_Hwnd(NULL),
+      m_FrameLatencyWaitableObject(NULL),
+      m_LastResizeResetTicks(0)
 {
     m_ContextLock = SDL_CreateMutex();
 
@@ -230,9 +232,18 @@ bool D3D11VARenderer::createDeviceByAdapterIndex(int adapterIndex, bool* adapter
                     "Using D3D11VA_FORCE_FENCE to override default fence workaround logic");
     }
     else {
-        // Old Intel GPUs (HD 4000) require a fence to properly synchronize
-        // the video engine with the 3D engine for texture sampling.
+        // Intel GPUs before Haswell (i.e., Ivy Bridge / HD 4000 generation, FL 11.0)
+        // require a fence to properly synchronize the video engine with the 3D engine
+        // for texture sampling. Haswell and later (FL 11.1+) handle this internally.
         m_UseFenceHack = adapterDesc.VendorId == 0x8086 && featureLevel < D3D_FEATURE_LEVEL_11_1;
+
+        if (m_UseFenceHack) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Enabling fence workaround for pre-Haswell Intel GPU: %S (FL %d.%d, DeviceId: %x)",
+                        adapterDesc.Description,
+                        (featureLevel >> 12) & 0xf, (featureLevel >> 8) & 0xf,
+                        adapterDesc.DeviceId);
+        }
     }
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -368,6 +379,10 @@ bool D3D11VARenderer::initialize(PDECODER_PARAMETERS params)
     // causes performance issues (buffer starvation) on AMD GPUs.
     swapChainDesc.BufferCount = 3 + 1 + 1;
 
+    // Use a waitable object to synchronize with the swap chain. This allows us to
+    // reduce latency by waiting for the swap chain to be ready before rendering.
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+
     // Use the current window size as the swapchain size
     RECT clientRect;
     if (GetClientRect(m_Hwnd, &clientRect) && 
@@ -388,8 +403,12 @@ bool D3D11VARenderer::initialize(PDECODER_PARAMETERS params)
     // We only apply this alignment workaround for specific resolutions known to cause issues,
     // like the ThinkPad X1 Fold's 1536x1006. For all other resolutions (including standard 16:9,
     // 16:10, and other common formats), we trust the driver to handle non-aligned sizes correctly.
+    //
+    // Update: Relaxed the check to handle cases where OSD overlays or window management quirks
+    // might cause the window height to fluctuate slightly (e.g. 1005px instead of 1006px),
+    // which previously bypassed this fix and caused black screens.
     if ((swapChainDesc.Height % 16 != 0 || swapChainDesc.Width % 16 != 0) &&
-        (swapChainDesc.Width == 1536 && swapChainDesc.Height == 1006)) {
+        (swapChainDesc.Width == 1536 && abs((int)swapChainDesc.Height - 1006) <= 20)) {
         int alignedWidth = FFALIGN(swapChainDesc.Width, 16);
         int alignedHeight = FFALIGN(swapChainDesc.Height, 16);
 
@@ -490,6 +509,21 @@ bool D3D11VARenderer::initialize(PDECODER_PARAMETERS params)
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "IDXGIFactory::MakeWindowAssociation() failed: %x",
                      hr);
+        return false;
+    }
+
+    // Set the maximum frame latency to 1 to reduce input lag
+    ComPtr<IDXGISwapChain2> swapChain2;
+    hr = m_SwapChain.As(&swapChain2);
+    if (SUCCEEDED(hr)) {
+        m_FrameLatencyWaitableObject = swapChain2->GetFrameLatencyWaitableObject();
+        swapChain2->SetMaximumFrameLatency(1);
+    }
+    else {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "IDXGISwapChain::QueryInterface(IDXGISwapChain2) failed: %x",
+                     hr);
+        // This is fatal because we requested the waitable object flag
         return false;
     }
 
@@ -620,31 +654,32 @@ void D3D11VARenderer::renderFrame(AVFrame* frame)
     // without triggering a full renderer recreation via SDL events (or we might have missed it).
     // If the swap chain size doesn't match the window size, we might get a black screen
     // or incorrect scaling.
+    //
+    // A cooldown is applied after each reset to prevent rapid-fire resets caused by
+    // transient size fluctuations (e.g., DWM animations, OSD overlays).
     if (m_Hwnd && !IsIconic(m_Hwnd)) {
-        RECT clientRect;
-        if (GetClientRect(m_Hwnd, &clientRect)) {
-            int width = clientRect.right - clientRect.left;
-            int height = clientRect.bottom - clientRect.top;
-            
-            // Only trigger reset if dimensions differ and are valid.
-            // Note: On foldable devices like ThinkPad X1 Fold, the screen resolution might change dynamically.
-            // If we are in "borderless windowed" mode, the window size should track the screen size.
-            // However, slight mismatches (e.g. 1px) due to DWM borders shouldn't trigger a reset.
-            // But if the size is significantly different (e.g. > 10px diff), we must reset.
-            if (width > 0 && height > 0) {
-                // Check if the window size has changed significantly.
-                // We use a threshold of 2 pixels to ignore slight mismatches due to DWM borders.
-                if (abs(width - m_DisplayWidth) > 2 || abs(height - m_DisplayHeight) > 2) {
-                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                "Detected window resize from %dx%d to %dx%d. Resetting renderer.",
-                                m_DisplayWidth, m_DisplayHeight, width, height);
-                                
-                    SDL_Event event;
-                    event.type = SDL_RENDER_TARGETS_RESET;
-                    SDL_PushEvent(&event);
-                    
-                    // Don't render this frame, as it might be invalid for the new size
-                    return;
+        uint32_t now = SDL_GetTicks();
+        if (now - m_LastResizeResetTicks >= 500) {
+            RECT clientRect;
+            if (GetClientRect(m_Hwnd, &clientRect)) {
+                int width = clientRect.right - clientRect.left;
+                int height = clientRect.bottom - clientRect.top;
+
+                if (width > 0 && height > 0) {
+                    if (abs(width - m_DisplayWidth) > 2 || abs(height - m_DisplayHeight) > 2) {
+                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                    "Detected window resize from %dx%d to %dx%d. Resetting renderer.",
+                                    m_DisplayWidth, m_DisplayHeight, width, height);
+
+                        m_LastResizeResetTicks = now;
+
+                        SDL_Event event;
+                        event.type = SDL_RENDER_TARGETS_RESET;
+                        SDL_PushEvent(&event);
+
+                        // Don't render this frame, as it might be invalid for the new size
+                        return;
+                    }
                 }
             }
         }
@@ -653,6 +688,11 @@ void D3D11VARenderer::renderFrame(AVFrame* frame)
     // Acquire the context lock for rendering to prevent concurrent
     // access from inside FFmpeg's decoding code
     lockContext(this);
+
+    // Wait for the swap chain to be ready
+    if (m_FrameLatencyWaitableObject) {
+        WaitForSingleObjectEx(m_FrameLatencyWaitableObject, 1000, TRUE);
+    }
 
     // Clear the back buffer
     const float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -1279,7 +1319,7 @@ bool D3D11VARenderer::setupRenderingResources()
         QByteArray vertexShaderBytecode = Path::readDataFile("d3d11_vertex.fxc");
 
         ComPtr<ID3D11VertexShader> vertexShader;
-        hr = m_Device->CreateVertexShader(vertexShaderBytecode.constData(), vertexShaderBytecode.length(), nullptr, &vertexShader);
+        hr = m_Device->CreateVertexShader(vertexShaderBytecode.constData(), static_cast<SIZE_T>(vertexShaderBytecode.length()), nullptr, &vertexShader);
         if (SUCCEEDED(hr)) {
             m_DeviceContext->VSSetShader(vertexShader.Get(), nullptr, 0);
         }
@@ -1296,7 +1336,7 @@ bool D3D11VARenderer::setupRenderingResources()
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         ComPtr<ID3D11InputLayout> inputLayout;
-        hr = m_Device->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), vertexShaderBytecode.constData(), vertexShaderBytecode.length(), &inputLayout);
+        hr = m_Device->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), vertexShaderBytecode.constData(), static_cast<SIZE_T>(vertexShaderBytecode.length()), &inputLayout);
         if (SUCCEEDED(hr)) {
             m_DeviceContext->IASetInputLayout(inputLayout.Get());
         }
@@ -1311,7 +1351,7 @@ bool D3D11VARenderer::setupRenderingResources()
     {
         QByteArray overlayPixelShaderBytecode = Path::readDataFile("d3d11_overlay_pixel.fxc");
 
-        hr = m_Device->CreatePixelShader(overlayPixelShaderBytecode.constData(), overlayPixelShaderBytecode.length(), nullptr, &m_OverlayPixelShader);
+        hr = m_Device->CreatePixelShader(overlayPixelShaderBytecode.constData(), static_cast<SIZE_T>(overlayPixelShaderBytecode.length()), nullptr, &m_OverlayPixelShader);
         if (FAILED(hr)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                          "ID3D11Device::CreatePixelShader() failed: %x",
@@ -1324,7 +1364,7 @@ bool D3D11VARenderer::setupRenderingResources()
     {
         QByteArray videoPixelShaderBytecode = Path::readDataFile(k_VideoShaderNames[i]);
 
-        hr = m_Device->CreatePixelShader(videoPixelShaderBytecode.constData(), videoPixelShaderBytecode.length(), nullptr, &m_VideoPixelShaders[i]);
+        hr = m_Device->CreatePixelShader(videoPixelShaderBytecode.constData(), static_cast<SIZE_T>(videoPixelShaderBytecode.length()), nullptr, &m_VideoPixelShaders[i]);
         if (FAILED(hr)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                          "ID3D11Device::CreatePixelShader() failed: %x",

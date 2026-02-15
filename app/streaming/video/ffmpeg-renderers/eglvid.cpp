@@ -283,7 +283,7 @@ int EGLRenderer::loadAndBuildShader(int shaderType,
     }
 
     auto sourceData = Path::readDataFile(file);
-    GLint len = sourceData.size();
+    GLint len = static_cast<GLint>(sourceData.size());
     const char *buf = sourceData.data();
 
     glShaderSource(shader, 1, &buf, &len);

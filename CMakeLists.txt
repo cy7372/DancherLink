@@ -13,6 +13,10 @@ find_package(Qt6 COMPONENTS Core Gui Quick Network QuickControls2 Svg Multimedia
 
 # Common definitions
 if(MSVC)
+    # /wd4005: macro redefinition (common in Win32/FFmpeg headers)
+    # /wd4996: deprecated CRT functions (strcpy, etc.)
+    # /wd4267: size_t→int conversion (most instances in app/ code have been fixed with
+    #          explicit casts; remaining warnings come from third-party headers and FFmpeg)
     add_compile_options(/W3 /wd4005 /wd4996 /wd4267)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()

@@ -38,6 +38,8 @@ public:
 
     Q_INVOKABLE void pairComputer(int computerIndex, QString pin);
 
+    Q_INVOKABLE void cancelPairing();
+
     Q_INVOKABLE void testConnectionForComputer(int computerIndex);
 
     Q_INVOKABLE void wakeComputer(int computerIndex);

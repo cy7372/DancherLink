@@ -62,7 +62,7 @@ int CUDARenderer::getDecoderCapabilities()
 
 CUDAGLInteropHelper::CUDAGLInteropHelper(AVHWDeviceContext* context)
     : m_Funcs(nullptr),
-      m_Context((AVCUDADeviceContext*)context->hwctx)
+      m_Context(reinterpret_cast<AVCUDADeviceContext*>(context->hwctx))
 {
     memset(m_Resources, 0, sizeof(m_Resources));
 
@@ -190,13 +190,13 @@ bool CUDAGLInteropHelper::copyCudaFrameToTextures(AVFrame* frame)
         // Do the copy
         CUDA_MEMCPY2D cu2d = {
             .srcMemoryType = CU_MEMORYTYPE_DEVICE,
-            .srcDevice = (CUdeviceptr)frame->data[i],
-            .srcPitch = (size_t)frame->linesize[i],
+            .srcDevice = reinterpret_cast<CUdeviceptr>(frame->data[i]),
+            .srcPitch = static_cast<size_t>(frame->linesize[i]),
             .dstMemoryType = CU_MEMORYTYPE_ARRAY,
             .dstArray = cudaArray,
-            .dstPitch = (size_t)frame->width >> i,
-            .WidthInBytes = (size_t)frame->width,
-            .Height = (size_t)frame->height >> i
+            .dstPitch = static_cast<size_t>(frame->width) >> i,
+            .WidthInBytes = static_cast<size_t>(frame->width),
+            .Height = static_cast<size_t>(frame->height) >> i
         };
         err = m_Funcs->cuMemcpy2D(&cu2d);
         if (err != CUDA_SUCCESS) {

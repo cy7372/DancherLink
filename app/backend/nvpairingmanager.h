@@ -6,6 +6,16 @@
 #include <openssl/x509.h>
 #include <openssl/evp.h>
 
+#include <memory>
+
+struct X509Deleter {
+    void operator()(X509* x) { X509_free(x); }
+};
+
+struct EvpPkeyDeleter {
+    void operator()(EVP_PKEY* k) { EVP_PKEY_free(k); }
+};
+
 class NvPairingManager
 {
 public:
@@ -47,6 +57,6 @@ private:
     signMessage(const QByteArray& message);
 
     NvHTTP m_Http;
-    X509* m_Cert;
-    EVP_PKEY* m_PrivateKey;
+    std::unique_ptr<X509, X509Deleter> m_Cert;
+    std::unique_ptr<EVP_PKEY, EvpPkeyDeleter> m_PrivateKey;
 };

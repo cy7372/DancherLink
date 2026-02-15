@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Users/CyYu/Programs/DancherLink-qt log --oneline -10)",
+      "Bash(dir:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)",
+      "Bash(python -m base64:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}

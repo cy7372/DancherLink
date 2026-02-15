@@ -25,6 +25,7 @@ set(APP_SOURCES
     main.cpp
     backend/computerseeker.cpp
     backend/identitymanager.cpp
+    backend/logmanager.cpp
     backend/nvcomputer.cpp
     backend/nvhttp.cpp
     backend/nvpairingmanager.cpp

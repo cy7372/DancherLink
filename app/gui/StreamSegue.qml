@@ -26,10 +26,21 @@ Item {
     property int previousVisibility: Window.Windowed
 
     Component.onCompleted: {
-        previousVisibility = window.visibility
-        // Temporarily maximize the window for the splash screen
-        if (window.visibility !== Window.FullScreen && window.visibility !== Window.Maximized) {
-             window.showMaximized()
+        // Delay capturing visibility to ensure the window is fully initialized,
+        // avoiding a race where the window is still transitioning states.
+        captureVisibilityTimer.start()
+    }
+
+    Timer {
+        id: captureVisibilityTimer
+        interval: 50
+        onTriggered: {
+            previousVisibility = window.visibility
+            // Temporarily maximize the window for the splash screen
+            if (window.visibility !== Window.FullScreen && window.visibility !== Window.Maximized) {
+                 window.show()
+                 window.showMaximized()
+            }
         }
     }
 
@@ -52,10 +63,10 @@ Item {
     function stageFailed(stage, errorCode, failingPorts)
     {
         // Display the error dialog after Session::exec() returns
-        streamSegueErrorDialog.text = qsTr("Starting %1 failed: Error %2").arg(stage).arg(errorCode)
+        errorDialog.text = qsTr("Starting %1 failed: Error %2").arg(stage).arg(errorCode)
 
         if (failingPorts) {
-            streamSegueErrorDialog.text += "\n\n" + qsTr("Check your firewall and port forwarding rules for port(s): %1").arg(failingPorts)
+            errorDialog.text += "\n\n" + qsTr("Check your firewall and port forwarding rules for port(s): %1").arg(failingPorts)
         }
     }
 
@@ -74,7 +85,7 @@ Item {
     function displayLaunchError(text)
     {
         // Display the error dialog after Session::exec() returns
-        streamSegueErrorDialog.text = text
+        errorDialog.text = text
         console.error(text)
     }
 
@@ -90,60 +101,72 @@ Item {
 
     function sessionFinished(portTestResult)
     {
-        if (portTestResult !== 0 && portTestResult !== -1 && streamSegueErrorDialog.text) {
-            streamSegueErrorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
+        if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
+            errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
         }
 
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
 
-        // Pop the StreamSegue off the stack if this is a GUI-based app launch
-        if (!quitAfter) {
-            stackView.pop()
-        }
-
-        if (quitAfter && !streamSegueErrorDialog.text) {
+        if (quitAfter && !errorDialog.text) {
             // If this was a CLI launch without errors, exit now
             Qt.quit()
         }
-        else {
+        else if (errorDialog.text) {
             // Show the Qt window again after streaming
             window.visible = true
 
             // Restore window state based on previous state or preferences.
-            // We only do this if the window isn't minimized, to avoid restoring
-            // a window that the user explicitly minimized during the stream.
-            if (window.visibility !== Window.Minimized) {
-                if (previousVisibility === Window.Maximized) {
-                    window.showMaximized()
-                } else if (previousVisibility === Window.FullScreen) {
-                    window.showFullScreen()
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                    window.showMaximized()
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                    window.showFullScreen()
-                } else {
-                    // Default to normal windowed mode if no other condition is met
-                    window.showNormal()
-                }
-            }
+            restoreWindowState()
 
-            // Force a re-layout to fix potential rendering glitches after waking from sleep
-            // where the window content might be drawn incorrectly or overlapped.
-            // Toggle visibility briefly to force the window manager to recompose.
-            window.visible = false
+            // Brief delay to let the layout engine settle before showing the dialog,
+            // avoiding rendering glitches when the window reappears after streaming.
+            errorDialogTimer.start()
+        }
+        else {
+            // No error, just pop back
             window.visible = true
+            restoreWindowState()
+            stackView.pop()
+        }
+    }
 
+    function restoreWindowState() {
+        // We only do this if the window isn't minimized, to avoid restoring
+        // a window that the user explicitly minimized during the stream.
+        if (window.visibility !== Window.Minimized) {
+            if (previousVisibility === Window.Maximized) {
+                window.showMaximized()
+            } else if (previousVisibility === Window.FullScreen) {
+                window.showFullScreen()
+            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                window.showMaximized()
+            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                window.showFullScreen()
+            } else {
+                // Default to normal windowed mode if no other condition is met
+                window.showNormal()
+            }
+        }
+    }
+
+    Timer {
+        id: errorDialogTimer
+        interval: 50
+        onTriggered: {
             window.requestActivate()
             window.raise()
+            errorDialog.open()
+        }
+    }
 
-            // Display any launch errors. We do this after
-            // the Qt UI is visible again to prevent losing
-            // focus on the dialog which would impact gamepad
-            // users.
-            if (streamSegueErrorDialog.text) {
-                streamSegueErrorDialog.quitAfter = quitAfter
-                streamSegueErrorDialog.open()
+    ErrorMessageDialog {
+        id: errorDialog
+        onClosed: {
+            if (quitAfter) {
+                Qt.quit()
+            } else {
+                stackView.pop()
             }
         }
     }

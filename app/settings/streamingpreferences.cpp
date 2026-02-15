@@ -205,6 +205,7 @@ void StreamingPreferences::reload()
 bool StreamingPreferences::retranslate()
 {
     static QTranslator* translator = nullptr;
+    static QTranslator* qtTranslator = nullptr;
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
     if (m_QmlEngine != nullptr) {
@@ -236,6 +237,30 @@ bool StreamingPreferences::retranslate()
         delete newTranslator;
     }
 
+    // Load Qt standard translations (e.g. for dialog buttons)
+    if (qtTranslator != nullptr) {
+        QCoreApplication::removeTranslator(qtTranslator);
+        delete qtTranslator;
+        qtTranslator = nullptr;
+    }
+
+    QTranslator* newQtTranslator = new QTranslator();
+    QString qtTransPath = QCoreApplication::applicationDirPath() + "/translations";
+    
+    // Try loading the main Qt translation file. 
+    // If we're English, this will likely fail (which is fine, English is default).
+    // For Chinese, we look for qt_zh_CN.qm or qtbase_zh_CN.qm.
+    if (newQtTranslator->load("qt_" + languageSuffix, qtTransPath) ||
+        newQtTranslator->load("qtbase_" + languageSuffix, qtTransPath)) {
+        
+        qInfo() << "Successfully loaded Qt translation for" << languageSuffix;
+        qtTranslator = newQtTranslator;
+        QCoreApplication::installTranslator(qtTranslator);
+    }
+    else {
+        delete newQtTranslator;
+    }
+
     if (m_QmlEngine != nullptr) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
         // This is a dynamic retranslation from the settings page.
@@ -258,68 +283,10 @@ QString StreamingPreferences::getSuffixFromLanguage(StreamingPreferences::Langua
 {
     switch (lang)
     {
-    case LANG_DE:
-        return "de";
     case LANG_EN:
         return "en";
-    case LANG_FR:
-        return "fr";
     case LANG_ZH_CN:
         return "zh_CN";
-    case LANG_NB_NO:
-        return "nb_NO";
-    case LANG_RU:
-        return "ru";
-    case LANG_ES:
-        return "es";
-    case LANG_JA:
-        return "ja";
-    case LANG_VI:
-        return "vi";
-    case LANG_TH:
-        return "th";
-    case LANG_KO:
-        return "ko";
-    case LANG_HU:
-        return "hu";
-    case LANG_NL:
-        return "nl";
-    case LANG_SV:
-        return "sv";
-    case LANG_TR:
-        return "tr";
-    case LANG_UK:
-        return "uk";
-    case LANG_ZH_TW:
-        return "zh_TW";
-    case LANG_PT:
-        return "pt";
-    case LANG_PT_BR:
-        return "pt_BR";
-    case LANG_EL:
-        return "el";
-    case LANG_IT:
-        return "it";
-    case LANG_HI:
-        return "hi";
-    case LANG_PL:
-        return "pl";
-    case LANG_CS:
-        return "cs";
-    case LANG_HE:
-        return "he";
-    case LANG_CKB:
-        return "ckb";
-    case LANG_LT:
-        return "lt";
-    case LANG_ET:
-        return "et";
-    case LANG_BG:
-        return "bg";
-    case LANG_EO:
-        return "eo";
-    case LANG_TA:
-        return "ta";
     case LANG_AUTO:
     default:
         return QLocale::system().name();

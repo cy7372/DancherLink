@@ -3,6 +3,7 @@
 #include <functional>
 #include <QQueue>
 #include <set>
+#include <memory>
 
 #include "../bandwidth.h"
 #include "decoder.h"
@@ -100,10 +101,11 @@ private:
     enum AVPixelFormat m_RequiredPixelFormat;
     QByteArray m_DecodeBuffer;
     const AVCodecHWConfig* m_HwDecodeCfg;
-    IFFmpegRenderer* m_BackendRenderer;
+    std::unique_ptr<IFFmpegRenderer> m_BackendRenderer;
+    std::unique_ptr<IFFmpegRenderer> m_OwnedFrontendRenderer;
     IFFmpegRenderer* m_FrontendRenderer;
     int m_ConsecutiveFailedDecodes;
-    Pacer* m_Pacer;
+    std::unique_ptr<Pacer> m_Pacer;
     BandwidthTracker m_BwTracker;
     VIDEO_STATS m_ActiveWndVideoStats;
     VIDEO_STATS m_LastWndVideoStats;

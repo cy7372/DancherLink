@@ -94,7 +94,7 @@ NvHTTP::parseQuad(QString quad)
 
     QStringList parts = quad.split(".");
     ret.reserve(parts.length());
-    for (int i = 0; i < parts.length(); i++)
+    for (qsizetype i = 0; i < parts.length(); i++)
     {
         ret.append(parts.at(i).toInt());
     }
@@ -444,17 +444,7 @@ NvHTTP::openConnectionToString(QUrl baseUrl,
                                NvLogLevel logLevel)
 {
     QNetworkReply* reply = openConnection(baseUrl, command, arguments, timeoutMs, logLevel);
-    QString ret;
-
-    QTextStream stream(reply);
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    stream.setEncoding(QStringConverter::Utf8);
-#else
-    stream.setCodec("UTF-8");
-#endif
-
-    ret = stream.readAll();
+    QString ret = QString::fromUtf8(reply->readAll());
     delete reply;
 
     return ret;

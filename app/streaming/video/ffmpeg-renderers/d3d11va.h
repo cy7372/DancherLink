@@ -63,6 +63,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_RenderTargetView;
     Microsoft::WRL::ComPtr<ID3D11BlendState> m_VideoBlendState;
     Microsoft::WRL::ComPtr<ID3D11BlendState> m_OverlayBlendState;
+    HANDLE m_FrameLatencyWaitableObject;
 
     SupportedFenceType m_FenceType;
     SDL_mutex* m_ContextLock;
@@ -99,5 +100,6 @@ private:
     AVBufferRef* m_HwDeviceContext;
     AVBufferRef* m_HwFramesContext;
     HWND m_Hwnd;
+    uint32_t m_LastResizeResetTicks;
 };
 

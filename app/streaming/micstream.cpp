@@ -252,7 +252,7 @@ void MicStream::sendLoop()
         memcpy(pkt.data() + 4, &tsle, 4);
         memcpy(pkt.data() + 8, &ssrcle, 4);
         memcpy(pkt.data() + 12, opus.constData(), opus.size());
-        int rc = sendMicrophoneData(pkt.constData(), pkt.size());
+        int rc = sendMicrophoneData(pkt.constData(), static_cast<int>(pkt.size()));
         if (rc < 0) {
             qWarning() << "[MicStream] sendMicrophoneData failed rc=" << rc;
             continue;

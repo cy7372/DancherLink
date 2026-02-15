@@ -182,7 +182,7 @@ GlobalCommandLineParser::ParseResult GlobalCommandLineParser::parse(const QStrin
         // doesn't know about all of the options that "quit" and "stream"
         // commands can accept. To work around this issue, we just look
         // for "quit" or "stream" positional arguments anywhere.
-        for (int i = 0; i < posArgs.size(); i++) {
+        for (qsizetype i = 0; i < posArgs.size(); i++) {
             QString action = posArgs.at(i).toLower();
             if (action == "quit") {
                 return QuitRequested;
