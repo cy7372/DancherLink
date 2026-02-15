@@ -24,7 +24,6 @@ SystemProperties::SystemProperties()
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";
     usesMaterial3Theme = QLibraryInfo::version() >= QVersionNumber(6, 5, 0);
-    logDir = Path::getLogDir();
     QString nativeArch = QSysInfo::currentCpuArchitecture();
 
 #ifdef Q_OS_WIN32
@@ -99,29 +98,6 @@ int SystemProperties::getRefreshRate(int displayIndex)
 {
     // Returns 0 if out of bounds
     return monitorRefreshRates.value(displayIndex);
-}
-
-QString SystemProperties::getLogDir()
-{
-    return logDir;
-}
-
-void SystemProperties::openLogDir()
-{
-    // Ensure the log directory exists
-    QDir dir(logDir);
-    if (!dir.exists()) {
-        dir.mkpath(".");
-    }
-
-#ifdef Q_OS_WIN32
-    // On Windows, use ShellExecuteW to open Explorer and select the folder
-    std::wstring nativePath = QDir::toNativeSeparators(logDir).toStdWString();
-    ShellExecuteW(nullptr, L"open", nativePath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-#else
-    // On other platforms, use QDesktopServices
-    QDesktopServices::openUrl(QUrl::fromLocalFile(logDir));
-#endif
 }
 
 void SystemProperties::querySdlVideoInfo()

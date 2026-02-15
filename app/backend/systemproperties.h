@@ -27,14 +27,11 @@ public:
     Q_PROPERTY(QString versionString MEMBER versionString CONSTANT)
     Q_PROPERTY(bool supportsHdr MEMBER supportsHdr CONSTANT)
     Q_PROPERTY(bool usesMaterial3Theme MEMBER usesMaterial3Theme CONSTANT)
-    Q_PROPERTY(QString logDir MEMBER logDir CONSTANT)
 
     Q_INVOKABLE void refreshDisplays();
     Q_INVOKABLE QRect getNativeResolution(int displayIndex);
     Q_INVOKABLE QRect getSafeAreaResolution(int displayIndex);
     Q_INVOKABLE int getRefreshRate(int displayIndex);
-    Q_INVOKABLE QString getLogDir();
-    Q_INVOKABLE void openLogDir();
 
 signals:
     void unmappedGamepadsChanged();
@@ -59,6 +56,5 @@ private:
     QString versionString;
     bool supportsHdr;
     bool usesMaterial3Theme;
-    QString logDir;
 };
 

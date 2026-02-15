@@ -336,6 +336,9 @@ static PSDP_OPTION getAttributesList(char*urlSafeAddr) {
     // 20% of the video bitrate will added to the user-specified bitrate for FEC
     adjustedBitrate = (int)(StreamConfig.bitrate * 0.80);
 
+    Limelog("[NET_DIAG] Bitrate debug: requested=%d kbps, adjusted=%d kbps (80%% for FEC overhead)\n",
+            StreamConfig.bitrate, adjustedBitrate);
+
     // Use more strict bitrate logic when streaming remotely. The theory here is that remote
     // streaming is much more bandwidth sensitive. Someone might select 5 Mbps because that's
     // really all they have, so we need to be careful not to exceed the cap, even counting

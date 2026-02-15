@@ -10,6 +10,12 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
   scripts\build-arch.bat Release x64
   ```
 - **IDE**: Can be opened directly in Qt Creator, Visual Studio, or any CMake-aware IDE
+- **Post-build**: MSI automatically copies to `server/` and updates `updates.json`
+
+## Local Distribution
+- **Subscription URL**: `\\{host}\Users\{user}\Programs\DancherLink-qt\server\updates.json`
+- `server/updates.json` — Manifest for auto-update (arch must be `x86_64` to match Qt)
+- `server/update_version.py` — Called by build script to copy MSI and update manifest
 
 ## Project Structure
 - `app/` — Main application (C++ backend + QML frontend)
@@ -20,6 +26,7 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 - `libs/windows/` — Prebuilt dependencies (OpenSSL, SDL2, FFmpeg, etc.)
 - `wix/` — WiX installer project
 - `scripts/` — Build and packaging scripts
+- `server/` — Local distribution (updates.json, MSI, update_version.py)
 
 ## Key Files
 - `app/main.cpp` — Entry point, logging, single instance

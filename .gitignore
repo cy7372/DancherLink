@@ -63,3 +63,4 @@ server/
 # *.ts
 
 # Note: We do not ignore *.txt because CMakeLists.txt and others are important.
+build_test
