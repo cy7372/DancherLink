@@ -26,13 +26,10 @@ static bool receivedFullFrame;
 #define RTP_QUEUE_DELAY 10
 
 // This is the desired number of video packets that can be
-// stored in the socket's receive buffer. 2048 is chosen
-// because it should be large enough for all reasonable
-// frame sizes (probably 2 or 3 frames) without using too
-// much kernel memory with larger packet sizes. It also
-// can smooth over transient pauses in network traffic
-// and subsequent packet/frame bursts that follow.
-#define RTP_RECV_PACKETS_BUFFERED 2048
+// stored in the socket's receive buffer. 4096 supports
+// 4K high bitrate streams with large I-frames and provides
+// better burst tolerance for network jitter.
+#define RTP_RECV_PACKETS_BUFFERED 4096
 
 // Initialize the video stream
 void initializeVideoStream(void) {
