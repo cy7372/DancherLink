@@ -36,7 +36,7 @@ bool SdlAudioRenderer::prepareForPlayback(const OPUS_MULTISTREAM_CONFIGURATION* 
                   opusConfig->channelCount *
                   getAudioBufferSampleSize();
 
-    m_AudioDevice = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+    m_AudioDevice = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
     if (m_AudioDevice == 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "Failed to open audio device: %s",

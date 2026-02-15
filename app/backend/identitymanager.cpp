@@ -31,14 +31,14 @@ void IdentityManager::createCredentials(QSettings& settings)
     X509* cert = X509_new();
     THROW_BAD_ALLOC_IF_NULL(cert);
 
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
     THROW_BAD_ALLOC_IF_NULL(ctx);
 
     EVP_PKEY_keygen_init(ctx);
     EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048);
 
     // pk must be initialized on input
-    EVP_PKEY* pk = NULL;
+    EVP_PKEY* pk = nullptr;
     EVP_PKEY_keygen(ctx, &pk);
 
     EVP_PKEY_CTX_free(ctx);
@@ -77,7 +77,7 @@ void IdentityManager::createCredentials(QSettings& settings)
 
     BIO* biokey = BIO_new(BIO_s_mem());
     THROW_BAD_ALLOC_IF_NULL(biokey);
-    PEM_write_bio_PrivateKey(biokey, pk, NULL, NULL, 0, NULL, NULL);
+    PEM_write_bio_PrivateKey(biokey, pk, nullptr, nullptr, 0, nullptr, nullptr);
 
     BIO* biocert = BIO_new(BIO_s_mem());
     THROW_BAD_ALLOC_IF_NULL(biocert);

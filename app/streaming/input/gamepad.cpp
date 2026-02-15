@@ -192,7 +192,7 @@ void SdlInputHandler::handleControllerAxisEvent(SDL_ControllerAxisEvent* event)
 {
     SDL_JoystickID gameControllerId = event->which;
     GamepadState* state = findStateForGamepad(gameControllerId);
-    if (state == NULL) {
+    if (state == nullptr) {
         return;
     }
 
@@ -262,7 +262,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
     }
 
     GamepadState* state = findStateForGamepad(event->which);
-    if (state == NULL) {
+    if (state == nullptr) {
         return;
     }
 
@@ -406,7 +406,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
 void SdlInputHandler::handleControllerSensorEvent(SDL_ControllerSensorEvent* event)
 {
     GamepadState* state = findStateForGamepad(event->which);
-    if (state == NULL) {
+    if (state == nullptr) {
         return;
     }
 
@@ -441,7 +441,7 @@ void SdlInputHandler::handleControllerSensorEvent(SDL_ControllerSensorEvent* eve
 void SdlInputHandler::handleControllerTouchpadEvent(SDL_ControllerTouchpadEvent* event)
 {
     GamepadState* state = findStateForGamepad(event->which);
-    if (state == NULL) {
+    if (state == nullptr) {
         return;
     }
 
@@ -470,7 +470,7 @@ void SdlInputHandler::handleControllerTouchpadEvent(SDL_ControllerTouchpadEvent*
 void SdlInputHandler::handleJoystickBatteryEvent(SDL_JoyBatteryEvent* event)
 {
     GamepadState* state = findStateForGamepad(event->which);
-    if (state == NULL) {
+    if (state == nullptr) {
         return;
     }
 
@@ -492,7 +492,7 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         uint32_t hapticCaps;
 
         controller = SDL_GameControllerOpen(event->which);
-        if (controller == NULL) {
+        if (controller == nullptr) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                          "Failed to open gamepad: %s",
                          SDL_GetError());
@@ -522,7 +522,7 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
 
         for (; i < MAX_GAMEPADS; i++) {
             SDL_assert(m_GamepadState[i].controller != controller);
-            if (m_GamepadState[i].controller == NULL) {
+            if (m_GamepadState[i].controller == nullptr) {
                 // Found an empty slot
                 break;
             }
@@ -722,7 +722,7 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
     }
     else if (event->type == SDL_CONTROLLERDEVICEREMOVED) {
         state = findStateForGamepad(event->which);
-        if (state != NULL) {
+        if (state != nullptr) {
             if (state->mouseEmulationTimer != 0) {
                 Session::get()->notifyMouseEmulationMode(false);
                 SDL_RemoveTimer(state->mouseEmulationTimer);

@@ -363,9 +363,9 @@ void AppModel::createDesktopShortcut(int appIndex)
         IShellLink* psl;
 
         // Initialize COM library for this worker thread
-        CoInitialize(NULL);
+        CoInitialize(nullptr);
 
-        hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
+        hres = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
         if (SUCCEEDED(hres))
         {
             psl->SetPath((LPCWSTR)nativeAppPath.utf16());

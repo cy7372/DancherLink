@@ -277,7 +277,7 @@ void FFmpegVideoDecoder::reset()
     if (m_DecoderThread != nullptr) {
         SDL_AtomicSet(&m_DecoderThreadShouldQuit, 1);
         LiWakeWaitForVideoFrame();
-        SDL_WaitThread(m_DecoderThread, NULL);
+        SDL_WaitThread(m_DecoderThread, nullptr);
         SDL_AtomicSet(&m_DecoderThreadShouldQuit, 0);
         m_DecoderThread = nullptr;
     }
@@ -1323,7 +1323,7 @@ bool FFmpegVideoDecoder::tryInitializeRendererForUnknownDecoder(const AVCodec* d
         }
     }
 
-    if (decoder_pix_fmts == NULL) {
+    if (decoder_pix_fmts == nullptr) {
         // Supported output pixel formats are unknown. We'll just try DRM/SDL and hope it can cope.
 
 #ifdef HAVE_DRM
@@ -1478,7 +1478,7 @@ bool FFmpegVideoDecoder::tryInitializeHwAccelDecoder(PDECODER_PARAMETERS params,
     SDL_assert(pass <= MAX_DECODER_PASS);
 
     // Iterate through hwaccel decoders
-    codecIterator = NULL;
+    codecIterator = nullptr;
     while ((decoder = av_codec_iterate(&codecIterator))) {
         // Skip codecs that aren't decoders
         if (!av_codec_is_decoder(decoder)) {
@@ -1538,7 +1538,7 @@ bool FFmpegVideoDecoder::tryInitializeNonHwAccelDecoder(PDECODER_PARAMETERS para
     void* codecIterator;
 
     // Iterate through non-hwaccel and non-standard hwaccel hardware decoders that have AV_CODEC_CAP_HARDWARE set
-    codecIterator = NULL;
+    codecIterator = nullptr;
     while ((decoder = av_codec_iterate(&codecIterator))) {
         // Skip codecs that aren't decoders
         if (!av_codec_is_decoder(decoder)) {
@@ -1711,7 +1711,7 @@ bool FFmpegVideoDecoder::initialize(PDECODER_PARAMETERS params)
 
     // Iterate through all software decoders if allowed
     if (params->vds != StreamingPreferences::VDS_FORCE_HARDWARE) {
-        codecIterator = NULL;
+        codecIterator = nullptr;
         while ((decoder = av_codec_iterate(&codecIterator))) {
             // Skip codecs that aren't decoders
             if (!av_codec_is_decoder(decoder)) {

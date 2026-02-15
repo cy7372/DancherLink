@@ -897,7 +897,7 @@ VAAPIRenderer::renderFrame(AVFrame* frame)
                      frame->width, frame->height,
                      dst.x, dst.y,
                      dst.w, dst.h,
-                     NULL, 0, flags);
+                     nullptr, 0, flags);
 
         SDL_LockMutex(m_OverlayMutex);
 

@@ -146,7 +146,7 @@ bool SystemNetworkStats::getWindowsNetworkUsage(qint64 &bytesReceived, qint64 &b
     bytesReceived = 0;
     bytesSent = 0;
 
-    PMIB_IF_TABLE2 pIfTable = NULL;
+    PMIB_IF_TABLE2 pIfTable = nullptr;
     ULONG error = GetIfTable2(&pIfTable);
 
     if (error != NO_ERROR)

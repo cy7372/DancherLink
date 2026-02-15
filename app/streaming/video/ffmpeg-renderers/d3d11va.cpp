@@ -66,8 +66,8 @@ D3D11VARenderer::D3D11VARenderer(int decoderSelectionPass)
       m_OverlayLock(0),
       m_HwDeviceContext(nullptr),
       m_HwFramesContext(nullptr),
-      m_Hwnd(NULL),
-      m_FrameLatencyWaitableObject(NULL),
+      m_Hwnd(nullptr),
+      m_FrameLatencyWaitableObject(nullptr),
       m_LastResizeResetTicks(0)
 {
     m_ContextLock = SDL_CreateMutex();

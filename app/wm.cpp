@@ -75,7 +75,7 @@ bool WMUtils::isRunningNvidiaProprietaryDriverX11()
         EGLDisplay display = eglGetPlatformDisplay(EGL_PLATFORM_X11_KHR, EGL_DEFAULT_DISPLAY, nullptr);
         if (display != EGL_NO_DISPLAY && eglInitialize(display, nullptr, nullptr)) {
             const char* vendorString = eglQueryString(display, EGL_VENDOR);
-            nvidiaDriver = vendorString && strstr(vendorString, "NVIDIA") != NULL;
+            nvidiaDriver = vendorString && strstr(vendorString, "NVIDIA") != nullptr;
             eglTerminate(display);
         }
 

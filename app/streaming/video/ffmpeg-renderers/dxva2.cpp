@@ -97,7 +97,7 @@ AVBufferRef* DXVA2Renderer::ffPoolAlloc(void* opaque, FF_POOL_SIZE_TYPE)
                                 sizeof(me->m_DecSurfacesRaw[0]), ffPoolDummyDelete, 0, 0);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 bool DXVA2Renderer::prepareDecoderContext(AVCodecContext* context, AVDictionary**)

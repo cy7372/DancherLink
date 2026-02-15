@@ -10,11 +10,11 @@
 namespace CliListApps
 {
 
-enum State {
-    StateInit,
-    StateSeekComputer,
-    StateListApps,
-    StateFailure,
+enum class State {
+    Init,
+    SeekComputer,
+    ListApps,
+    Failure,
 };
 
 class Event
@@ -50,8 +50,8 @@ public:
         switch (event.type) {
         // Occurs when CLI main calls execute
         case Event::Executed:
-            if (m_State == StateInit) {
-                m_State = StateSeekComputer;
+            if (m_State == State::Init) {
+                m_State = State::SeekComputer;
                 m_ComputerManager = event.computerManager;
 
                 m_ComputerSeeker = new ComputerSeeker(m_ComputerManager, m_ComputerName, q);
@@ -70,7 +70,7 @@ public:
             break;
         // Occurs when computer search timed out
         case Event::ComputerSeekTimedout:
-            if (m_State == StateSeekComputer) {
+            if (m_State == State::SeekComputer) {
                 fprintf(stderr, "%s\n", qPrintable(QString("Failed to connect to %1").arg(m_ComputerName)));
 
                 QCoreApplication::exit(-1);
@@ -78,9 +78,9 @@ public:
             break;
         // Occurs when searched computer is found
         case Event::ComputerFound:
-            if (m_State == StateSeekComputer) {
+            if (m_State == State::SeekComputer) {
                 if (event.computer->pairState == NvComputer::PS_PAIRED) {
-                    m_State = StateListApps;
+                    m_State = State::ListApps;
                     m_Computer = event.computer;
 
                     if (m_Arguments.isVerbose()) {
@@ -103,7 +103,7 @@ public:
                         QCoreApplication::exit(1);
                     }
                 } else {
-                    m_State = StateFailure;
+                    m_State = State::Failure;
                     fprintf(stderr, "%s\n", qPrintable(QObject::tr("Computer %1 has not been paired. "
                                             "Please open Moonlight to pair before retrieving games list.")
                                             .arg(event.computer->name)));
@@ -155,7 +155,7 @@ Launcher::Launcher(QString computer, ListCommandLineParser arguments, QObject *p
 {
     Q_D(Launcher);
     d->m_ComputerName = computer;
-    d->m_State = StateInit;
+    d->m_State = State::Init;
     d->m_Arguments = arguments;
 }
 
@@ -174,7 +174,7 @@ void Launcher::execute(ComputerManager *manager)
 bool Launcher::isExecuted() const
 {
     Q_D(const Launcher);
-    return d->m_State != StateInit;
+    return d->m_State != State::Init;
 }
 
 void Launcher::onComputerFound(NvComputer *computer)

@@ -53,7 +53,7 @@ bool NvAddress::isNull() const
 QString NvAddress::toString() const
 {
     if (m_Address.isEmpty()) {
-        return "<NULL>";
+        return "<nullptr>";
     }
 
     if (QHostAddress(m_Address).protocol() == QAbstractSocket::IPv6Protocol) {

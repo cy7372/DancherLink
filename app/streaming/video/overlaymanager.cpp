@@ -273,7 +273,7 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
              SDL_Surface* glyph = TTF_RenderGlyph_Blended(fontToUse, ch, m_Overlays[type].color);
              if (glyph) {
                  SDL_Rect dstRect = { currentX, currentY, 0, 0 };
-                 SDL_BlitSurface(glyph, NULL, surface, &dstRect);
+                 SDL_BlitSurface(glyph, nullptr, surface, &dstRect);
                  
                  // Use glyph advance for accurate spacing
                  int minx, maxx, miny, maxy, advance;

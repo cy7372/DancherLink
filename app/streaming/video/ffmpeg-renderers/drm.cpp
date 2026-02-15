@@ -202,7 +202,7 @@ bool DrmRenderer::prepareDecoderContext(AVCodecContext* context, AVDictionary** 
 {
     // The out-of-tree LibreELEC patches use this option to control the type of the V4L2
     // buffers that we get back. We only support NV12 buffers now.
-    if(strstr(context->codec->name, "_v4l2") != NULL)
+    if(strstr(context->codec->name, "_v4l2") != nullptr)
         av_dict_set_int(options, "pixel_format", AV_PIX_FMT_NV12, 0);
 
     // This option controls the pixel format for the h264_omx and hevc_omx decoders
@@ -1216,7 +1216,7 @@ bool DrmRenderer::addFbForFrame(AVFrame *frame, uint32_t* newFbId, bool testMode
     err = drmModeAddFB2WithModifiers(m_DrmFd, frame->width, frame->height,
                                      drmFrame->layers[0].format,
                                      handles, pitches, offsets,
-                                     (flags & DRM_MODE_FB_MODIFIERS) ? modifiers : NULL,
+                                     (flags & DRM_MODE_FB_MODIFIERS) ? modifiers : nullptr,
                                      newFbId, flags);
 
     if (m_DrmPrimeBackend) {
@@ -1424,7 +1424,7 @@ const char* DrmRenderer::getDrmColorEncodingValue(AVFrame* frame)
     case COLORSPACE_REC_2020:
         return "ITU-R BT.2020 YCbCr";
     default:
-        return NULL;
+        return nullptr;
     }
 }
 

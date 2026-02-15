@@ -78,7 +78,7 @@ NvPairingManager::encrypt(const QByteArray& plaintext, const QByteArray& key)
     ScopedEvpCipherCtx cipher(EVP_CIPHER_CTX_new());
     THROW_BAD_ALLOC_IF_NULL(cipher);
 
-    EVP_EncryptInit(cipher.get(), EVP_aes_128_ecb(), reinterpret_cast<const unsigned char*>(key.data()), NULL);
+    EVP_EncryptInit(cipher.get(), EVP_aes_128_ecb(), reinterpret_cast<const unsigned char*>(key.data()), nullptr);
     EVP_CIPHER_CTX_set_padding(cipher.get(), 0);
 
     EVP_EncryptUpdate(cipher.get(),
@@ -100,7 +100,7 @@ NvPairingManager::decrypt(const QByteArray& ciphertext, const QByteArray& key)
     ScopedEvpCipherCtx cipher(EVP_CIPHER_CTX_new());
     THROW_BAD_ALLOC_IF_NULL(cipher);
 
-    EVP_DecryptInit(cipher.get(), EVP_aes_128_ecb(), reinterpret_cast<const unsigned char*>(key.data()), NULL);
+    EVP_DecryptInit(cipher.get(), EVP_aes_128_ecb(), reinterpret_cast<const unsigned char*>(key.data()), nullptr);
     EVP_CIPHER_CTX_set_padding(cipher.get(), 0);
 
     EVP_DecryptUpdate(cipher.get(),
@@ -129,10 +129,10 @@ NvPairingManager::getSignatureFromPemCert(const QByteArray& certificate)
     ASN1_BIT_STRING *asnSignature = cert->signature;
 #elif (OPENSSL_VERSION_NUMBER < 0x10100000L)
     ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, cert.get());
+    X509_get0_signature(&asnSignature, nullptr, cert.get());
 #else
     const ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, cert.get());
+    X509_get0_signature(&asnSignature, nullptr, cert.get());
 #endif
 
     QByteArray signature(reinterpret_cast<char*>(asnSignature->data), asnSignature->length);
@@ -174,11 +174,11 @@ NvPairingManager::signMessage(const QByteArray& message)
     ScopedEvpMdCtx ctx(EVP_MD_CTX_create());
     THROW_BAD_ALLOC_IF_NULL(ctx);
 
-    EVP_DigestSignInit(ctx.get(), NULL, EVP_sha256(), NULL, m_PrivateKey.get());
+    EVP_DigestSignInit(ctx.get(), nullptr, EVP_sha256(), nullptr, m_PrivateKey.get());
     EVP_DigestSignUpdate(ctx.get(), reinterpret_cast<unsigned char*>(const_cast<char*>(message.data())), static_cast<size_t>(message.length()));
 
     size_t signatureLength = 0;
-    EVP_DigestSignFinal(ctx.get(), NULL, &signatureLength);
+    EVP_DigestSignFinal(ctx.get(), nullptr, &signatureLength);
 
     QByteArray signature((int)signatureLength, 0);
     EVP_DigestSignFinal(ctx.get(), reinterpret_cast<unsigned char*>(signature.data()), &signatureLength);
@@ -276,10 +276,10 @@ NvPairingManager::pair(QString appVersion, QString pin, QSslCertificate& serverC
     ASN1_BIT_STRING *asnSignature = m_Cert->signature;
 #elif (OPENSSL_VERSION_NUMBER < 0x10100000L)
     ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, m_Cert.get());
+    X509_get0_signature(&asnSignature, nullptr, m_Cert.get());
 #else
     const ASN1_BIT_STRING *asnSignature;
-    X509_get0_signature(&asnSignature, NULL, m_Cert.get());
+    X509_get0_signature(&asnSignature, nullptr, m_Cert.get());
 #endif
 
     challengeResponse.append(challengeResponseData.data() + hashLength, 16);

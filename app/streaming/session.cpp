@@ -2042,7 +2042,7 @@ bool Session::startConnectionAsync()
 
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
-                                NULL, 0, NULL, 0);
+                                nullptr, 0, nullptr, 0);
     if (err != 0) {
         // We already displayed an error dialog in the stage failure
         // listener.
@@ -2339,7 +2339,7 @@ void Session::exec()
             // interfering with the stream (e.g. Chinese/Japanese/Korean IMEs).
             // This is more effective than SDL_StopTextInput() on Windows because it
             // completely detaches the IME context from the window handle.
-            ImmAssociateContext(info.info.win.window, NULL);
+            ImmAssociateContext(info.info.win.window, nullptr);
             
             // Register for session notifications to detect lock/unlock events
             WTSRegisterSessionNotification(info.info.win.window, NOTIFY_FOR_THIS_SESSION);
@@ -2445,7 +2445,7 @@ void Session::exec()
     LogManager::instance()->enterAsyncLoggingMode();
 
 #ifdef Q_OS_WIN32
-    HPOWERNOTIFY hPowerNotify = NULL;
+    HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
         // Enable system events to catch power broadcast messages
         SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
@@ -2663,7 +2663,7 @@ void Session::exec()
                                 if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
                                     // Use AttachThreadInput to attach our thread to the foreground thread.
                                     // This allows us to steal focus even if the OS normally wouldn't allow it.
-                                    DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+                                    DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
                                     DWORD myThread = GetCurrentThreadId();
                                     if (foregroundThread != myThread) {
                                         AttachThreadInput(myThread, foregroundThread, TRUE);
@@ -2703,7 +2703,7 @@ void Session::exec()
                                 if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
                                     // Use AttachThreadInput to attach our thread to the foreground thread.
                                     // This allows us to steal focus even if the OS normally wouldn't allow it.
-                                    DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+                                    DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
                                     DWORD myThread = GetCurrentThreadId();
                                     if (foregroundThread != myThread) {
                                         AttachThreadInput(myThread, foregroundThread, TRUE);
@@ -2856,7 +2856,7 @@ void Session::exec()
                             
                             // Close existing dialog if any
                             #ifdef Q_OS_WIN32
-                            HWND hwnd = FindWindowA(NULL, tr("Resolution Changed").toLocal8Bit().constData());
+                            HWND hwnd = FindWindowA(nullptr, tr("Resolution Changed").toLocal8Bit().constData());
                             if (hwnd) {
                                 // CRITICAL SECTION: Focus Restoration Logic
                                 // This block handles the complex interaction between the modal dialog destruction
@@ -2867,7 +2867,7 @@ void Session::exec()
                                 // Give focus to the dialog before destroying it.
                                 // This ensures proper focus restoration to the parent window after the dialog is closed.
                                 // We attach to the dialog's thread to ensure we can actually set focus to it.
-                                DWORD dialogThread = GetWindowThreadProcessId(hwnd, NULL);
+                                DWORD dialogThread = GetWindowThreadProcessId(hwnd, nullptr);
                                 DWORD myThread = GetCurrentThreadId();
                                 bool attached = false;
 
@@ -2923,7 +2923,7 @@ void Session::exec()
                             if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
                                 // Use AttachThreadInput to attach our thread to the foreground thread.
                                 // This allows us to steal focus even if the OS normally wouldn't allow it.
-                                DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+                                DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
                                 DWORD myThread = GetCurrentThreadId();
                                 if (foregroundThread != myThread) {
                                     AttachThreadInput(myThread, foregroundThread, TRUE);
@@ -3025,7 +3025,7 @@ void Session::exec()
                             }
                             else {
                                 #ifdef Q_OS_WIN32
-                                HWND hwnd = FindWindowA(NULL, title.toLocal8Bit().constData());
+                                HWND hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
                                 if (hwnd) {
                                     // Use SendMessage instead of PostMessage here too, to avoid race conditions
                                     // when closing an existing dialog to show a new one.
@@ -3381,7 +3381,7 @@ DispatchDeferredCleanup:
         // Find the message box window by its title and close it
         // Note: MessageBox windows are top-level but owned by the application.
         // We look for a window with the specific title.
-        HWND hwnd = NULL;
+        HWND hwnd = nullptr;
         
         QString title = tr("Resolution Changed");
         
@@ -3389,7 +3389,7 @@ DispatchDeferredCleanup:
         // where the thread has passed the generation check but hasn't created the window yet.
         // We retry for up to 100ms.
         for (int i = 0; i < 10; i++) {
-            hwnd = FindWindowA(NULL, title.toLocal8Bit().constData());
+            hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
             if (hwnd) break;
             SDL_Delay(10);
         }
