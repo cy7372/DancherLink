@@ -20,7 +20,8 @@ ComputerManager::ComputerManager(StreamingPreferences* prefs)
       m_MdnsBrowser(nullptr),
       m_CompatFetcher(nullptr),
       m_NeedsDelayedFlush(false),
-      m_ComputersDirty(true)
+      m_ComputersDirty(true),
+      m_ActivePairingTask(nullptr)
 {
     QSettings settings;
 
@@ -471,22 +472,42 @@ void ComputerManager::handleAboutToQuit()
 
 void ComputerManager::cancelPendingPairing()
 {
-    // FIXME: We need to implement cancellation in NvPairingManager or track the PendingPairingTask.
-    // Currently PendingPairingTask is fire-and-forget in the thread pool.
-    // To properly cancel, we'd need to keep a reference to the active task and set a flag on it,
-    // or use a CancellationToken-like mechanism passed to NvPairingManager.
-    // Since NvPairingManager uses synchronous HTTP calls, we'd need to abort the QNetworkReply.
-    //
-    // For now, this is a placeholder to satisfy the UI requirement.
-    qInfo() << "Pairing cancellation requested (not yet implemented)";
+    QMutexLocker locker(&m_PairingLock);
+
+    if (m_ActivePairingTask != nullptr) {
+        qInfo() << "Cancelling active pairing task";
+        m_ActivePairingTask->cancel();
+        m_ActivePairingTask = nullptr;
+    } else {
+        qInfo() << "No active pairing task to cancel";
+    }
 }
 
 void ComputerManager::pairHost(NvComputer* computer, QString pin)
 {
+    QMutexLocker locker(&m_PairingLock);
+
+    // Cancel any existing pairing task
+    if (m_ActivePairingTask != nullptr) {
+        qInfo() << "Cancelling previous pairing task before starting new one";
+        m_ActivePairingTask->cancel();
+    }
+
     // Punt to a worker thread to avoid stalling the
     // UI while waiting for pairing to complete
-    PendingPairingTask* pairing = new PendingPairingTask(this, computer, pin);
-    QThreadPool::globalInstance()->start(pairing);
+    m_ActivePairingTask = new PendingPairingTask(this, computer, pin);
+
+    // Clear the active task pointer when pairing completes
+    connect(m_ActivePairingTask, &PendingPairingTask::pairingCompleted,
+            this, [this](NvComputer*, QString) {
+        QMutexLocker locker(&m_PairingLock);
+        // Only clear if this is still the active task (not replaced by a new one)
+        if (m_ActivePairingTask == sender()) {
+            m_ActivePairingTask = nullptr;
+        }
+    });
+
+    QThreadPool::globalInstance()->start(m_ActivePairingTask);
 }
 
 

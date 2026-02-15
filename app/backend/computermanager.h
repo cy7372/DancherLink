@@ -26,6 +26,7 @@
 #include <memory>
 #include <map>
 #include <vector>
+#include <atomic>
 
 class ComputerManager;
 
@@ -461,6 +462,10 @@ private:
     mutable QVector<NvComputer*> m_CachedComputers;
     mutable bool m_ComputersDirty;
 
+    // Active pairing task tracking
+    PendingPairingTask* m_ActivePairingTask;
+    QMutex m_PairingLock;
+
     friend class DeferredHostDeletionTask;
     friend class PendingPairingTask;
     friend class PendingQuitTask;
@@ -476,10 +481,21 @@ public:
     PendingPairingTask(ComputerManager* computerManager, NvComputer* computer, QString pin)
         : m_ComputerManager(computerManager),
           m_Computer(computer),
-          m_Pin(pin)
+          m_Pin(pin),
+          m_Cancelled(false)
     {
         connect(this, &PendingPairingTask::pairingCompleted,
                 computerManager, &ComputerManager::pairingCompleted);
+    }
+
+    void cancel()
+    {
+        m_Cancelled.store(true);
+    }
+
+    bool isCancelled() const
+    {
+        return m_Cancelled.load();
     }
 
 signals:
@@ -488,10 +504,31 @@ signals:
 private:
     void run() override
     {
+        // Check if cancelled before starting
+        if (m_Cancelled.load()) {
+            emit pairingCompleted(m_Computer, tr("Pairing was cancelled."));
+            return;
+        }
+
         NvPairingManager pairingManager(m_Computer);
 
         try {
            NvPairingManager::PairState result = pairingManager.pair(m_Computer->appVersion, m_Pin, m_Computer->serverCert);
+
+           // Check if cancelled after pairing completed
+           if (m_Cancelled.load()) {
+               // Send unpair request to clean up server state
+               qInfo() << "Pairing completed but was cancelled, sending unpair request";
+               try {
+                   NvHTTP http(m_Computer);
+                   http.quitApp(); // This will clean up the pairing state
+               } catch (...) {
+                   // Ignore errors during cleanup
+               }
+               emit pairingCompleted(m_Computer, tr("Pairing was cancelled."));
+               return;
+           }
+
            switch (result)
            {
            case NvPairingManager::PairState::PIN_WRONG:
@@ -516,15 +553,24 @@ private:
                break;
            }
         } catch (const GfeHttpResponseException& e) {
-            emit pairingCompleted(m_Computer, tr("GeForce Experience returned error: %1").arg(e.toQString()));
+            if (!m_Cancelled.load()) {
+                emit pairingCompleted(m_Computer, tr("GeForce Experience returned error: %1").arg(e.toQString()));
+            }
         } catch (const QtNetworkReplyException& e) {
-            emit pairingCompleted(m_Computer, e.toQString());
+            if (!m_Cancelled.load()) {
+                emit pairingCompleted(m_Computer, e.toQString());
+            }
+        } catch (...) {
+            if (!m_Cancelled.load()) {
+                emit pairingCompleted(m_Computer, tr("Pairing failed due to an unexpected error."));
+            }
         }
     }
 
     ComputerManager* m_ComputerManager;
     NvComputer* m_Computer;
     QString m_Pin;
+    std::atomic<bool> m_Cancelled;
 };
 
 class PendingQuitTask : public QObject, public QRunnable
