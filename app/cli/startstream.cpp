@@ -1,4 +1,6 @@
 #include "startstream.h"
+#include "cli_common.h"
+
 #include "backend/computermanager.h"
 #include "backend/computerseeker.h"
 #include "streaming/session.h"
@@ -6,11 +8,11 @@
 #include <QCoreApplication>
 #include <QTimer>
 
-#define COMPUTER_SEEK_TIMEOUT 30000
-#define APP_SEEK_TIMEOUT 10000
-
 namespace CliStartStream
 {
+
+// Local constant for app seek timeout
+constexpr int APP_SEEK_TIMEOUT = CliConstants::APP_SEEK_TIMEOUT_MS;
 
 enum State {
     StateInit,

@@ -1,4 +1,5 @@
 #include "quitstream.h"
+#include "cli_common.h"
 
 #include "backend/computermanager.h"
 #include "backend/computerseeker.h"
@@ -7,7 +8,9 @@
 #include <QCoreApplication>
 #include <QTimer>
 
-#define COMPUTER_SEEK_TIMEOUT 10000
+// Use quick timeout for quit operation
+#undef COMPUTER_SEEK_TIMEOUT
+#define COMPUTER_SEEK_TIMEOUT CliConstants::COMPUTER_SEEK_TIMEOUT_QUICK_MS
 
 namespace CliQuitStream
 {

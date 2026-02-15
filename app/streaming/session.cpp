@@ -1440,13 +1440,13 @@ bool Session::validateLaunch(SDL_Window* testWindow)
         }
     }
 
-    if (m_StreamConfig.width >= 3840) {
+    if (m_StreamConfig.width >= StreamingConstants::UHD_4K_WIDTH) {
         // Only allow 4K on GFE 3.x+
         if (m_Computer->gfeVersion.isEmpty() || m_Computer->gfeVersion.startsWith("2.")) {
             emitLaunchWarning(tr("GeForce Experience 3.0 or higher is required for 4K streaming."));
 
-            m_StreamConfig.width = 1920;
-            m_StreamConfig.height = 1080;
+            m_StreamConfig.width = StreamingConstants::FHD_WIDTH;
+            m_StreamConfig.height = StreamingConstants::FHD_HEIGHT;
         }
     }
 
@@ -1483,7 +1483,7 @@ bool Session::validateLaunch(SDL_Window* testWindow)
     //
     // However, if we aren't using Nvidia hosting software, don't assume anything about
     // encoding capabilities by using HEVC Main 10 support. It will likely be wrong.
-    if ((m_StreamConfig.width > 4096 || m_StreamConfig.height > 4096) && m_Computer->isNvidiaServerSoftware) {
+    if ((m_StreamConfig.width > StreamingConstants::NVENC_MAX_DIMENSION || m_StreamConfig.height > StreamingConstants::NVENC_MAX_DIMENSION) && m_Computer->isNvidiaServerSoftware) {
         // Pascal added support for 8K HEVC encoding support. Maxwell 2 could encode HEVC but only up to 4K.
         // We can't directly identify Pascal, but we can look for HEVC Main10 which was added in the same generation.
         if (m_Computer->maxLumaPixelsHEVC == 0 || !(m_Computer->serverCodecModeSupport & SCM_HEVC_MAIN10)) {

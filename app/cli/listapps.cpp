@@ -1,12 +1,11 @@
 #include "listapps.h"
+#include "cli_common.h"
 
 #include "backend/boxartmanager.h"
 #include "backend/computermanager.h"
 #include "backend/computerseeker.h"
 
 #include <QCoreApplication>
-
-#define COMPUTER_SEEK_TIMEOUT 30000
 
 namespace CliListApps
 {
