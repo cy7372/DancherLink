@@ -31,12 +31,13 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 ## Key Files
 - `app/main.cpp` — Entry point, logging, single instance
 - `app/gui/main.qml` — Main UI window
-- `app/gui/StreamSegue.qml` — Stream launch splash screen
 - `app/streaming/video/ffmpeg.cpp` — Video decoder initialization
 - `app/streaming/video/ffmpeg-renderers/d3d11va.cpp` — Primary Windows video renderer
+- `app/streaming/video/ffmpeg-renderers/gpuopts.cpp` — GPU optimization (HAGS, priority)
 - `app/streaming/session.cpp` — Streaming session lifecycle
 - `app/backend/computermanager.cpp` — PC discovery and management
-- `app/version.txt` — Version number (format: X.Y.Z.build)
+- `moonlight-common-c/src/PlatformSockets.c` — Socket buffer configuration
+- `moonlight-common-c/src/VideoStream.c` — RTP packet buffering
 
 ## Conventions
 - C++17, Qt 6 QML (Material Design dark theme)
@@ -49,3 +50,5 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 ## Notes
 - Pairing cancellation: `ComputerManager::cancelPendingPairing()` cancels active pairing via atomic flag
 - STUN is disabled for privacy (DancherLink-specific)
+- Network buffers: Socket RCVBUF min 512KB, RTP buffer 8192 packets (optimized for 4K high bitrate)
+- GPU optimization: Auto-detects HAGS, sets GPU process/thread priority for streaming
