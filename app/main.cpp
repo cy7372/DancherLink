@@ -48,6 +48,14 @@
 #include "cli/commandlineparser.h"
 #include "path.h"
 #include "utils.h"
+
+// Local timing constants for main.cpp
+namespace {
+    constexpr int SINGLE_INSTANCE_CONNECT_TIMEOUT_MS = 500;
+    constexpr int SINGLE_INSTANCE_WRITE_TIMEOUT_MS = 1000;
+    constexpr int THREADPOOL_SHUTDOWN_TIMEOUT_MS = 30000;
+    constexpr int ASYNC_LOG_FLUSH_TIMEOUT_MS = 500;
+}
 #include "gui/computermodel.h"
 #include "gui/appmodel.h"
 #include "backend/autoupdatechecker.h"
@@ -118,7 +126,7 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo)
 
     // Sleep for a moment to allow the logging thread to finish up before crashing
     if (LogManager::instance()->isAsyncLoggingEnabled()) {
-        Sleep(500);
+        Sleep(ASYNC_LOG_FLUSH_TIMEOUT_MS);
     }
 
     // Let the program crash and WER collect a dump
@@ -445,7 +453,7 @@ int main(int argc, char *argv[])
     const QString serverName = "DancherLinkSingleInstance";
     QLocalSocket socket;
     socket.connectToServer(serverName);
-    if (socket.waitForConnected(500)) {
+    if (socket.waitForConnected(SINGLE_INSTANCE_CONNECT_TIMEOUT_MS)) {
         // Another instance is running, so we'll send a message to wake it up
         // and then exit this instance.
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Another instance is running. Waking it up and exiting.");
@@ -456,7 +464,7 @@ int main(int argc, char *argv[])
 #endif
 
         socket.write("wakeup");
-        socket.waitForBytesWritten(1000);
+        socket.waitForBytesWritten(SINGLE_INSTANCE_WRITE_TIMEOUT_MS);
         socket.disconnectFromServer();
         return 0;
     }
@@ -783,7 +791,7 @@ int main(int argc, char *argv[])
 
     // Give worker tasks time to properly exit. Fixes PendingQuitTask
     // sometimes freezing and blocking process exit.
-    QThreadPool::globalInstance()->waitForDone(30000);
+    QThreadPool::globalInstance()->waitForDone(THREADPOOL_SHUTDOWN_TIMEOUT_MS);
 
     LogManager::instance()->shutdown();
 

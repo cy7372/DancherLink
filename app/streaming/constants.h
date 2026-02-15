@@ -62,6 +62,52 @@ constexpr int SOCKET_WRITE_TIMEOUT_MS = 1000;
 // Default window scale ratio
 constexpr float DEFAULT_WINDOW_SCALE_RATIO = 0.80f;
 
+// Common delay values
+constexpr int SHORT_DELAY_MS = 500;          // Short delay for UI/cleanup operations
+constexpr int MEDIUM_DELAY_MS = 1000;        // Medium delay for network operations
+constexpr int LONG_DELAY_MS = 5000;          // Long delay for logging intervals
+
+// Single instance socket timeouts
+constexpr int SINGLE_INSTANCE_CONNECT_TIMEOUT_MS = 500;
+constexpr int SINGLE_INSTANCE_WRITE_TIMEOUT_MS = 1000;
+
+// Host connection timeouts
+constexpr int HOST_REACHABILITY_TIMEOUT_MS = 3000;
+constexpr int HOST_READY_CHECK_RETRY_DELAY_MS = 500;
+
+// Service unavailable retry delay (seconds)
+constexpr int SERVICE_UNAVAILABLE_RETRY_DELAY_SEC = 5;
+
+// Async log flush timeout
+constexpr int ASYNC_LOG_FLUSH_TIMEOUT_MS = 500;
+
+// Steam Link window creation delay
+constexpr int STEAM_LINK_WINDOW_CREATION_DELAY_MS = 500;
+
+// Audio pipeline latency delay
+constexpr int AUDIO_PIPELINE_LATENCY_DELAY_MS = 500;
+
+// Bandwidth update interval
+constexpr int BANDWIDTH_UPDATE_INTERVAL_MS = 1000;
+
+// Resize reset cooldown
+constexpr int RESIZE_RESET_COOLDOWN_MS = 500;
+
+// Frame latency wait timeout
+constexpr int FRAME_LATENCY_WAIT_TIMEOUT_MS = 1000;
+
+// Pace history window
+constexpr int PACE_HISTORY_WINDOW_MS = 500;
+
+// Gamepad rumble duration
+constexpr int GAMEPAD_RUMBLE_DURATION_MS = 30000;
+
+// Stats measurement window (microseconds)
+constexpr int STATS_MEASUREMENT_WINDOW_US = 1000000;
+
+// VPN detection minimum MTU
+constexpr int VPN_DETECTION_MIN_MTU = 1500;
+
 // ----------------------------------------------------------------------------
 // Bitrate Constants
 // ----------------------------------------------------------------------------

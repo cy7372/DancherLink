@@ -26,7 +26,6 @@ void destroyMicrophoneStream() {
 int sendMicrophoneData(const void* data, int length) {
     Q_UNUSED(data);
     Q_UNUSED(length);
-    // qWarning("sendMicrophoneData not implemented");
     return 0;
 }
 }

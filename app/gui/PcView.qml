@@ -132,7 +132,6 @@ CenteredGridView {
         }
 
         Image {
-            // TODO: Tooltip
             id: stateIcon
             anchors.horizontalCenter: pcIcon.horizontalCenter
             anchors.verticalCenter: pcIcon.verticalCenter
@@ -142,6 +141,17 @@ CenteredGridView {
             sourceSize {
                 width: !model.online ? 75 : 70
                 height: !model.online ? 75 : 70
+            }
+
+            ToolTip.visible: stateIconMouseArea.containsMouse && stateIcon.visible
+            ToolTip.text: !model.online ? qsTr("PC is offline") : qsTr("PC is not paired")
+            ToolTip.delay: 500
+
+            MouseArea {
+                id: stateIconMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton  // Don't intercept clicks
             }
         }
 
