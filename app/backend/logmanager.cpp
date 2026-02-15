@@ -102,7 +102,10 @@ void LogManager::initialize(bool suppressVerboseOutput)
     if (IS_UNSPECIFIED_HANDLE(oldConErr))
 #endif
     {
-        m_LoggerFile = new QFile(tempDir.filePath(QString("DancherLink-%1.log").arg(QDateTime::currentSecsSinceEpoch())));
+        // Use human-readable datetime format for log filename
+        QString logFileName = QString("DancherLink-%1.log")
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
+        m_LoggerFile = new QFile(tempDir.filePath(logFileName));
         if (m_LoggerFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
             QTextStream(stderr) << "Redirecting log output to " << m_LoggerFile->fileName() << Qt::endl;
             m_LoggerStream.setDevice(m_LoggerFile);

@@ -1792,6 +1792,43 @@ Page {
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Prompts to quit and reconnect when the client display resolution changes.")
                     }
+
+                    // Spacer
+                    Item {
+                        width: parent.width
+                        height: 10
+                    }
+
+                    // Debug section with log directory button
+                    Label {
+                        width: parent.width
+                        text: qsTr("Debug & Logging")
+                        font.pointSize: 12
+                        font.bold: true
+                        color: groupTitleColor
+                    }
+
+                    Button {
+                        id: openLogDirButton
+                        text: qsTr("Open Log Directory")
+                        font.pointSize: 12
+                        onClicked: {
+                            SystemProperties.openLogDir()
+                        }
+
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Opens the directory containing log files for troubleshooting.")
+                    }
+
+                    Label {
+                        width: parent.width
+                        text: qsTr("Log path: %1").arg(SystemProperties.logDir)
+                        font.pointSize: 10
+                        color: "#888888"
+                        wrapMode: Text.Wrap
+                    }
                 }
             }
         }

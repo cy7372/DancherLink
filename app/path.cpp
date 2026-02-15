@@ -105,7 +105,8 @@ QString Path::getDataFilePath(QString fileName)
 void Path::initialize(bool portable)
 {
     if (portable) {
-        s_LogDir = QDir::currentPath();
+        // Portable mode: use subdirectories in the application directory
+        s_LogDir = QDir::currentPath() + "/logs";
         s_BoxArtCacheDir = QDir::currentPath() + "/boxart";
         s_QmlCacheDir = QDir::currentPath() + "/qmlcache";
 
@@ -114,15 +115,18 @@ void Path::initialize(bool portable)
         s_CacheDir = QDir::currentPath() + "/cache";
     }
     else {
-#ifdef Q_OS_DARWIN
-        // On macOS, $TMPDIR is some random folder under /var/folders/ that nobody can
-        // easily find, so use the system's global tmp directory instead.
-        s_LogDir = "/tmp";
-#else
-        s_LogDir = QDir::tempPath();
-#endif
+        // Installed mode: use standard AppData locations
+        // Logs go to LocalAppData/<AppName>/logs/ for persistence and easy access
+        QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        s_LogDir = appDataPath + "/logs";
         s_CacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
         s_BoxArtCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/boxart";
         s_QmlCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/qmlcache";
+    }
+
+    // Ensure log directory exists
+    QDir logDir(s_LogDir);
+    if (!logDir.exists()) {
+        logDir.mkpath(".");
     }
 }
