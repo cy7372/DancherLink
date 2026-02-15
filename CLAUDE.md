@@ -44,4 +44,8 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 - Platform workarounds marked with `HACK` comments
 - Device-specific fixes (e.g. ThinkPad X1 Fold) are intentional — do not generalize without asking
 - Prefer `SDL_Log*` for logging in streaming/video code, `qDebug`/`qWarning` in Qt code
-- Thread safety: `SDL_mutex` for D3D11 context, `QReadWriteLock` for shared state, `SDL_Atomic` for flags
+- Thread safety: `SDL_mutex` for D3D11 context, `QReadWriteLock` for shared state, `SDL_Atomic` for flags, `std::atomic` for cancellation flags
+
+## Notes
+- Pairing cancellation: `ComputerManager::cancelPendingPairing()` cancels active pairing via atomic flag
+- STUN is disabled for privacy (DancherLink-specific)
