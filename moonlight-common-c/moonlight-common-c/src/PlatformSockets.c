@@ -2,7 +2,7 @@
 
 #define TEST_PORT_TIMEOUT_SEC 3
 
-#define RCV_BUFFER_SIZE_MIN  262144  // 256 KB minimum for high bitrate streams
+#define RCV_BUFFER_SIZE_MIN  524288  // 512 KB minimum for high bitrate streams
 #define RCV_BUFFER_SIZE_STEP 16384
 
 #if defined(__vita__)
