@@ -1,4 +1,5 @@
 #include "session.h"
+#include "constants.h"
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "backend/logmanager.h"
@@ -534,7 +535,7 @@ void Session::getDecoderInfo(SDL_Window* window,
 
     // Try an HEVC Main10 decoder first to see if we have HDR support
     if (chooseDecoder(StreamingPreferences::VDS_FORCE_HARDWARE,
-                      window, VIDEO_FORMAT_H265_MAIN10, 1920, 1080, 60,
+                      window, VIDEO_FORMAT_H265_MAIN10, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                       false, false, true, decoder)) {
         isHardwareAccelerated = decoder->isHardwareAccelerated();
         isFullScreenOnly = decoder->isAlwaysFullScreen();
@@ -547,7 +548,7 @@ void Session::getDecoderInfo(SDL_Window* window,
 
     // Try an AV1 Main10 decoder next to see if we have HDR support
     if (chooseDecoder(StreamingPreferences::VDS_FORCE_HARDWARE,
-                      window, VIDEO_FORMAT_AV1_MAIN10, 1920, 1080, 60,
+                      window, VIDEO_FORMAT_AV1_MAIN10, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                       false, false, true, decoder)) {
         // If we've got a working AV1 Main 10-bit decoder, we'll enable the HDR checkbox
         // but we will still continue probing to get other attributes for HEVC or H.264
@@ -559,10 +560,10 @@ void Session::getDecoderInfo(SDL_Window* window,
         // If we found no hardware decoders with HDR, check for a renderer
         // that supports HDR rendering with software decoded frames.
         if (chooseDecoder(StreamingPreferences::VDS_FORCE_SOFTWARE,
-                          window, VIDEO_FORMAT_H265_MAIN10, 1920, 1080, 60,
+                          window, VIDEO_FORMAT_H265_MAIN10, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                           false, false, true, decoder) ||
             chooseDecoder(StreamingPreferences::VDS_FORCE_SOFTWARE,
-                          window, VIDEO_FORMAT_AV1_MAIN10, 1920, 1080, 60,
+                          window, VIDEO_FORMAT_AV1_MAIN10, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                           false, false, true, decoder)) {
             isHdrSupported = decoder->isHdrSupported();
             delete decoder;
@@ -576,7 +577,7 @@ void Session::getDecoderInfo(SDL_Window* window,
 
     // Try a regular hardware accelerated HEVC decoder now
     if (chooseDecoder(StreamingPreferences::VDS_FORCE_HARDWARE,
-                      window, VIDEO_FORMAT_H265, 1920, 1080, 60,
+                      window, VIDEO_FORMAT_H265, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                       false, false, true, decoder)) {
         isHardwareAccelerated = decoder->isHardwareAccelerated();
         isFullScreenOnly = decoder->isAlwaysFullScreen();
@@ -603,7 +604,7 @@ void Session::getDecoderInfo(SDL_Window* window,
     // If we still didn't find a hardware decoder, try H.264 now.
     // This will fall back to software decoding, so it should always work.
     if (chooseDecoder(StreamingPreferences::VDS_AUTO,
-                      window, VIDEO_FORMAT_H264, 1920, 1080, 60,
+                      window, VIDEO_FORMAT_H264, StreamingConstants::PROBE_WIDTH, StreamingConstants::PROBE_HEIGHT, StreamingConstants::PROBE_FPS,
                       false, false, true, decoder)) {
         isHardwareAccelerated = decoder->isHardwareAccelerated();
         isFullScreenOnly = decoder->isAlwaysFullScreen();
@@ -1976,7 +1977,7 @@ bool Session::startConnectionAsync()
     }
     else {
         // Use 1392 byte video packets by default
-        m_StreamConfig.packetSize = 1392;
+        m_StreamConfig.packetSize = StreamingConstants::DEFAULT_PACKET_SIZE;
 
         // getActiveAddressReachability() does network I/O, so we only attempt to check
         // reachability if we've already contacted the PC successfully.
@@ -1992,7 +1993,7 @@ bool Session::startConnectionAsync()
             // It looks like our route to this PC is over a VPN, so cap at 1024 bytes.
             // Treat it as remote even if the target address is in RFC 1918 address space.
             m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
-            m_StreamConfig.packetSize = 1024;
+            m_StreamConfig.packetSize = StreamingConstants::VPN_PACKET_SIZE;
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                         "[NET_DIAG] Network type: VPN, packet size: %d bytes", m_StreamConfig.packetSize);
             break;
