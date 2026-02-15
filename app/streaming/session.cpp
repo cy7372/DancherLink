@@ -729,6 +729,168 @@ Session::~Session()
     SDL_DestroyMutex(m_DecoderLock);
 }
 
+// ============================================================================
+// Initialize Helper Methods
+// ============================================================================
+
+void Session::initializeSessionOptions()
+{
+    // Copy all preferences to session options
+    // This is the ONLY place where we read from m_Preferences for session configuration.
+    m_SessionOptions.width = m_Preferences->width;
+    m_SessionOptions.height = m_Preferences->height;
+    m_SessionOptions.fps = m_Preferences->fps;
+    m_SessionOptions.bitrateKbps = m_Preferences->bitrateKbps;
+    m_SessionOptions.enableVsync = m_Preferences->enableVsync;
+    m_SessionOptions.enableFramePacing = m_Preferences->framePacing;
+    m_SessionOptions.enableHdr = m_Preferences->enableHdr;
+    m_SessionOptions.enableYUV444 = m_Preferences->enableYUV444;
+    m_SessionOptions.playAudioOnHost = m_Preferences->playAudioOnHost;
+    m_SessionOptions.multiController = m_Preferences->multiController;
+    m_SessionOptions.enableMdns = m_Preferences->enableMdns;
+    m_SessionOptions.quitAppAfter = m_Preferences->quitAppAfter;
+    m_SessionOptions.absoluteMouseMode = m_Preferences->absoluteMouseMode;
+    m_SessionOptions.absoluteTouchMode = m_Preferences->absoluteTouchMode;
+    m_SessionOptions.richPresence = m_Preferences->richPresence;
+    m_SessionOptions.gamepadMouse = m_Preferences->gamepadMouse;
+    m_SessionOptions.swapMouseButtons = m_Preferences->swapMouseButtons;
+    m_SessionOptions.reverseScrollDirection = m_Preferences->reverseScrollDirection;
+    m_SessionOptions.swapFaceButtons = m_Preferences->swapFaceButtons;
+    m_SessionOptions.enableMicrophone = m_Preferences->enableMicrophone;
+    m_SessionOptions.autoAdjustBitrate = m_Preferences->autoAdjustBitrate;
+    m_SessionOptions.unlockBitrate = m_Preferences->unlockBitrate;
+    m_SessionOptions.gameOptimizations = m_Preferences->gameOptimizations;
+    m_SessionOptions.muteOnFocusLoss = m_Preferences->muteOnFocusLoss;
+    m_SessionOptions.backgroundGamepad = m_Preferences->backgroundGamepad;
+    m_SessionOptions.keepAwake = m_Preferences->keepAwake;
+    m_SessionOptions.detectResolutionChange = m_Preferences->detectResolutionChange;
+    m_SessionOptions.audioConfig = m_Preferences->audioConfig;
+    m_SessionOptions.videoCodecConfig = m_Preferences->videoCodecConfig;
+    m_SessionOptions.videoDecoderSelection = m_Preferences->videoDecoderSelection;
+    m_SessionOptions.windowMode = m_Preferences->windowMode;
+    m_SessionOptions.uiDisplayMode = m_Preferences->uiDisplayMode;
+    m_SessionOptions.captureSysKeysMode = m_Preferences->captureSysKeysMode;
+
+    // Determine if we are in Auto Resolution mode
+    if (m_Preferences->width == 0 && m_Preferences->height == 0) {
+        m_SessionOptions.isAutoResolution = true;
+    } else {
+        m_SessionOptions.isAutoResolution = false;
+    }
+}
+
+bool Session::detectScreenResolution()
+{
+    if (!m_SessionOptions.isAutoResolution) {
+        return true;  // Fixed resolution mode, nothing to detect
+    }
+
+    // In Auto mode, detect current screen resolution
+    if (m_QtWindow && m_QtWindow->screen()) {
+        QSize screenSize = m_QtWindow->screen()->size() * m_QtWindow->screen()->devicePixelRatio();
+
+        // Ensure dimensions are even numbers
+        int width = screenSize.width();
+        int height = screenSize.height();
+        if (width % 2 != 0) width &= ~1;
+        if (height % 2 != 0) height &= ~1;
+
+        m_StreamConfig.width = width;
+        m_StreamConfig.height = height;
+        m_SessionOptions.width = width;
+        m_SessionOptions.height = height;
+
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Auto-detected screen resolution: %dx%d",
+                    m_StreamConfig.width, m_StreamConfig.height);
+        return true;
+    }
+
+    // Fallback to default resolution
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Unable to auto-detect screen resolution. Defaulting to %dx%d.",
+                StreamingConstants::HD_WIDTH, StreamingConstants::HD_HEIGHT);
+    m_StreamConfig.width = StreamingConstants::HD_WIDTH;
+    m_StreamConfig.height = StreamingConstants::HD_HEIGHT;
+    m_SessionOptions.width = StreamingConstants::HD_WIDTH;
+    m_SessionOptions.height = StreamingConstants::HD_HEIGHT;
+    return false;
+}
+
+void Session::setupAudioCallbacks()
+{
+    LiInitializeAudioCallbacks(&m_AudioCallbacks);
+    m_AudioCallbacks.init = arInit;
+    m_AudioCallbacks.cleanup = arCleanup;
+    m_AudioCallbacks.decodeAndPlaySample = arDecodeAndPlaySample;
+    m_AudioCallbacks.capabilities = getAudioRendererCapabilities(m_StreamConfig.audioConfiguration);
+}
+
+void Session::setupEncryptionFlags()
+{
+#ifndef STEAM_LINK
+    // Opt-in to all encryption features if we detect that the platform
+    // has AES cryptography acceleration instructions and more than 2 cores.
+    if (StreamUtils::hasFastAes() && SDL_GetCPUCount() > 2) {
+        m_StreamConfig.encryptionFlags = ENCFLG_ALL;
+    }
+    else {
+        // Enable audio encryption as long as we're not on Steam Link.
+        m_StreamConfig.encryptionFlags = ENCFLG_AUDIO;
+    }
+#endif
+}
+
+void Session::setupNetworkConfig()
+{
+    if (m_Preferences->packetSize != 0) {
+        // Override default packet size and remote streaming detection
+        m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
+        m_StreamConfig.packetSize = m_Preferences->packetSize;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[NET_DIAG] Using custom packet size: %d bytes",
+                    m_Preferences->packetSize);
+    }
+    else {
+        // Use default packet size
+        m_StreamConfig.packetSize = StreamingConstants::DEFAULT_PACKET_SIZE;
+
+        switch (m_Computer->getActiveAddressReachability()) {
+        case NvComputer::RI_LAN:
+            m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: LAN, packet size: %d bytes", m_StreamConfig.packetSize);
+            break;
+        case NvComputer::RI_VPN:
+            m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
+            m_StreamConfig.packetSize = StreamingConstants::VPN_PACKET_SIZE;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: VPN, packet size: %d bytes", m_StreamConfig.packetSize);
+            break;
+        default:
+            m_StreamConfig.streamingRemotely = STREAM_CFG_AUTO;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[NET_DIAG] Network type: AUTO, packet size: %d bytes", m_StreamConfig.packetSize);
+            break;
+        }
+    }
+}
+
+void Session::setupVideoFormats()
+{
+    // Start with all codecs and profiles in priority order
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_HIGH10_444);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_MAIN10);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_REXT10_444);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_MAIN10);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_HIGH8_444);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_MAIN8);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_REXT8_444);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H264_HIGH8_444);
+    m_SupportedVideoFormats.append(VIDEO_FORMAT_H264);
+}
+
 bool Session::initialize(QQuickWindow* qtWindow)
 {
     // Try to suppress the IME UI if possible
@@ -782,60 +944,7 @@ bool Session::initialize(QQuickWindow* qtWindow)
     // Initialize SessionOptions from persistent preferences
     // This is the ONLY place where we read from m_Preferences for session configuration.
     // If we are restarting, m_SessionOptions will already be populated with the updated values.
-    
-    // Copy all preferences to session options
-    m_SessionOptions.width = m_Preferences->width;
-    m_SessionOptions.height = m_Preferences->height;
-    m_SessionOptions.fps = m_Preferences->fps;
-    m_SessionOptions.bitrateKbps = m_Preferences->bitrateKbps;
-    m_SessionOptions.enableVsync = m_Preferences->enableVsync;
-    m_SessionOptions.enableFramePacing = m_Preferences->framePacing;
-    m_SessionOptions.enableHdr = m_Preferences->enableHdr;
-    m_SessionOptions.enableYUV444 = m_Preferences->enableYUV444;
-    m_SessionOptions.playAudioOnHost = m_Preferences->playAudioOnHost;
-    m_SessionOptions.multiController = m_Preferences->multiController;
-    m_SessionOptions.enableMdns = m_Preferences->enableMdns;
-    m_SessionOptions.quitAppAfter = m_Preferences->quitAppAfter;
-    m_SessionOptions.absoluteMouseMode = m_Preferences->absoluteMouseMode;
-    m_SessionOptions.absoluteTouchMode = m_Preferences->absoluteTouchMode;
-    m_SessionOptions.richPresence = m_Preferences->richPresence;
-    m_SessionOptions.gamepadMouse = m_Preferences->gamepadMouse;
-    m_SessionOptions.swapMouseButtons = m_Preferences->swapMouseButtons;
-    m_SessionOptions.reverseScrollDirection = m_Preferences->reverseScrollDirection;
-    m_SessionOptions.swapFaceButtons = m_Preferences->swapFaceButtons;
-    m_SessionOptions.enableMicrophone = m_Preferences->enableMicrophone;
-    m_SessionOptions.autoAdjustBitrate = m_Preferences->autoAdjustBitrate;
-    m_SessionOptions.unlockBitrate = m_Preferences->unlockBitrate;
-    m_SessionOptions.gameOptimizations = m_Preferences->gameOptimizations;
-    m_SessionOptions.muteOnFocusLoss = m_Preferences->muteOnFocusLoss;
-    m_SessionOptions.backgroundGamepad = m_Preferences->backgroundGamepad;
-    m_SessionOptions.keepAwake = m_Preferences->keepAwake;
-    m_SessionOptions.detectResolutionChange = m_Preferences->detectResolutionChange;
-    m_SessionOptions.audioConfig = m_Preferences->audioConfig;
-    m_SessionOptions.videoCodecConfig = m_Preferences->videoCodecConfig;
-    m_SessionOptions.videoDecoderSelection = m_Preferences->videoDecoderSelection;
-    m_SessionOptions.windowMode = m_Preferences->windowMode;
-    m_SessionOptions.uiDisplayMode = m_Preferences->uiDisplayMode;
-    m_SessionOptions.captureSysKeysMode = m_Preferences->captureSysKeysMode;
-
-    // Determine if we are in Auto Resolution mode.
-    //
-    // "Auto" mode means the user wants the client to adapt to the screen resolution.
-    //
-    // We are in Auto mode if:
-    // The user preference is 0x0 (Standard Auto, needs screen detection)
-    if (m_Preferences->width == 0 && m_Preferences->height == 0) {
-        // CASE 1: Standard Auto Session
-        // The user has selected "Auto" (0x0) in preferences.
-        m_SessionOptions.isAutoResolution = true;
-        
-        // m_SessionOptions.width/height are 0 here (copied from preferences above).
-        // They will be populated by the screen detection logic below.
-    } else {
-        // CASE 2: Fixed Resolution
-        // The user has explicitly selected a resolution (e.g. 1920x1080).
-        m_SessionOptions.isAutoResolution = false;
-    }
+    initializeSessionOptions();
 
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -849,41 +958,7 @@ bool Session::initialize(QQuickWindow* qtWindow)
     m_StreamConfig.height = m_SessionOptions.height;
 
     // Handle "Auto" resolution logic
-    if (m_SessionOptions.isAutoResolution) {
-        // In Auto mode, we always detect the current screen resolution.
-        // This ensures we adapt to device form factor changes (e.g. foldable devices)
-        // on every session start or restart.
-        if (m_QtWindow && m_QtWindow->screen()) {
-            // Use physical resolution for Auto mode to ensure we get the full
-            // resolution of the display (including HiDPI scaling).
-            QSize screenSize = m_QtWindow->screen()->size() * m_QtWindow->screen()->devicePixelRatio();
-            
-            // Ensure dimensions are even numbers
-            int width = screenSize.width();
-            int height = screenSize.height();
-            if (width % 2 != 0) width &= ~1;
-            if (height % 2 != 0) height &= ~1;
-
-            m_StreamConfig.width = width;
-            m_StreamConfig.height = height;
-
-            // Update SessionOptions to reflect the detected resolution
-            m_SessionOptions.width = width;
-            m_SessionOptions.height = height;
-
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "Auto-detected screen resolution: %dx%d (Logical)",
-                        m_StreamConfig.width, m_StreamConfig.height);
-        }
-        else {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Unable to auto-detect screen resolution. Defaulting to 1280x720.");
-            m_StreamConfig.width = 1280;
-            m_StreamConfig.height = 720;
-            m_SessionOptions.width = 1280;
-            m_SessionOptions.height = 720;
-        }
-    }
+    detectScreenResolution();
 
     int x, y, width, height;
     getWindowDimensions(x, y, width, height);
@@ -915,18 +990,8 @@ bool Session::initialize(QQuickWindow* qtWindow)
     m_StreamConfig.fps = m_Preferences->fps;
     m_StreamConfig.bitrate = m_Preferences->bitrateKbps;
 
-#ifndef STEAM_LINK
-    // Opt-in to all encryption features if we detect that the platform
-    // has AES cryptography acceleration instructions and more than 2 cores.
-    if (StreamUtils::hasFastAes() && SDL_GetCPUCount() > 2) {
-        m_StreamConfig.encryptionFlags = ENCFLG_ALL;
-    }
-    else {
-        // Enable audio encryption as long as we're not on Steam Link.
-        // That hardware can hardly handle Opus decoding at all.
-        m_StreamConfig.encryptionFlags = ENCFLG_AUDIO;
-    }
-#endif
+    // Setup encryption flags based on platform capabilities
+    setupEncryptionFlags();
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Video bitrate: %d kbps",
@@ -951,11 +1016,8 @@ bool Session::initialize(QQuickWindow* qtWindow)
         break;
     }
 
-    LiInitializeAudioCallbacks(&m_AudioCallbacks);
-    m_AudioCallbacks.init = arInit;
-    m_AudioCallbacks.cleanup = arCleanup;
-    m_AudioCallbacks.decodeAndPlaySample = arDecodeAndPlaySample;
-    m_AudioCallbacks.capabilities = getAudioRendererCapabilities(m_StreamConfig.audioConfiguration);
+    // Setup audio callbacks
+    setupAudioCallbacks();
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Audio channel count: %d",
@@ -964,17 +1026,8 @@ bool Session::initialize(QQuickWindow* qtWindow)
                 "Audio channel mask: %X",
                 CHANNEL_MASK_FROM_AUDIO_CONFIGURATION(m_StreamConfig.audioConfiguration));
 
-    // Start with all codecs and profiles in priority order
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_HIGH10_444);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_MAIN10);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_REXT10_444);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_MAIN10);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_HIGH8_444);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_AV1_MAIN8);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265_REXT8_444);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H265);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H264_HIGH8_444);
-    m_SupportedVideoFormats.append(VIDEO_FORMAT_H264);
+    // Initialize supported video formats
+    setupVideoFormats();
 
     switch (m_Preferences->videoCodecConfig)
     {
@@ -1966,45 +2019,8 @@ bool Session::startConnectionAsync()
         hostInfo.rtspSessionUrl = rtspSessionUrlStr.data();
     }
 
-    if (m_Preferences->packetSize != 0) {
-        // Override default packet size and remote streaming detection
-        // NB: Using STREAM_CFG_AUTO will cap our packet size at 1024 for remote hosts.
-        m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
-        m_StreamConfig.packetSize = m_Preferences->packetSize;
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "[NET_DIAG] Using custom packet size: %d bytes",
-                    m_Preferences->packetSize);
-    }
-    else {
-        // Use 1392 byte video packets by default
-        m_StreamConfig.packetSize = StreamingConstants::DEFAULT_PACKET_SIZE;
-
-        // getActiveAddressReachability() does network I/O, so we only attempt to check
-        // reachability if we've already contacted the PC successfully.
-        switch (m_Computer->getActiveAddressReachability()) {
-        case NvComputer::RI_LAN:
-            // This address is on-link, so treat it as a local address
-            // even if it's not in RFC 1918 space or it's an IPv6 address.
-            m_StreamConfig.streamingRemotely = STREAM_CFG_LOCAL;
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "[NET_DIAG] Network type: LAN, packet size: %d bytes", m_StreamConfig.packetSize);
-            break;
-        case NvComputer::RI_VPN:
-            // It looks like our route to this PC is over a VPN, so cap at 1024 bytes.
-            // Treat it as remote even if the target address is in RFC 1918 address space.
-            m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
-            m_StreamConfig.packetSize = StreamingConstants::VPN_PACKET_SIZE;
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "[NET_DIAG] Network type: VPN, packet size: %d bytes", m_StreamConfig.packetSize);
-            break;
-        default:
-            // If we don't have reachability info, let moonlight-common-c decide.
-            m_StreamConfig.streamingRemotely = STREAM_CFG_AUTO;
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "[NET_DIAG] Network type: AUTO, packet size: %d bytes", m_StreamConfig.packetSize);
-            break;
-        }
-    }
+    // Setup network configuration (packet size, remote streaming detection)
+    setupNetworkConfig();
 
     // If the user has chosen YUV444 without adjusting the bitrate but the host doesn't
     // support YUV444 streaming, use the default non-444 bitrate for the stream instead.

@@ -208,6 +208,16 @@ private:
 
     bool populateDecoderProperties(SDL_Window* window);
 
+    // Initialize helper methods for modular initialization
+    void initializeSessionOptions();
+    bool detectScreenResolution();
+    void setupVideoFormats();
+    void setupAudioCallbacks();
+    void setupEncryptionFlags();
+    void setupNetworkConfig();
+    bool validateVideoConstraints();
+    bool validateAudioConfig();
+
     IAudioRenderer* createAudioRenderer(const POPUS_MULTISTREAM_CONFIGURATION opusConfig);
 
     bool initializeAudioRenderer();
