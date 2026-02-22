@@ -18,9 +18,44 @@ ApplicationWindow {
     // a retranslate() because AppView breaks for some reason.
     property bool clearOnBack: false
 
+    // Track if we've explicitly maximized the window to work around
+    // a Qt/Windows bug where restored windows lose their maximized geometry
+    // but keep the maximized title bar state.
+    property bool userMaximized: false
+
     id: window
     width: 1280
     height: 600
+
+    // Handle visibility changes to track user's maximization preference
+    onVisibilityChanged: {
+        // Track when user manually maximizes/unmaximizes the window
+        if (visibility === Window.Maximized) {
+            userMaximized = true
+        } else if (visibility === Window.Windowed) {
+            userMaximized = false
+        }
+    }
+
+    // Timer for fixing Windows maximize/restore geometry bug
+    Timer {
+        id: fixMaximizeTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: {
+            // Only fix if window should be maximized but geometry is wrong
+            if (userMaximized && visibility === Window.Maximized) {
+                var widthRatio = window.width / Screen.width
+                var heightRatio = window.height / Screen.height
+
+                // If window is significantly smaller than screen, re-apply maximization
+                if (widthRatio < 0.95 || heightRatio < 0.95) {
+                    window.showMaximized()
+                }
+            }
+        }
+    }
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
@@ -41,9 +76,10 @@ ApplicationWindow {
         // Show the window according to the user's preferences
         if (SystemProperties.hasDesktopEnvironment) {
             if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_MAXIMIZED) {
-                // Set visibility to Maximized directly
-                window.show()
+                // Use showMaximized() to ensure Qt saves the correct restore geometry.
+                // The visibility property alone doesn't trigger geometry saving.
                 window.showMaximized()
+                userMaximized = true
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
                 window.showFullScreen()
@@ -233,6 +269,11 @@ ApplicationWindow {
             if (!pollingActive) {
                 ComputerManager.startPolling()
                 pollingActive = true
+            }
+
+            // Check if we need to fix the maximize geometry bug
+            if (userMaximized) {
+                fixMaximizeTimer.start()
             }
         }
         else {
