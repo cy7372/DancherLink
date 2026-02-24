@@ -2,6 +2,7 @@
 #include "constants.h"
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
+#include "streaming/networkqualitymonitor.h"
 #include "backend/logmanager.h"
 #include "backend/richpresencemanager.h"
 #include "backend/nvhttp.h"
@@ -32,6 +33,7 @@ constexpr int ICON_SIZE = 64;
 #ifdef Q_OS_WIN32
 #include <windows.h>
 #include <commctrl.h>
+#include <shobjidl.h>
 #include <SDL_syswm.h>
 #include <dwmapi.h>
 #include <powersetting.h>
@@ -327,10 +329,37 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
     switch (connectionStatus)
     {
     case CONN_STATUS_POOR:
-        s_ActiveSession->m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate,
-                                                            s_ActiveSession->m_StreamConfig.bitrate > 5000 ?
-                                                                "Slow connection to PC\nReduce your bitrate" : "Poor connection to PC");
-        s_ActiveSession->m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, true);
+        {
+            // Get detailed network quality info for better recommendations
+            NetworkStats stats = NetworkQualityMonitor::instance()->currentStats();
+            QString message;
+
+            if (stats.shouldReduceBitrate && stats.recommendedBitrate > 0) {
+                // Calculate recommended bitrate reduction
+                int currentBitrate = s_ActiveSession->m_StreamConfig.bitrate;
+                int recommendedBitrate = stats.recommendedBitrate;
+                int reduction = 100 - (recommendedBitrate * 100 / currentBitrate);
+
+                message = QString("Network Quality: %1\n"
+                                  "Packet Loss: %2%\n\n"
+                                  "Recommendation:\n"
+                                  "Reduce bitrate by %3%\n"
+                                  "(from %4 to %5 kbps)")
+                    .arg(NetworkQualityMonitor::instance()->qualityString())
+                    .arg(QString::number(stats.packetLossRate * 100, 'f', 1))
+                    .arg(reduction)
+                    .arg(currentBitrate)
+                    .arg(recommendedBitrate);
+            } else if (s_ActiveSession->m_StreamConfig.bitrate > 5000) {
+                message = "Slow connection to PC\nReduce your bitrate";
+            } else {
+                message = "Poor connection to PC";
+            }
+
+            s_ActiveSession->m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate,
+                                                                message.toUtf8().constData());
+            s_ActiveSession->m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, true);
+        }
         break;
     case CONN_STATUS_OKAY:
         s_ActiveSession->m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, false);
@@ -1599,6 +1628,7 @@ private:
     void run() override
     {
         if (!m_Session) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "DeferredSessionCleanupTask: m_Session is null");
             return;
         }
 
@@ -1615,20 +1645,10 @@ private:
             emit m_Session->quitStarting();
         }
         else if (restartRequest) {
-            // We defer the restart signal until AFTER LiStopConnection()
-            // to ensure the previous connection is fully cleaned up before starting a new one.
+            // Defer restart until after LiStopConnection()
         }
         else {
-            // Restore the Qt window immediately before notifying QML.
-            // This ensures the window is visible even if QML's binding is delayed
-            // or if the window state was corrupted by SDL.
-            if (m_Session && m_Session->m_QtWindow) {
-                // We don't call show() here because it may reset the window state to Normal.
-                // QML will handle making the window visible again.
-                // QMetaObject::invokeMethod(m_Session->m_QtWindow, "show", Qt::QueuedConnection);
-                QMetaObject::invokeMethod(m_Session->m_QtWindow, "requestActivate", Qt::QueuedConnection);
-                QMetaObject::invokeMethod(m_Session->m_QtWindow, "raise", Qt::QueuedConnection);
-            }
+            // QML will handle making the window visible again.
             if (m_Session) {
                 emit m_Session->sessionFinished(m_Session->m_PortTestResults);
             }
@@ -1643,6 +1663,9 @@ private:
 
         // Finish cleanup of the connection state
         LiStopConnection();
+
+        // End the session log
+        LogManager::instance()->endSessionLog();
 
         // Give the window manager and graphics driver a moment to cleanup resources
         // before we potentially create a new window and D3D device in the next session.
@@ -1667,17 +1690,8 @@ private:
         
         // Now that the connection is stopped, we can safely request a restart.
         // This prevents race conditions where the new session tries to start
-        // while the old one is still technically active (causing server-side timeouts).
+        // while the old one is still technically active.
         if (restartRequest && m_Session) {
-            // We must emit this signal on the main thread because it will trigger UI updates
-            // and potentially new Session creation which should happen on the main thread.
-            // Direct emission from a worker thread is safe for signals/slots (Qt handles it),
-            // but for clarity and safety we use the session object as the sender.
-            // Note: If m_Session was deleted (which shouldn't happen if restartRequest is true
-            // because we didn't emit sessionFinished), this would be unsafe.
-            // But we know m_Session is alive because we are a friend class or nested class
-            // and we hold a pointer to it. Wait, DeferredSessionCleanupTask holds a raw pointer 'm_Session'.
-            // If Session is deleted, this will crash.
             emit m_Session->sessionRestartRequested();
         }
     }
@@ -2049,6 +2063,30 @@ bool Session::startConnectionAsync()
         return false;
     }
 
+#ifdef Q_OS_WIN32
+    // Windows-specific setup before emitting connectionStarted():
+    // 1. Raise the SDL window to ensure it appears in front of the Qt window
+    // 2. Set Qt window to tool window style to prevent Windows from restoring it
+    //    when the user presses keys during streaming
+    if (m_Window) {
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
+        if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
+            SetForegroundWindow(info.info.win.window);
+            SetActiveWindow(info.info.win.window);
+        }
+    }
+    // setQtWindowToolStyle uses Qt APIs that must be called from the main thread.
+    // Use BlockingQueuedConnection to ensure the style is set before we continue.
+    // NOTE: We use m_QtWindow as the target object because it has the correct
+    // thread affinity (main thread), ensuring BlockingQueuedConnection works.
+    if (m_QtWindow) {
+        QMetaObject::invokeMethod(m_QtWindow, [this]() {
+            setQtWindowToolStyle(true);
+        }, Qt::BlockingQueuedConnection);
+    }
+#endif
+
     emit connectionStarted();
     return true;
 }
@@ -2079,9 +2117,78 @@ void Session::setShouldExit(bool quitHostApp)
     if (quitHostApp) {
         m_Preferences->quitAppAfter = true;
     }
-    
+
     m_ShouldExit = true;
 }
+
+#ifdef Q_OS_WIN32
+void Session::setQtWindowToolStyle(bool toolStyle)
+{
+    if (!m_QtWindow) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "setQtWindowToolStyle: m_QtWindow is null");
+        return;
+    }
+
+    HWND hwnd = reinterpret_cast<HWND>(m_QtWindow->winId());
+    if (!hwnd) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "setQtWindowToolStyle: Failed to get HWND");
+        return;
+    }
+
+    // Use ITaskbarList to control taskbar presence - more reliable than WS_EX_TOOLWINDOW
+    // This approach doesn't change the window style, just controls taskbar visibility
+    ITaskbarList* pTaskbarList = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER,
+                                   IID_ITaskbarList, (void**)&pTaskbarList);
+
+    if (SUCCEEDED(hr) && pTaskbarList) {
+        hr = pTaskbarList->HrInit();
+        if (SUCCEEDED(hr)) {
+            if (toolStyle) {
+                // Remove from taskbar
+                pTaskbarList->DeleteTab(hwnd);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Removed Qt window from taskbar via ITaskbarList");
+            } else {
+                // Add back to taskbar
+                pTaskbarList->AddTab(hwnd);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Added Qt window back to taskbar via ITaskbarList");
+            }
+        } else {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "ITaskbarList::HrInit failed: 0x%08X", hr);
+        }
+        pTaskbarList->Release();
+    } else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Failed to create ITaskbarList: 0x%08X, falling back to WS_EX_TOOLWINDOW", hr);
+
+        // Fallback to WS_EX_TOOLWINDOW method
+        LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        if (toolStyle) {
+            exStyle |= WS_EX_TOOLWINDOW;
+            exStyle &= ~WS_EX_APPWINDOW;
+        } else {
+            exStyle &= ~WS_EX_TOOLWINDOW;
+            exStyle |= WS_EX_APPWINDOW;
+        }
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
+}
+
+void Session::restoreWindowStyle()
+{
+    // This is called from QML to ensure the window style is restored
+    // before the window is shown again.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "restoreWindowStyle() called from QML");
+    setQtWindowToolStyle(false);
+}
+#endif
 
 void Session::waitForHostOnline()
 {
@@ -2113,8 +2220,12 @@ void Session::waitForHostOnline()
                     }
                     return;
                 }
+            } catch (const std::exception& e) {
+                SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                             "Host readiness check failed (attempt %d): %s", i+1, e.what());
             } catch (...) {
-                // Ignore errors and retry
+                SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                             "Host readiness check failed (attempt %d): unknown error", i+1);
             }
             
             if (!that) return;
@@ -2135,6 +2246,12 @@ void Session::waitForHostOnline()
 
 void Session::start()
 {
+    // Start a new session log file
+    QString serverName = m_Computer ? m_Computer->name : QString();
+    LogManager::instance()->startSessionLog(serverName);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Starting streaming session to %s",
+                serverName.isEmpty() ? "unknown server" : serverName.toUtf8().constData());
+
     // Wait for any old session to finish cleanup
     s_ActiveSessionSemaphore.acquire();
 
@@ -2444,6 +2561,16 @@ void Session::exec()
     // Switch to async logging mode when we enter the SDL loop
     LogManager::instance()->enterAsyncLoggingMode();
 
+    // Start network quality monitoring
+    NetworkQualityMonitor::instance()->start(m_StreamConfig.bitrate);
+
+    // Connect IDR frame request signal for smart network recovery
+    connect(NetworkQualityMonitor::instance(), &NetworkQualityMonitor::idrFrameRequested,
+            this, []() {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[NetQuality] Requesting IDR frame for network recovery");
+        LiRequestIdrFrame();
+    });
+
 #ifdef Q_OS_WIN32
     HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
@@ -2481,14 +2608,23 @@ void Session::exec()
         // NB: This behavior was introduced in SDL 2.0.16, but had a few critical
         // issues that could cause indefinite timeouts, delayed joystick detection,
         // and other problems.
-        
+
         // Use a shorter timeout to ensure we can catch external interruptions if needed
         if (!SDL_WaitEventTimeout(&event, 100)) {
             presence.runCallbacks();
-            
-            // Periodically check if we should check resolution changes manually?
-            // No, we rely on events.
-            
+
+            // Update network quality stats
+            const RTP_VIDEO_STATS* stats = LiGetRTPVideoStats();
+            if (stats) {
+                NetworkQualityMonitor::instance()->updateStats(
+                    stats->packetCountVideo,
+                    stats->packetCountFec,
+                    stats->packetCountFecRecovered,
+                    stats->packetCountFecFailed,
+                    stats->packetCountOOS
+                );
+            }
+
             continue;
         }
 #else
@@ -2505,6 +2641,7 @@ void Session::exec()
             SDL_Delay(10);
 #endif
             presence.runCallbacks();
+
             continue;
         }
 #endif
@@ -3327,6 +3464,9 @@ void Session::exec()
     }
 
 DispatchDeferredCleanup:
+    // Stop network quality monitoring
+    NetworkQualityMonitor::instance()->stop();
+
 #ifdef Q_OS_WIN32
     // Increment the generation counter to invalidate any pending dialog threads
     // that haven't shown their message box yet.
@@ -3335,7 +3475,7 @@ DispatchDeferredCleanup:
     if (hPowerNotify) {
         UnregisterPowerSettingNotification(hPowerNotify);
     }
-    
+
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
@@ -3357,16 +3497,13 @@ DispatchDeferredCleanup:
     }
 
     if (m_MicThread != nullptr) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Stopping microphone stream (async)");
-        
         // Ensure we don't try to stop/delete twice
         if (m_MicStream) {
              // Stop the stream on its thread.
              // This will trigger the chain: stop() -> finished() -> deleteLater() -> destroyed() -> quit()
              QMetaObject::invokeMethod(m_MicStream, "stop", Qt::QueuedConnection);
         }
-        
+
         // We defer the wait() and delete to the cleanup task to avoid blocking the UI thread
     }
 
@@ -3379,12 +3516,10 @@ DispatchDeferredCleanup:
 
     if (m_ResolutionDialogPending) {
         // Find the message box window by its title and close it
-        // Note: MessageBox windows are top-level but owned by the application.
-        // We look for a window with the specific title.
         HWND hwnd = nullptr;
-        
+
         QString title = tr("Resolution Changed");
-        
+
         // Try to find the window with a small timeout loop to handle the race condition
         // where the thread has passed the generation check but hasn't created the window yet.
         // We retry for up to 100ms.
@@ -3395,8 +3530,6 @@ DispatchDeferredCleanup:
         }
 
         if (hwnd) {
-            // WM_CLOSE works for MessageBox
-            // Use SendMessage to ensure it's closed before we proceed
             SendMessageA(hwnd, WM_CLOSE, 0, 0);
         }
         m_ResolutionDialogPending = false;
@@ -3405,7 +3538,7 @@ DispatchDeferredCleanup:
 
     // Uncapture the mouse so we can return to the Qt GUI ASAP.
     m_InputHandler->setCaptureActive(false);
-    
+
     SDL_EnableScreenSaver();
     SDL_SetHint(SDL_HINT_TIMER_RESOLUTION, "0");
     if (QGuiApplication::platformName() == "eglfs") {
@@ -3434,6 +3567,9 @@ DispatchDeferredCleanup:
         SDL_HideWindow(m_Window);
     }
 
+    // Restore Qt window style via QML's restoreWindowState() to avoid deadlocks.
+    // The QML handler will be called when sessionFinished signal is emitted.
+
     // Propagate state changes from the SDL window back to the Qt window
     //
     // NB: We're making a conscious decision not to propagate the maximized
@@ -3441,7 +3577,11 @@ DispatchDeferredCleanup:
     // routinely maximize the streaming window simply to view the stream
     // in a larger window, but they don't necessarily want the UI in such
     // a large window.
-    if (!m_IsFullScreen && m_QtWindow != nullptr && m_Window != nullptr) {
+    //
+    // IMPORTANT: Only modify Qt window state if it's visible. Modifying state
+    // on a hidden window can cause it to become visible unexpectedly, which
+    // would bring the Qt UI to the foreground during streaming.
+    if (!m_IsFullScreen && m_QtWindow != nullptr && m_Window != nullptr && m_QtWindow->isVisible()) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
         if (SDL_GetWindowFlags(m_Window) & SDL_WINDOW_MINIMIZED) {
             m_QtWindow->setWindowStates(m_QtWindow->windowStates() | Qt::WindowMinimized);
@@ -3461,18 +3601,6 @@ DispatchDeferredCleanup:
 
     // This must be called after the decoder is deleted, because
     // the renderer may want to interact with the window.
-    // We explicitly delete the decoder here to ensure it's gone before the window is destroyed.
-    // NOTE: This deletion is moved to DeferredSessionCleanupTask to avoid blocking the GUI thread.
-    // if (m_VideoDecoder) {
-    //     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Deleting video decoder before destroying window");
-    //     delete m_VideoDecoder;
-    //     m_VideoDecoder = nullptr;
-    // }
-    // if (m_AudioRenderer) {
-    //     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Deleting audio renderer before destroying window");
-    //     delete m_AudioRenderer;
-    //     m_AudioRenderer = nullptr;
-    // }
 
     if (m_RestartRequest) {
         // SDL_HideWindow(m_Window);
@@ -3493,13 +3621,6 @@ DispatchDeferredCleanup:
     // Don't quit the video subsystem here as it might still be needed by Qt or subsequent sessions.
     // SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
-    // Cleanup can take a while, so dispatch it to a worker thread.
-    // When it is complete, it will release our s_ActiveSessionSemaphore
-    // reference.
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Dispatching DeferredSessionCleanupTask to thread pool");
+    // Dispatch cleanup to worker thread to avoid blocking the UI thread.
     QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
-
-    // Do NOT emit sessionRestartRequested() here. 
-    // It is now handled inside DeferredSessionCleanupTask::run()
-    // after LiStopConnection() to ensure clean state.
 }

@@ -175,6 +175,15 @@ public:
 
     void setShouldExit(bool quitHostApp = false);
 
+#ifdef Q_OS_WIN32
+    // Set or remove the WS_EX_TOOLWINDOW style from the Qt window.
+    // When set, the window won't appear in taskbar, Alt+Tab, or be restored by Win key.
+    void setQtWindowToolStyle(bool toolStyle);
+
+    // Restore window style - called from QML to ensure style is restored
+    Q_INVOKABLE void restoreWindowStyle();
+#endif
+
 signals:
     void stageStarting(QString stage);
 

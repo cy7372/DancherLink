@@ -28,6 +28,9 @@ Item {
     Component.onCompleted: {
         // Delay capturing visibility to ensure the window is fully initialized,
         // avoiding a race where the window is still transitioning states.
+        // NB: We only capture the visibility here, we don't modify the window state.
+        // Modifying the window state here can interfere with Qt's window management
+        // and cause issues when restoring from minimize.
         captureVisibilityTimer.start()
     }
 
@@ -35,19 +38,16 @@ Item {
         id: captureVisibilityTimer
         interval: 50
         onTriggered: {
+            // Just capture the visibility for later restoration
             previousVisibility = window.visibility
-            // Temporarily maximize the window for the splash screen
-            if (window.visibility !== Window.FullScreen && window.visibility !== Window.Maximized) {
-                 window.show()
-                 window.showMaximized()
-            }
+            // Don't call showMaximized() here - it can interfere with Qt's window management
         }
     }
 
     onRestartRequested: {
         // Reset the UI state to show we are working
-        window.visible = true
-        
+        window.show()
+
         // Temporarily maximize the window for the splash screen
         if (window.visibility !== Window.FullScreen && window.visibility !== Window.Maximized) {
              window.showMaximized()
@@ -78,8 +78,11 @@ Item {
         stageLabel.visible = false
         hintText.visible = false
 
-        // Hide the window now that streaming has begun
-        window.visible = false
+        // Hide the window now that streaming has begun.
+        // Note: The Qt window is set to WS_EX_TOOLWINDOW style in Session::startConnectionAsync()
+        // before this signal is emitted. This prevents Windows from restoring the hidden window
+        // when the user presses keys during streaming. The style is restored after streaming ends.
+        window.hide()
     }
 
     function displayLaunchError(text)
@@ -95,8 +98,9 @@ Item {
         var component = Qt.createComponent("QuitSegue.qml")
         stackView.replace(stackView.currentItem, component.createObject(stackView, {"appName": appName}), StackView.Immediate)
 
-        // Show the Qt window again to show quit segue
-        window.visible = true
+        // Show the Qt window again to show quit segue.
+        // Use showNormal() to ensure the window is in a known state.
+        window.showNormal()
     }
 
     function sessionFinished(portTestResult)
@@ -113,10 +117,9 @@ Item {
             Qt.quit()
         }
         else if (errorDialog.text) {
-            // Show the Qt window again after streaming
-            window.visible = true
-
-            // Restore window state based on previous state or preferences.
+            // Restore window state and show the Qt window again after streaming
+            // Do NOT call window.show() before restoreWindowState() - the restore
+            // function handles showing the window itself.
             restoreWindowState()
 
             // Brief delay to let the layout engine settle before showing the dialog,
@@ -125,7 +128,6 @@ Item {
         }
         else {
             // No error, just pop back
-            window.visible = true
             restoreWindowState()
             stackView.pop()
         }
@@ -135,16 +137,49 @@ Item {
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
         if (window.visibility !== Window.Minimized) {
+            // Restore window style first (Windows only)
+            if (session) {
+                session.restoreWindowStyle()
+            }
+
+            // Apply the desired window state based on previous visibility or preferences
+            var targetVisibility = Window.Windowed
+
             if (previousVisibility === Window.Maximized) {
-                window.showMaximized()
+                targetVisibility = Window.Maximized
             } else if (previousVisibility === Window.FullScreen) {
-                window.showFullScreen()
+                targetVisibility = Window.FullScreen
             } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                window.showMaximized()
+                targetVisibility = Window.Maximized
             } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                targetVisibility = Window.FullScreen
+            }
+
+            // Store the target visibility for the timer
+            restoreWindowStateTimer.targetVisibility = targetVisibility
+
+            // First, show the window to ensure it's visible
+            window.show()
+
+            // Use a timer to delay the actual state change. This is critical on Windows
+            // because showMaximized() needs to be called after the window is fully shown.
+            // If called too soon after show(), the maximized state may not be applied correctly,
+            // resulting in a window that has a maximized title bar but windowed geometry.
+            restoreWindowStateTimer.start()
+        }
+    }
+
+    Timer {
+        id: restoreWindowStateTimer
+        property int targetVisibility: Window.Windowed
+        interval: 30
+        onTriggered: {
+            // Now apply the window state after the show() has been processed
+            if (targetVisibility === Window.Maximized) {
+                window.showMaximized()
+            } else if (targetVisibility === Window.FullScreen) {
                 window.showFullScreen()
             } else {
-                // Default to normal windowed mode if no other condition is met
                 window.showNormal()
             }
         }
