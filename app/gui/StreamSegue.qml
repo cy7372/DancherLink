@@ -155,33 +155,18 @@ Item {
                 targetVisibility = Window.FullScreen
             }
 
-            // Store the target visibility for the timer
-            restoreWindowStateTimer.targetVisibility = targetVisibility
-
-            // First, show the window to ensure it's visible
-            window.show()
-
-            // Use a timer to delay the actual state change. This is critical on Windows
-            // because showMaximized() needs to be called after the window is fully shown.
-            // If called too soon after show(), the maximized state may not be applied correctly,
-            // resulting in a window that has a maximized title bar but windowed geometry.
-            restoreWindowStateTimer.start()
-        }
-    }
-
-    Timer {
-        id: restoreWindowStateTimer
-        property int targetVisibility: Window.Windowed
-        interval: 30
-        onTriggered: {
-            // Now apply the window state after the show() has been processed
-            if (targetVisibility === Window.Maximized) {
-                window.showMaximized()
-            } else if (targetVisibility === Window.FullScreen) {
-                window.showFullScreen()
-            } else {
-                window.showNormal()
-            }
+            // Use Qt.callLater to apply the window state in the next event loop iteration.
+            // This avoids the visible "small window flash" that occurs with a Timer-based approach,
+            // because the window state change happens before the window is painted.
+            Qt.callLater(function() {
+                if (targetVisibility === Window.Maximized) {
+                    window.showMaximized()
+                } else if (targetVisibility === Window.FullScreen) {
+                    window.showFullScreen()
+                } else {
+                    window.showNormal()
+                }
+            })
         }
     }
 
