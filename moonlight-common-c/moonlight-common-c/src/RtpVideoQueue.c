@@ -238,6 +238,9 @@ static int reconstructFrame(PRTP_VIDEO_QUEUE queue) {
         return -1;
     }
 
+    // Record FEC reconstruction start time
+    uint64_t fecStartUs = PltGetMicroseconds();
+
     // If we make it here and reported a lost frame, we lied to the host. This can happen if we happen to get
     // unlucky and this particular frame happens to be the one with OOS data, but it should almost never happen.
     LC_ASSERT(queue->missingPackets <= queue->bufferParityPackets);
@@ -340,22 +343,35 @@ static int reconstructFrame(PRTP_VIDEO_QUEUE queue) {
 
     ret = reed_solomon_reconstruct(rs, packets, marks, totalPackets, receiveSize);
 
+    // Record FEC reconstruction end time
+    uint64_t fecEndUs = PltGetMicroseconds();
+    uint64_t fecDurationUs = fecEndUs - fecStartUs;
+
     // We should always provide enough parity to recover the missing data successfully.
     // If this fails, something is probably wrong with our FEC state.
     LC_ASSERT(ret == 0);
 
     if (queue->bufferDataPackets != queue->receivedDataPackets) {
         // Always log FEC recovery for network diagnostics
-        Limelog("[NET_DIAG] FEC RECOVERY frame %d: recovered %d shards, missing=%d, data=%d/%d, parity=%d/%d, fec_pct=%d%%\n",
+        Limelog("[NET_DIAG] FEC RECOVERY frame %d: recovered %d shards, missing=%d, data=%d/%d, parity=%d/%d, fec_pct=%d%%, time=%llums\n",
                 queue->currentFrameNumber,
                 queue->bufferDataPackets - queue->receivedDataPackets,
                 queue->missingPackets,
                 queue->receivedDataPackets, queue->bufferDataPackets,
                 queue->receivedParityPackets, queue->bufferParityPackets,
-                queue->fecPercentage);
+                queue->fecPercentage,
+                (unsigned long long)(fecDurationUs / 1000));
 
         // Report the final FEC status if we needed to perform a recovery
         reportFinalFrameFecStatus(queue);
+    }
+
+    // Warn if FEC reconstruction took too long (over 5ms)
+    if (fecDurationUs > 5000) {
+        Limelog("[NET_DIAG] SLOW FEC: frame %d took %llums to reconstruct (recovered %d shards)\n",
+                queue->currentFrameNumber,
+                (unsigned long long)(fecDurationUs / 1000),
+                queue->bufferDataPackets - queue->receivedDataPackets);
     }
 
 cleanup_packets:

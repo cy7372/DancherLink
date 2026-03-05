@@ -78,6 +78,9 @@ static void VideoPingThreadProc(void* context) {
     }
 }
 
+// Network diagnostics - set to 1 to enable (adds ~8ms latency overhead)
+#define NET_DIAG_ENABLED 0
+
 // Receive thread proc
 static void VideoReceiveThreadProc(void* context) {
     int err;
@@ -89,6 +92,7 @@ static void VideoReceiveThreadProc(void* context) {
     int waitingForVideoMs;
     bool encrypted;
 
+#if NET_DIAG_ENABLED
     // Network diagnostics counters
     uint64_t totalPacketsReceived = 0;
     uint64_t lastDiagTimeMs = 0;
@@ -98,6 +102,18 @@ static void VideoReceiveThreadProc(void* context) {
     uint64_t consecutiveTimeouts = 0;
     #define NET_DIAG_INTERVAL_MS 5000  // Log every 5 seconds
     #define PACKET_GAP_WARNING_MS 100  // Warn if no packet for 100ms
+
+    // Enhanced timing diagnostics
+    uint64_t totalDecryptTimeUs = 0;
+    uint64_t totalQueueTimeUs = 0;
+    uint64_t maxDecryptTimeUs = 0;
+    uint64_t maxQueueTimeUs = 0;
+    uint64_t maxSocketQueueBytes = 0;
+    uint64_t decryptCount = 0;
+    uint32_t lastSeqNum = 0;
+    uint32_t seqNumDiscontinuities = 0;
+    bool firstPacket = true;
+#endif
 
     encrypted = !!(EncryptionFeaturesEnabled & SS_ENC_VIDEO);
     decryptedSize = StreamConfig.packetSize + MAX_RTP_HEADER_SIZE;
@@ -146,11 +162,11 @@ static void VideoReceiveThreadProc(void* context) {
                             receiveSize,
                             useSelect);
         if (err < 0) {
-            Limelog("[NET_DIAG] Video Receive: recvUdpSocket() failed: %d\n", (int)LastSocketError());
             ListenerCallbacks.connectionTerminated(LastSocketFail());
             break;
         }
         else if  (err == 0) {
+#if NET_DIAG_ENABLED
             consecutiveTimeouts++;
             // Log warning if we get multiple consecutive timeouts (indicates network issue)
             if (consecutiveTimeouts >= 10 && receivedDataFromPeer) {
@@ -158,6 +174,7 @@ static void VideoReceiveThreadProc(void* context) {
                         (unsigned long long)consecutiveTimeouts,
                         (unsigned long long)(consecutiveTimeouts * UDP_RECV_POLL_TIMEOUT_MS));
             }
+#endif
 
             if (!receivedDataFromPeer) {
                 // If we wait many seconds without ever receiving a video packet,
@@ -174,6 +191,7 @@ static void VideoReceiveThreadProc(void* context) {
             continue;
         }
 
+#if NET_DIAG_ENABLED
         // Reset consecutive timeout counter on successful receive
         if (consecutiveTimeouts > 0 && receivedDataFromPeer) {
             Limelog("[NET_DIAG] Receive recovered after %llu timeouts (~%llums gap)\n",
@@ -182,21 +200,21 @@ static void VideoReceiveThreadProc(void* context) {
         }
         consecutiveTimeouts = 0;
 
-        // Track packet receive timing for gap detection
-        if (receivedDataFromPeer) {
-            uint64_t nowMs = PltGetMillis();
-            if (lastPacketTimeMs > 0) {
-                uint64_t gapMs = nowMs - lastPacketTimeMs;
-                if (gapMs > maxPacketGapMs) {
-                    maxPacketGapMs = gapMs;
-                }
-                if (gapMs >= PACKET_GAP_WARNING_MS) {
-                    Limelog("[NET_DIAG] Large packet gap detected: %llums (max so far: %llums)\n",
-                            (unsigned long long)gapMs, (unsigned long long)maxPacketGapMs);
-                }
+        // Check socket buffer status (how many bytes are waiting)
+        #ifdef LC_WINDOWS
+        u_long socketQueueBytes = 0;
+        if (ioctlsocket(rtpSocket, FIONREAD, &socketQueueBytes) == 0) {
+            if (socketQueueBytes > maxSocketQueueBytes) {
+                maxSocketQueueBytes = socketQueueBytes;
             }
-            lastPacketTimeMs = nowMs;
+            // Warn if buffer is getting full (arbitrary threshold: 2MB)
+            if (socketQueueBytes > 2 * 1024 * 1024) {
+                Limelog("[NET_DIAG] WARNING: Socket buffer high: %llu bytes pending\n",
+                        (unsigned long long)socketQueueBytes);
+            }
         }
+        #endif
+#endif
 
         if (!receivedDataFromPeer) {
             receivedDataFromPeer = true;
@@ -249,6 +267,9 @@ static void VideoReceiveThreadProc(void* context) {
                 continue;
             }
 
+#if NET_DIAG_ENABLED
+            uint64_t decryptStartUs = PltGetMicroseconds();
+#endif
             if (!PltDecryptMessage(decryptionCtx, ALGORITHM_AES_GCM, 0,
                                    (unsigned char*)StreamConfig.remoteInputAesKey, sizeof(StreamConfig.remoteInputAesKey),
                                    encHeader->iv, sizeof(encHeader->iv),
@@ -258,6 +279,22 @@ static void VideoReceiveThreadProc(void* context) {
                 Limelog("Failed to decrypt video packet!\n");
                 continue;
             }
+#if NET_DIAG_ENABLED
+            uint64_t decryptEndUs = PltGetMicroseconds();
+
+            // Track decrypt timing
+            uint64_t decryptTimeUs = decryptEndUs - decryptStartUs;
+            totalDecryptTimeUs += decryptTimeUs;
+            if (decryptTimeUs > maxDecryptTimeUs) {
+                maxDecryptTimeUs = decryptTimeUs;
+            }
+            decryptCount++;
+
+            // Warn if decryption is slow (over 1ms)
+            if (decryptTimeUs > 1000) {
+                Limelog("[NET_DIAG] Slow decrypt: %llu us\n", (unsigned long long)decryptTimeUs);
+            }
+#endif
         }
 
         // Convert fields to host byte-order
@@ -266,7 +303,37 @@ static void VideoReceiveThreadProc(void* context) {
         packet->timestamp = BE32(packet->timestamp);
         packet->ssrc = BE32(packet->ssrc);
 
+#if NET_DIAG_ENABLED
+        // Track sequence number discontinuities (potential packet loss)
+        if (!firstPacket) {
+            uint16_t seqDiff = (uint16_t)(packet->sequenceNumber - lastSeqNum);
+            if (seqDiff > 1 && seqDiff < 32768) {  // Not wrap-around
+                seqNumDiscontinuities += seqDiff - 1;
+                if (seqDiff > 10) {
+                    Limelog("[NET_DIAG] Large seq jump: %u -> %u (gap=%u)\n",
+                            lastSeqNum, packet->sequenceNumber, seqDiff - 1);
+                }
+            }
+        }
+        lastSeqNum = packet->sequenceNumber;
+        firstPacket = false;
+
+        // Time the queue operation
+        uint64_t queueStartUs = PltGetMicroseconds();
         queueStatus = RtpvAddPacket(&rtpQueue, packet, err, (PRTPV_QUEUE_ENTRY)&buffer[decryptedSize]);
+        uint64_t queueEndUs = PltGetMicroseconds();
+
+        // Track queue timing
+        uint64_t queueTimeUs = queueEndUs - queueStartUs;
+        totalQueueTimeUs += queueTimeUs;
+        if (queueTimeUs > maxQueueTimeUs) {
+            maxQueueTimeUs = queueTimeUs;
+        }
+
+        // Warn if queue operation is slow (over 500us - could indicate FEC reconstruction)
+        if (queueTimeUs > 500) {
+            Limelog("[NET_DIAG] Slow queue op: %llu us (FEC recovery?)\n", (unsigned long long)queueTimeUs);
+        }
 
         // Network diagnostics: count packets and log periodically
         totalPacketsReceived++;
@@ -279,16 +346,53 @@ static void VideoReceiveThreadProc(void* context) {
             }
             else if (nowMs - lastDiagTimeMs >= NET_DIAG_INTERVAL_MS) {
                 uint64_t packetsPerSec = (diagIntervalPackets * 1000) / (nowMs - lastDiagTimeMs);
-                Limelog("[NET_DIAG] Video packets: %llu total, %llu/sec avg, packetSize=%d, maxGap=%llums\n",
+
+                // Calculate average processing times
+                uint64_t avgDecryptUs = decryptCount > 0 ? totalDecryptTimeUs / decryptCount : 0;
+                uint64_t avgQueueUs = diagIntervalPackets > 0 ? totalQueueTimeUs / diagIntervalPackets : 0;
+
+                Limelog("[NET_DIAG] === Video Stream Stats ===\n");
+                Limelog("[NET_DIAG] Packets: %llu total, %llu/sec, size=%d, maxGap=%llums\n",
                         (unsigned long long)totalPacketsReceived,
                         (unsigned long long)packetsPerSec,
                         StreamConfig.packetSize,
                         (unsigned long long)maxPacketGapMs);
+                Limelog("[NET_DIAG] Timing: decrypt avg=%lluus max=%lluus, queue avg=%lluus max=%lluus\n",
+                        (unsigned long long)avgDecryptUs,
+                        (unsigned long long)maxDecryptTimeUs,
+                        (unsigned long long)avgQueueUs,
+                        (unsigned long long)maxQueueTimeUs);
+                Limelog("[NET_DIAG] Socket buffer max=%llu bytes, seq discontinuities=%u\n",
+                        (unsigned long long)maxSocketQueueBytes,
+                        seqNumDiscontinuities);
+
+                // Get RTP queue stats
+                const RTP_VIDEO_STATS* stats = LiGetRTPVideoStats();
+                Limelog("[NET_DIAG] RTP stats: video=%u fec=%u recovered=%u failed=%u oos=%u\n",
+                        stats->packetCountVideo,
+                        stats->packetCountFec,
+                        stats->packetCountFecRecovered,
+                        stats->packetCountFecFailed,
+                        stats->packetCountOOS);
+                Limelog("[NET_DIAG] ==============================\n");
+
+                // Reset interval counters
                 diagIntervalPackets = 0;
-                maxPacketGapMs = 0;  // Reset max gap for next interval
+                maxPacketGapMs = 0;
+                totalDecryptTimeUs = 0;
+                totalQueueTimeUs = 0;
+                maxDecryptTimeUs = 0;
+                maxQueueTimeUs = 0;
+                maxSocketQueueBytes = 0;
+                decryptCount = 0;
+                seqNumDiscontinuities = 0;
                 lastDiagTimeMs = nowMs;
             }
         }
+#else
+        // Without diagnostics, just queue the packet directly
+        queueStatus = RtpvAddPacket(&rtpQueue, packet, err, (PRTPV_QUEUE_ENTRY)&buffer[decryptedSize]);
+#endif
 
         if (queueStatus == RTPF_RET_QUEUED) {
             // The queue owns the buffer

@@ -38,6 +38,10 @@ public:
     void exitAsyncLoggingMode();
     bool isAsyncLoggingEnabled() const;
 
+    // Session-specific logging
+    void startSessionLog(const QString& serverName = QString());
+    void endSessionLog();
+
     void writeLogSync(const QString& message);
 
     // Logging handlers

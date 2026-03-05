@@ -53,6 +53,7 @@ set(APP_SOURCES
     gui/appmodel.cpp
     streaming/bandwidth.cpp
     streaming/streamutils.cpp
+    streaming/networkqualitymonitor.cpp
     backend/autoupdatechecker.cpp
     path.cpp
     settings/mappingmanager.cpp

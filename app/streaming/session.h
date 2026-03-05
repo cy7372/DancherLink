@@ -148,6 +148,10 @@ public:
     explicit Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences = nullptr);
     virtual ~Session();
 
+    // Override fps/bitrate for this session based on pre-stream network measurement.
+    // Must be called before initialize(). 0 = use preference value.
+    void setNetworkOverrides(int fps, int bitrateKbps);
+
     Q_INVOKABLE bool initialize(QQuickWindow* qtWindow);
     Q_INVOKABLE void start();
     Q_INVOKABLE void interrupt();
@@ -367,10 +371,17 @@ private:
     QThread* m_MicThread;
     MicStream* m_MicStream;
 
+    // Network-adaptive overrides (set by AppModel before initialize())
+    int m_NetworkOverrideFps = 0;
+    int m_NetworkOverrideBitrateKbps = 0;
+
     Overlay::OverlayManager m_OverlayManager;
 
     static CONNECTION_LISTENER_CALLBACKS k_ConnCallbacks;
     static Session* s_ActiveSession;
     static QSemaphore s_ActiveSessionSemaphore;
     static SDL_Window* s_SharedWindow;
+
+    // Prevent copying of Session objects due to complex resource management
+    Q_DISABLE_COPY_MOVE(Session)
 };

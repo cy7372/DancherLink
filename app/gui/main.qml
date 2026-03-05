@@ -4,6 +4,8 @@ import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import QtQuick.Controls.Material 2.15
 
+import "."
+
 import ComputerManager 1.0
 import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
@@ -18,44 +20,22 @@ ApplicationWindow {
     // a retranslate() because AppView breaks for some reason.
     property bool clearOnBack: false
 
-    // Track if we've explicitly maximized the window to work around
-    // a Qt/Windows bug where restored windows lose their maximized geometry
-    // but keep the maximized title bar state.
-    property bool userMaximized: false
+    // Cached reference to current AppModel to avoid repeated property lookups
+    // This reduces QML binding evaluation overhead in the network indicator
+    property var currentAppModel: stackView.currentItem ? stackView.currentItem.appModel : null
+
+    Connections {
+        target: stackView
+        function onCurrentItemChanged() {
+            currentAppModel = stackView.currentItem ? stackView.currentItem.appModel : null
+        }
+    }
 
     id: window
-    width: 1280
-    height: 600
-
-    // Handle visibility changes to track user's maximization preference
-    onVisibilityChanged: {
-        // Track when user manually maximizes/unmaximizes the window
-        if (visibility === Window.Maximized) {
-            userMaximized = true
-        } else if (visibility === Window.Windowed) {
-            userMaximized = false
-        }
-    }
-
-    // Timer for fixing Windows maximize/restore geometry bug
-    Timer {
-        id: fixMaximizeTimer
-        interval: 100
-        running: false
-        repeat: false
-        onTriggered: {
-            // Only fix if window should be maximized but geometry is wrong
-            if (userMaximized && visibility === Window.Maximized) {
-                var widthRatio = window.width / Screen.width
-                var heightRatio = window.height / Screen.height
-
-                // If window is significantly smaller than screen, re-apply maximization
-                if (widthRatio < 0.95 || heightRatio < 0.95) {
-                    window.showMaximized()
-                }
-            }
-        }
-    }
+    // No fixed width/height bindings here - they interfere with Qt's window state
+    // restoration on Windows. When the window is restored from minimize, QML property
+    // bindings are re-evaluated, which can override Qt's restored geometry.
+    // Instead, we set the initial size imperatively in Component.onCompleted.
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
@@ -63,7 +43,7 @@ ApplicationWindow {
         // in order to improve contrast between GFE's placeholder box art
         // and the background of the app grid.
         if (SystemProperties.usesMaterial3Theme) {
-            Material.background = "#303030"
+            Material.background = AppTheme.backgroundPrimary
         }
 
         SdlGamepadKeyNavigation.enable()
@@ -74,17 +54,19 @@ ApplicationWindow {
         checkUpdateTimer.start()
 
         // Show the window according to the user's preferences
+        // Note: For maximized/fullscreen modes, we don't set width/height first
+        // because that can interfere with the window state on Windows.
         if (SystemProperties.hasDesktopEnvironment) {
             if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_MAXIMIZED) {
-                // Use showMaximized() to ensure Qt saves the correct restore geometry.
-                // The visibility property alone doesn't trigger geometry saving.
                 window.showMaximized()
-                userMaximized = true
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
                 window.showFullScreen()
             }
             else {
+                // For windowed mode, set initial size before showing
+                window.width = 1280
+                window.height = 600
                 window.show()
             }
         } else {
@@ -270,11 +252,6 @@ ApplicationWindow {
                 ComputerManager.startPolling()
                 pollingActive = true
             }
-
-            // Check if we need to fix the maximize geometry bug
-            if (userMaximized) {
-                fixMaximizeTimer.start()
-            }
         }
         else {
             // Start the inactivity timer to stop polling
@@ -338,6 +315,115 @@ ApplicationWindow {
                 }
             }
 
+            // Network latency indicator - positioned after the back button
+            Rectangle {
+                id: networkIndicator
+                visible: currentAppModel != null
+                height: 24
+                Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                // Dynamic width based on content
+                width: networkIndicatorRow.implicitWidth + 16
+                radius: 4
+                color: {
+                    var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
+                    if (ms < 0)   return "#555555"
+                    if (ms < 20)  return "#1B5E20"
+                    if (ms < 50)  return "#2E7D32"
+                    if (ms < 100) return "#E65100"
+                    if (ms < 150) return "#B71C1C"
+                    return "#880E4F"
+                }
+
+                Row {
+                    id: networkIndicatorRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    Label {
+                        id: latencyLabel
+                        text: {
+                            if (!currentAppModel) return ""
+                            var ms = currentAppModel.networkLatencyMs
+                            if (ms === -1) return qsTr("Measuring...")
+                            if (ms < 0)   return qsTr("N/A")
+                            return ms + " ms"
+                        }
+                        color: "white"
+                        font.pointSize: 10
+                        font.bold: true
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Label {
+                        id: qualityLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                        text: {
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                            return currentAppModel.networkQualityString
+                        }
+                        color: "#CCCCCC"
+                        font.pointSize: 9
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Label {
+                        id: settingsLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                        text: {
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                            return " @ " + StreamingPreferences.fps + "fps / " + (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + "M"
+                        }
+                        color: "#FFEB3B"
+                        font.pointSize: 9
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Label {
+                        id: adaptiveLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
+                        text: {
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                            var ms = currentAppModel.networkLatencyMs
+                            if (ms < 0) return ""
+                            var fpsReduced = ms >= 150 && StreamingPreferences.fps > 30
+                            var mult = ms < 20 ? 1.00 : ms < 50 ? 0.85 : ms < 100 ? 0.70 : ms < 150 ? 0.55 : 0.40
+                            var fps = fpsReduced ? 30 : StreamingPreferences.fps
+                            var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
+                            kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
+                            return " \u2192 " + fps + "fps / " + (kbps/1000).toFixed(0) + "M"
+                        }
+                        color: "#81C784"
+                        font.pointSize: 9
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                ToolTip.delay: 500
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: {
+                    if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                    var ms = currentAppModel.networkLatencyMs
+                    var quality = currentAppModel.networkQualityString
+                    var fps = StreamingPreferences.fps
+                    var bitrate = StreamingPreferences.bitrateKbps / 1000
+                    var fpsReduced = ms >= 150 && fps > 30
+                    var mult = ms < 20 ? 1.00 : ms < 50 ? 0.85 : ms < 100 ? 0.70 : ms < 150 ? 0.55 : 0.40
+                    var adaptiveFps = fpsReduced ? 30 : fps
+                    var adaptiveBitrate = Math.max(2, Math.floor(bitrate * mult))
+                    adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
+
+                    if (StreamingPreferences.networkAdaptiveBitrate) {
+                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M\nAdaptive: %5fps / %6M")
+                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
+                            .arg(adaptiveFps).arg(adaptiveBitrate.toFixed(0))
+                    } else {
+                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M")
+                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
+                    }
+                }
+            }
+
             // This label will appear when the window gets too small and
             // we need to ensure the toolbar controls don't collide
             Label {
@@ -351,16 +437,7 @@ ApplicationWindow {
                 // We need this label to always be visible so it can occupy
                 // the remaining space in the RowLayout. To "hide" it, we
                 // just set the text to empty string.
-                text: !titleLabel.visible ? stackView.currentItem.objectName : ""
-            }
-
-            Label {
-                id: versionLabel
-                visible: stackView.currentItem instanceof SettingsView
-                text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pointSize: 12
-                horizontalAlignment: Qt.AlignRight
-                verticalAlignment: Qt.AlignVCenter
+                text: !titleLabel.visible ? (stackView.currentItem ? stackView.currentItem.objectName : "") : ""
             }
 
             NavigableToolButton {
@@ -442,12 +519,13 @@ ApplicationWindow {
             }
 
             NavigableToolButton {
-                visible: true
+                // Only show Gamepad Mapper when at least one gamepad is connected
+                visible: SdlGamepadKeyNavigation.getConnectedGamepads() > 0
 
                 ToolTip.delay: 1000
                 ToolTip.timeout: 3000
                 ToolTip.visible: hovered
-                ToolTip.text: qsTr("Gamepad Mapper")
+                ToolTip.text: qsTr("Gamepad Mapper") + (SdlGamepadKeyNavigation.getConnectedGamepads() > 0 ? " (" + SdlGamepadKeyNavigation.getConnectedGamepads() + ")" : "")
 
                 iconSource: "qrc:/res/ic_videogame_asset_white_48px.svg"
 
@@ -479,6 +557,17 @@ ApplicationWindow {
                 ToolTip.timeout: 3000
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Settings") + (settingsShortcut.nativeText ? (" ("+settingsShortcut.nativeText+")") : "")
+            }
+
+            // Version label - only visible on Settings page, placed at far right
+            Label {
+                id: versionLabel
+                visible: stackView.currentItem instanceof SettingsView
+                text: qsTr("Version %1").arg(SystemProperties.versionString)
+                font.pointSize: 12
+                horizontalAlignment: Qt.AlignRight
+                verticalAlignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
             }
         }
     }
@@ -567,46 +656,12 @@ ApplicationWindow {
         // text set dynamically
     }
 
-    NavigableDialog {
+    InputDialog {
         id: addPcDialog
-        property string label: qsTr("Enter the IP address of your host PC:")
+        label: qsTr("Enter the IP address of your host PC:")
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onOpened: {
-            // Force keyboard focus on the textbox so keyboard navigation works
-            editText.forceActiveFocus()
-        }
-
-        onClosed: {
-            editText.clear()
-        }
-
-        onAccepted: {
-            if (editText.text) {
-                ComputerManager.addNewHostManually(editText.text.trim())
-            }
-        }
-
-        ColumnLayout {
-            Label {
-                text: addPcDialog.label
-                font.bold: true
-            }
-
-            TextField {
-                id: editText
-                Layout.fillWidth: true
-                focus: true
-
-                Keys.onReturnPressed: {
-                    addPcDialog.accept()
-                }
-
-                Keys.onEnterPressed: {
-                    addPcDialog.accept()
-                }
-            }
+        onValueAccepted: function(value) {
+            ComputerManager.addNewHostManually(value)
         }
     }
 }

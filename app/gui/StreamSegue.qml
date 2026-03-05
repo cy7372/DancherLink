@@ -2,6 +2,8 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 
+import "."
+
 import SdlGamepadKeyNavigation 1.0
 import Session 1.0
 import StreamingPreferences 1.0
@@ -48,10 +50,8 @@ Item {
         // Reset the UI state to show we are working
         window.show()
 
-        // Temporarily maximize the window for the splash screen
-        if (window.visibility !== Window.FullScreen && window.visibility !== Window.Maximized) {
-             window.showMaximized()
-        }
+        // Always show the splash screen in fullscreen mode
+        window.showFullScreen()
     }
 
     function stageStarting(stage)
@@ -215,6 +215,10 @@ Item {
     StackView.onActivated: {
         // Hide the toolbar before we start loading
         toolBar.visible = false
+
+        // Note: Splash screen uses previous window state
+        // If you want fullscreen splash, uncomment the next line:
+        // window.showFullScreen()
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)

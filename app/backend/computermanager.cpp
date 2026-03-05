@@ -368,9 +368,12 @@ QVector<NvComputer*> ComputerManager::getComputers()
     if (m_ComputersDirty) {
         // Return a sorted host list
         m_CachedComputers = QVector<NvComputer*>::fromList(m_KnownHosts.values());
-        std::stable_sort(m_CachedComputers.begin(), m_CachedComputers.end(), [](const NvComputer* host1, const NvComputer* host2) {
-            return host1->name.toLower() < host2->name.toLower();
-        });
+        // Use Qt::CaseInsensitive comparison to avoid creating temporary strings
+        // with toLower() on each comparison
+        std::stable_sort(m_CachedComputers.begin(), m_CachedComputers.end(),
+            [](const NvComputer* host1, const NvComputer* host2) {
+                return host1->name.compare(host2->name, Qt::CaseInsensitive) < 0;
+            });
         m_ComputersDirty = false;
     }
     return m_CachedComputers;

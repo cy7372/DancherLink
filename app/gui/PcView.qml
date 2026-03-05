@@ -2,6 +2,8 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+import "."
+
 import ComputerModel 1.0
 
 import ComputerManager 1.0
@@ -113,12 +115,12 @@ CenteredGridView {
         property alias pcContextMenu : pcContextMenuLoader.item
 
         background: Rectangle {
-            color: parent.highlighted ? "#505050" : (parent.hovered ? "#404040" : "transparent")
-            border.color: parent.highlighted ? "#87CEEB" : "transparent"
-            border.width: parent.highlighted ? 2 : 0
-            radius: 8
+            color: parent.highlighted ? AppTheme.backgroundHighlighted : (parent.hovered ? AppTheme.backgroundHover : "transparent")
+            border.color: parent.highlighted ? AppTheme.accentPrimary : "transparent"
+            border.width: parent.highlighted ? AppTheme.borderWidth : 0
+            radius: AppTheme.borderRadius
 
-            Behavior on color { ColorAnimation { duration: 100 } }
+            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
         }
 
         Image {
@@ -215,7 +217,7 @@ CenteredGridView {
                     text: qsTr("Rename PC")
                     onTriggered: {
                         renamePcDialog.pcIndex = index
-                        renamePcDialog.originalName = model.name
+                        renamePcDialog.placeholderText = model.name
                         renamePcDialog.open()
                     }
                 }
@@ -369,49 +371,13 @@ CenteredGridView {
         }
     }
 
-    NavigableDialog {
+    InputDialog {
         id: renamePcDialog
-        property string label: qsTr("Enter the new name for this PC:")
-        property string originalName
-        property int pcIndex : -1;
+        label: qsTr("Enter the new name for this PC:")
+        property int pcIndex: -1
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onOpened: {
-            // Force keyboard focus on the textbox so keyboard navigation works
-            editText.forceActiveFocus()
-        }
-
-        onClosed: {
-            editText.clear()
-        }
-
-        onAccepted: {
-            if (editText.text) {
-                computerModel.renameComputer(pcIndex, editText.text)
-            }
-        }
-
-        ColumnLayout {
-            Label {
-                text: renamePcDialog.label
-                font.bold: true
-            }
-
-            TextField {
-                id: editText
-                placeholderText: renamePcDialog.originalName
-                Layout.fillWidth: true
-                focus: true
-
-                Keys.onReturnPressed: {
-                    renamePcDialog.accept()
-                }
-
-                Keys.onEnterPressed: {
-                    renamePcDialog.accept()
-                }
-            }
+        onValueAccepted: function(value) {
+            computerModel.renameComputer(pcIndex, value)
         }
     }
 

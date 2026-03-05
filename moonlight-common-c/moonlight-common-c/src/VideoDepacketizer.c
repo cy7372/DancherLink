@@ -30,6 +30,9 @@ static bool idrFrameProcessed;
 #define CONSECUTIVE_DROP_LIMIT 120
 static unsigned int consecutiveFrameDrops;
 
+// Counter to reduce log spam when waiting for IDR frame
+static unsigned int waitingForIdrLogCounter;
+
 static LINKED_BLOCKING_QUEUE decodeUnitQueue;
 
 typedef struct _BUFFER_DESC {
@@ -680,6 +683,7 @@ static void processAvcHevcRtpPayloadSlow(PBUFFER_DESC currentPos, PLENTRY_INTERN
             // No longer waiting for an IDR frame
             waitingForIdrFrame = false;
             waitingForRefInvalFrame = false;
+            waitingForIdrLogCounter = 0;  // Reset log counter
 
             // Cancel any pending IDR frame request
             waitingForNextSuccessfulFrame = false;
@@ -863,6 +867,7 @@ static void processRtpPayload(PNV_VIDEO_PACKET videoPacket, int length,
                 // to determine if a given frame is an IDR frame.
                 if (!(NegotiatedVideoFormat & (VIDEO_FORMAT_MASK_H264 | VIDEO_FORMAT_MASK_H265))) {
                     waitingForIdrFrame = false;
+                    waitingForIdrLogCounter = 0;  // Reset log counter
                     waitingForNextSuccessfulFrame = false;
                     frameType = FRAME_TYPE_IDR;
                 }
@@ -1078,7 +1083,12 @@ static void processRtpPayload(PNV_VIDEO_PACKET videoPacket, int length,
         if (waitingForIdrFrame || waitingForRefInvalFrame) {
             // IDR wait takes priority over RFI wait (and an IDR frame will satisfy both)
             if (waitingForIdrFrame) {
-                Limelog("Waiting for IDR frame\n");
+                // Only log every 30 frames to reduce log spam
+                if (waitingForIdrLogCounter % 30 == 0) {
+                    Limelog("Waiting for IDR frame (frame %u, drops=%u)\n",
+                            frameIndex, consecutiveFrameDrops);
+                }
+                waitingForIdrLogCounter++;
 
                 // We wait for the first fully received frame after a loss to approximate
                 // detection of the recovery of the network. Requesting an IDR frame while

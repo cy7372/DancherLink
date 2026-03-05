@@ -750,6 +750,12 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
 {
 }
 
+void Session::setNetworkOverrides(int fps, int bitrateKbps)
+{
+    m_NetworkOverrideFps = fps;
+    m_NetworkOverrideBitrateKbps = bitrateKbps;
+}
+
 Session::~Session()
 {
     // NB: This may not get destroyed for a long time! Don't put any non-trivial cleanup here.
@@ -768,8 +774,8 @@ void Session::initializeSessionOptions()
     // This is the ONLY place where we read from m_Preferences for session configuration.
     m_SessionOptions.width = m_Preferences->width;
     m_SessionOptions.height = m_Preferences->height;
-    m_SessionOptions.fps = m_Preferences->fps;
-    m_SessionOptions.bitrateKbps = m_Preferences->bitrateKbps;
+    m_SessionOptions.fps = (m_NetworkOverrideFps > 0) ? m_NetworkOverrideFps : m_Preferences->fps;
+    m_SessionOptions.bitrateKbps = (m_NetworkOverrideBitrateKbps > 0) ? m_NetworkOverrideBitrateKbps : m_Preferences->bitrateKbps;
     m_SessionOptions.enableVsync = m_Preferences->enableVsync;
     m_SessionOptions.enableFramePacing = m_Preferences->framePacing;
     m_SessionOptions.enableHdr = m_Preferences->enableHdr;

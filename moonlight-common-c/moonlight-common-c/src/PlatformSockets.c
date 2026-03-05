@@ -241,7 +241,9 @@ void closeSocket(SOCKET s) {
 // These set "safe" host or link-local QoS options that we can unconditionally
 // set without having to worry about routers blockholing the traffic.
 static void setSocketQos(SOCKET s, int socketQosType) {
-#if defined(LC_WINDOWS)
+// DISABLED: DSCP QoS marking can cause packet drops on public internet
+// Many ISPs/routers drop or deprioritize packets with DSCP markings
+#if 0 // defined(LC_WINDOWS)
     DWORD dscpValue;
     switch (socketQosType) {
     case SOCK_QOS_TYPE_BEST_EFFORT:

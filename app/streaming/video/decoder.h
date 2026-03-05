@@ -5,11 +5,11 @@
 #include "SDL_compat.h"
 #include "settings/streamingpreferences.h"
 
-#define SDL_CODE_FRAME_READY 0
-#define SDL_CODE_SESSION_EXIT 1
+constexpr uint32_t SDL_CODE_FRAME_READY = 0;
+constexpr uint32_t SDL_CODE_SESSION_EXIT = 1;
 
 
-#define MAX_SLICES 4
+constexpr int MAX_SLICES = 4;
 
 typedef struct _VIDEO_STATS {
     uint32_t receivedFrames;
@@ -49,8 +49,8 @@ typedef struct _DECODER_PARAMETERS {
     bool testOnly;
 } DECODER_PARAMETERS, *PDECODER_PARAMETERS;
 
-#define WINDOW_STATE_CHANGE_SIZE 0x01
-#define WINDOW_STATE_CHANGE_DISPLAY 0x02
+constexpr uint32_t WINDOW_STATE_CHANGE_SIZE = 0x01;
+constexpr uint32_t WINDOW_STATE_CHANGE_DISPLAY = 0x02;
 
 typedef struct _WINDOW_STATE_CHANGE_INFO {
     SDL_Window* window;

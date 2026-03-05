@@ -1,9 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <QHostAddress>
 
-#define DEFAULT_HTTP_PORT 47989
-#define DEFAULT_HTTPS_PORT 47984
+constexpr uint16_t DEFAULT_HTTP_PORT = 47989;
+constexpr uint16_t DEFAULT_HTTPS_PORT = 47984;
 
 class NvAddress
 {

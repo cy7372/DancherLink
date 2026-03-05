@@ -5,6 +5,9 @@
 #include <QDir>
 #include <QDateTime>
 #include <QRunnable>
+#include <QSemaphore>
+#include <QWaitCondition>
+#include <QQueue>
 
 #ifdef HAVE_FFMPEG
 extern "C" {
@@ -21,34 +24,86 @@ extern "C" {
 // Max log file size of 10 MB
 static const uint64_t k_MaxLogSizeBytes = 10 * 1024 * 1024;
 
-LogManager* LogManager::s_Instance = nullptr;
-
-class LoggerTask : public QRunnable
-{
+// Object pool for LoggerTask to reduce memory allocations
+// Uses a simple linked-list based free list
+class LoggerTaskPool {
 public:
-    LoggerTask(LogManager* manager, const QString& msg) 
-        : m_Manager(manager), m_Msg(msg)
-    {
-        setAutoDelete(true);
+    static LoggerTaskPool* instance() {
+        static LoggerTaskPool pool;
+        return &pool;
     }
 
-    void run() override
-    {
-        // Access private members via friend or public method? 
-        // Since LoggerTask is in cpp, it can't easily access private members unless it's a friend class in header.
-        // But I didn't declare it in header.
-        // I'll make logToLoggerStreamInternal public or similar, or just use a lambda if I could (but QThreadPool uses QRunnable).
-        // Actually, I can add a friend declaration in LogManager header later if needed, 
-        // or just expose a method "writeLog(QString)".
-        // But "writeLog" is what calls start(new LoggerTask)... infinite recursion if not careful.
-        // I will add a `writeLogSync(QString)` method to LogManager.
-        m_Manager->writeLogSync(m_Msg);
+    class PooledLoggerTask : public QRunnable {
+    public:
+        PooledLoggerTask()
+            : m_Manager(nullptr), m_RefCount(0)
+        {
+            setAutoDelete(false); // We manage deletion via the pool
+        }
+
+        void init(LogManager* manager, const QString& msg) {
+            m_Manager = manager;
+            m_Msg = msg;
+            m_RefCount.storeRelaxed(1);
+        }
+
+        void run() override {
+            if (m_Manager) {
+                m_Manager->writeLogSync(m_Msg);
+            }
+            // Return to pool after execution
+            LoggerTaskPool::instance()->release(this);
+        }
+
+        // Allow atomic decrement and check for last reference
+        bool deref() {
+            return m_RefCount.deref();
+        }
+
+    private:
+        LogManager* m_Manager;
+        QString m_Msg;
+        QAtomicInt m_RefCount;
+    };
+
+    PooledLoggerTask* acquire(LogManager* manager, const QString& msg) {
+        QMutexLocker locker(&m_Mutex);
+
+        PooledLoggerTask* task;
+        if (!m_FreeList.isEmpty()) {
+            task = m_FreeList.dequeue();
+        } else {
+            task = new PooledLoggerTask();
+        }
+
+        task->init(manager, msg);
+        return task;
+    }
+
+    void release(PooledLoggerTask* task) {
+        QMutexLocker locker(&m_Mutex);
+
+        // Limit pool size to avoid excessive memory usage
+        while (m_FreeList.size() >= 16) {
+            PooledLoggerTask* oldest = m_FreeList.dequeue();
+            delete oldest;
+        }
+
+        m_FreeList.enqueue(task);
     }
 
 private:
-    LogManager* m_Manager;
-    QString m_Msg;
+    LoggerTaskPool() = default;
+    ~LoggerTaskPool() {
+        qDeleteAll(m_FreeList);
+        m_FreeList.clear();
+    }
+
+    QMutex m_Mutex;
+    QQueue<PooledLoggerTask*> m_FreeList;
 };
+
+LogManager* LogManager::s_Instance = nullptr;
 
 LogManager* LogManager::instance()
 {
@@ -102,31 +157,31 @@ void LogManager::initialize(bool suppressVerboseOutput)
     if (IS_UNSPECIFIED_HANDLE(oldConErr))
 #endif
     {
-        // Use human-readable datetime format with milliseconds to avoid collisions
-        QString logFileName = QString("DancherLink-%1.log")
-            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss-zzz"));
+        // Simple filename format: dl_MMDD_HHMM.log (dl = DancherLink)
+        QDateTime now = QDateTime::currentDateTime();
+        QString logFileName = QString("dl_%1.log")
+            .arg(now.toString("MMdd_HHmm"));
 
         // Ensure the filename is unique by checking if it exists
         QString fullPath = tempDir.filePath(logFileName);
-        int counter = 1;
+        int counter = 2;
         while (QFile::exists(fullPath)) {
-            logFileName = QString("DancherLink-%1_%2.log")
-                .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"))
+            logFileName = QString("dl_%1_%2.log")
+                .arg(now.toString("MMdd_HHmm"))
                 .arg(counter++);
             fullPath = tempDir.filePath(logFileName);
         }
 
         m_LoggerFile = new QFile(fullPath);
         if (m_LoggerFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream(stderr) << "Redirecting log output to " << m_LoggerFile->fileName() << Qt::endl;
+            QTextStream(stderr) << "Log: " << m_LoggerFile->fileName() << Qt::endl;
             m_LoggerStream.setDevice(m_LoggerFile);
         }
     }
 
     // Prune the oldest existing logs if there are more than 10
-    QStringList existingLogNames = tempDir.entryList(QStringList("DancherLink-*.log"), QDir::NoFilter, QDir::SortFlag::Time);
+    QStringList existingLogNames = tempDir.entryList(QStringList("dl_*.log"), QDir::NoFilter, QDir::SortFlag::Time);
     for (qsizetype i = 10; i < existingLogNames.size(); i++) {
-        qInfo() << "Removing old log file:" << existingLogNames.at(i);
         QFile(tempDir.filePath(existingLogNames.at(i))).remove();
     }
 #endif
@@ -204,6 +259,44 @@ bool LogManager::isAsyncLoggingEnabled() const
     return m_AsyncLoggingEnabled != 0;
 }
 
+void LogManager::startSessionLog(const QString& serverName)
+{
+#ifdef LOG_TO_FILE
+    // Wait for any pending log writes to complete
+    m_LoggerThread.waitForDone();
+
+    // Just add a session start marker, don't create a new file
+    QMutexLocker locker(&m_SyncLoggerMutex);
+    if (m_LoggerFile) {
+        m_LoggerStream << Qt::endl;
+        m_LoggerStream << "========== STREAM START";
+        if (!serverName.isEmpty()) {
+            m_LoggerStream << " [" << serverName << "]";
+        }
+        m_LoggerStream << " ==========" << Qt::endl;
+        m_LoggerStream.flush();
+    }
+#else
+    Q_UNUSED(serverName);
+#endif
+}
+
+void LogManager::endSessionLog()
+{
+#ifdef LOG_TO_FILE
+    // Wait for any pending log writes to complete
+    m_LoggerThread.waitForDone();
+
+    // Just add a session end marker
+    QMutexLocker locker(&m_SyncLoggerMutex);
+    if (m_LoggerFile) {
+        m_LoggerStream << "========== STREAM END ==========" << Qt::endl;
+        m_LoggerStream << Qt::endl;
+        m_LoggerStream.flush();
+    }
+#endif
+}
+
 void LogManager::writeLogSync(const QString& message)
 {
     // QTextStream is not thread-safe, so we must lock.
@@ -245,12 +338,13 @@ void LogManager::logToLoggerStream(QString& message)
 #endif
 
     if (isAsyncLoggingEnabled()) {
-        // Queue the log message to be written asynchronously
-        m_LoggerThread.start(new LoggerTask(this, message));
+        // Queue the log message to be written asynchronously using pooled task
+        auto* task = LoggerTaskPool::instance()->acquire(this, message);
+        m_LoggerThread.start(task);
     }
     else {
-        // Log the message immediately
-        LoggerTask(this, message).run();
+        // Log the message immediately (synchronously)
+        writeLogSync(message);
     }
 }
 
@@ -298,8 +392,8 @@ void LogManager::sdlLogToDiskHandler(void* userdata, int category, SDL_LogPriori
         break;
     }
 
-    QTime logTime = QTime::fromMSecsSinceStartOfDay(self->m_LoggerTime.elapsed());
-    QString txt = QString("%1 - SDL %2 (%3): %4\n").arg(logTime.toString()).arg(priorityTxt).arg(category).arg(message);
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    QString txt = QString("%1 - SDL %2 (%3): %4\n").arg(timestamp).arg(priorityTxt).arg(category).arg(message);
 
     self->logToLoggerStream(txt);
 }
@@ -337,8 +431,8 @@ void LogManager::qtLogToDiskHandler(QtMsgType type, const QMessageLogContext&, c
         break;
     }
 
-    QTime logTime = QTime::fromMSecsSinceStartOfDay(self->m_LoggerTime.elapsed());
-    QString txt = QString("%1 - Qt %2: %3\n").arg(logTime.toString()).arg(typeTxt).arg(msg);
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    QString txt = QString("%1 - Qt %2: %3\n").arg(timestamp).arg(typeTxt).arg(msg);
 
     self->logToLoggerStream(txt);
 }
@@ -366,8 +460,8 @@ void LogManager::ffmpegLogToDiskHandler(void* ptr, int level, const char* fmt, v
     av_log_format_line(ptr, level, fmt, vl, lineBuffer, sizeof(lineBuffer), &printPrefix);
 
     if (shouldPrefixThisMessage) {
-        QTime logTime = QTime::fromMSecsSinceStartOfDay(self->m_LoggerTime.elapsed());
-        QString txt = QString("%1 - FFmpeg: %2").arg(logTime.toString()).arg(lineBuffer);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        QString txt = QString("%1 - FFmpeg: %2").arg(timestamp).arg(lineBuffer);
         self->logToLoggerStream(txt);
     }
     else {

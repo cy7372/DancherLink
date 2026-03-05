@@ -27,9 +27,9 @@ typedef struct _VERTEX
     float tu, tv;
 } VERTEX, *PVERTEX;
 
-#define CSC_MATRIX_RAW_ELEMENT_COUNT 9
-#define CSC_MATRIX_PACKED_ELEMENT_COUNT 12
-#define OFFSETS_ELEMENT_COUNT 3
+constexpr int CSC_MATRIX_RAW_ELEMENT_COUNT = 9;
+constexpr int CSC_MATRIX_PACKED_ELEMENT_COUNT = 12;
+constexpr int OFFSETS_ELEMENT_COUNT = 3;
 
 typedef struct _CSC_CONST_BUF
 {

@@ -4,6 +4,8 @@ import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import QtQuick.Controls.Material 2.15
 
+import "."
+
 import StreamingPreferences 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
@@ -48,7 +50,7 @@ Page {
         StreamingPreferences.save()
     }
 
-    property color groupTitleColor: "#87CEEB" // SkyBlue
+    property color groupTitleColor: AppTheme.groupTitle
 
     Component {
         id: groupBoxLabel
@@ -65,14 +67,18 @@ Page {
 
     property bool isWideLayout: settingsPage.width > 850
 
+    // Bottom margin to account for Windows taskbar
+    readonly property int bottomSafeMargin: 60
+
     Flickable {
         id: flickable
         anchors.fill: parent
+        anchors.bottomMargin: bottomSafeMargin
 
         boundsBehavior: Flickable.OvershootBounds
 
         contentWidth: settingsPage.width
-        contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height) : (settingsColumn1.height + settingsColumn2.height)
+        contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height) : (settingsColumn1.height + settingsColumn2.height) + bottomSafeMargin
 
         ScrollBar.vertical: ScrollBar {
             anchors {
@@ -109,16 +115,18 @@ Page {
                 var pos = item.mapToItem(flickable.contentItem, 0, 0)
 
                 // Ensure some extra space is visible around the element we're scrolling to
+                // Account for bottomSafeMargin to avoid taskbar overlap
                 var scrollMargin = height > 100 ? 50 : 0
+                var effectiveHeight = height - bottomSafeMargin
 
                 if (pos.y - scrollMargin < contentY) {
                     autoScrollAnimation.from = contentY
                     autoScrollAnimation.to = Math.max(pos.y - scrollMargin, 0)
                     autoScrollAnimation.start()
                 }
-                else if (pos.y + item.height + scrollMargin > contentY + height) {
+                else if (pos.y + item.height + scrollMargin > contentY + effectiveHeight) {
                     autoScrollAnimation.from = contentY
-                    autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - height, contentHeight - height)
+                    autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - effectiveHeight, contentHeight - height)
                     autoScrollAnimation.start()
                 }
             }
@@ -274,6 +282,7 @@ Page {
                             id: resolutionComboBox
                             maximumWidth: parent.width / 2
                             textRole: "text"
+                            // Resolution can always be changed regardless of adaptive bitrate setting
                             model: ListModel {
                                 id: resolutionListModel
                                 // Other elements may be added at runtime
@@ -692,8 +701,9 @@ Page {
                             id: fpsComboBox
                             maximumWidth: parent.width / 2
                             textRole: "text"
+                            // FPS can always be changed - it's used as the maximum for adaptive bitrate
                             // ::onActivated must be used, as it only listens for when the index is changed by a human
-                            onActivated : {
+                            onActivated: {
                                 if (model.get(currentIndex).is_custom) {
                                     customFpsDialog.open()
                                 }
@@ -762,6 +772,24 @@ Page {
                                 slider.value = defaultBitrate
                             }
                         }
+                    }
+
+                    CheckBox {
+                        id: networkAdaptiveBitrateCheck
+                        width: parent.width
+                        hoverEnabled: true
+                        text: qsTr("Auto-adjust bitrate based on network")
+                        font.pointSize: 12
+                        checked: StreamingPreferences.networkAdaptiveBitrate
+                        onCheckedChanged: {
+                            StreamingPreferences.networkAdaptiveBitrate = checked
+                            StreamingPreferences.save()
+                        }
+
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Measures network latency before streaming and automatically reduces bitrate (and fps if latency is very high) to match connection quality. Your saved bitrate is used as the maximum.")
                     }
 
                     Label {

@@ -70,16 +70,16 @@ struct DualSenseOutputReport{
 };
 
 // activeGamepadMask is a short, so we're bounded by the number of mask bits
-#define MAX_GAMEPADS 16
+constexpr int MAX_GAMEPADS = 16;
 
-#define MAX_FINGERS 2
+constexpr int MAX_FINGERS = 2;
 
-#define GAMEPAD_HAPTIC_METHOD_NONE 0
-#define GAMEPAD_HAPTIC_METHOD_LEFTRIGHT 1
-#define GAMEPAD_HAPTIC_METHOD_SIMPLERUMBLE 2
+constexpr int GAMEPAD_HAPTIC_METHOD_NONE = 0;
+constexpr int GAMEPAD_HAPTIC_METHOD_LEFTRIGHT = 1;
+constexpr int GAMEPAD_HAPTIC_METHOD_SIMPLERUMBLE = 2;
 
-#define GAMEPAD_HAPTIC_SIMPLE_HIFREQ_MOTOR_WEIGHT 0.33
-#define GAMEPAD_HAPTIC_SIMPLE_LOWFREQ_MOTOR_WEIGHT 0.8
+constexpr double GAMEPAD_HAPTIC_SIMPLE_HIFREQ_MOTOR_WEIGHT = 0.33;
+constexpr double GAMEPAD_HAPTIC_SIMPLE_LOWFREQ_MOTOR_WEIGHT = 0.8;
 
 class SdlInputHandler
 {

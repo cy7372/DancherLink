@@ -81,7 +81,11 @@ QUrl BoxArtManager::loadBoxArtFromNetwork(NvComputer* computer, int appId)
     QImage image;
     try {
         image = http.getBoxArt(appId);
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        qWarning() << "Failed to load box art for app" << appId << ":" << e.what();
+    } catch (...) {
+        qWarning() << "Failed to load box art for app" << appId << "(unknown error)";
+    }
 
     // Cache the box art on disk if it loaded
     if (!image.isNull()) {

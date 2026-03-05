@@ -22,7 +22,7 @@ private:
     AVBufferRef* m_HwContext;
 };
 
-#define NV12_PLANES 2
+constexpr int NV12_PLANES = 2;
 
 // Helper class used by SDLRenderer to read our CUDA frame
 class CUDAGLInteropHelper {

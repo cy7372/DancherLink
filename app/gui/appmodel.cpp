@@ -7,10 +7,52 @@
 #include <QtConcurrent>
 #include <QFuture>
 #include <QThreadPool>
+#include <QTcpSocket>
+#include <QElapsedTimer>
+#include <QtMath>
 
 #ifdef Q_OS_WIN32
 #include <shobjidl.h>
 #include <shlguid.h>
+
+// RAII wrapper for COM pointers to ensure proper cleanup
+template<typename T>
+class ComPtr {
+public:
+    ComPtr() : ptr_(nullptr) {}
+    explicit ComPtr(T* p) : ptr_(p) {}
+    ~ComPtr() { release(); }
+
+    // Disable copy
+    ComPtr(const ComPtr&) = delete;
+    ComPtr& operator=(const ComPtr&) = delete;
+
+    // Enable move
+    ComPtr(ComPtr&& other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+    ComPtr& operator=(ComPtr&& other) noexcept {
+        if (this != &other) {
+            release();
+            ptr_ = other.ptr_;
+            other.ptr_ = nullptr;
+        }
+        return *this;
+    }
+
+    T** put() { return &ptr_; }
+    T* get() const { return ptr_; }
+    T* operator->() const { return ptr_; }
+    explicit operator bool() const { return ptr_ != nullptr; }
+
+    void release() {
+        if (ptr_) {
+            ptr_->Release();
+            ptr_ = nullptr;
+        }
+    }
+
+private:
+    T* ptr_;
+};
 #endif
 
 AppModel::AppModel(QObject *parent)
@@ -18,6 +60,7 @@ AppModel::AppModel(QObject *parent)
 {
     connect(&m_BoxArtManager, &BoxArtManager::boxArtLoadComplete,
             this, &AppModel::handleBoxArtLoaded);
+    // Don't start the debounce timer here - it will be started after the first measurement completes
 }
 
 void AppModel::initialize(ComputerManager* computerManager, int computerIndex, bool showHiddenGames)
@@ -32,6 +75,116 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
     m_ShowHiddenGames = showHiddenGames;
 
     updateAppList(m_Computer->appList);
+
+    // Start async network quality measurement to the server
+    m_MeasuredRttMs = -1;
+    measureLatencyAsync();
+}
+
+void AppModel::measureLatencyAsync()
+{
+    QString address = m_Computer->activeAddress.address();
+    quint16 port = m_Computer->activeAddress.port();
+
+    // If a previous measurement is still running, let it finish and ignore its result
+    if (m_LatencyWatcher) {
+        m_LatencyWatcher->disconnect();
+        m_LatencyWatcher->deleteLater();
+        m_LatencyWatcher = nullptr;
+    }
+
+    // Debounce: Skip measurement if we've measured recently
+    // This avoids redundant network requests when switching views rapidly
+    // Note: We check debounce AFTER clearing the previous watcher to avoid blocking new measurements
+    if (m_LatencyDebounceTimer.isValid() &&
+        m_LatencyDebounceTimer.elapsed() < LATENCY_DEBOUNCE_INTERVAL_MS) {
+        qInfo() << "[NetAdapt] Skipping latency measurement (debounced): "
+                << m_LatencyDebounceTimer.elapsed() << "ms since last";
+        return;
+    }
+
+    m_LatencyWatcher = new QFutureWatcher<int>(this);
+    connect(m_LatencyWatcher, &QFutureWatcher<int>::finished, this, [this]() {
+        m_MeasuredRttMs = m_LatencyWatcher->result();
+        m_LatencyWatcher->deleteLater();
+        m_LatencyWatcher = nullptr;
+        m_LatencyDebounceTimer.restart(); // Reset debounce timer on completion
+        emit networkLatencyChanged(m_MeasuredRttMs);
+        qDebug() << "[NetAdapt] Measured RTT to server:" << m_MeasuredRttMs << "ms";
+    });
+
+    auto future = QtConcurrent::run([address, port]() -> int {
+        QTcpSocket socket;
+        QElapsedTimer timer;
+        timer.start();
+        socket.connectToHost(address, port);
+        if (socket.waitForConnected(2000)) {
+            int rttMs = (int)timer.elapsed();
+            socket.disconnectFromHost();
+            return rttMs;
+        }
+        return -2; // Connection failed
+    });
+
+    m_LatencyWatcher->setFuture(future);
+}
+
+int AppModel::networkLatencyMs() const
+{
+    return m_MeasuredRttMs;
+}
+
+QString AppModel::networkQualityString() const
+{
+    if (m_MeasuredRttMs == -1) return tr("Measuring...");
+    if (m_MeasuredRttMs < 0)  return tr("Unavailable");
+    if (m_MeasuredRttMs < 20) return tr("Excellent");
+    if (m_MeasuredRttMs < 50) return tr("Good");
+    if (m_MeasuredRttMs < 100) return tr("Fair");
+    if (m_MeasuredRttMs < 150) return tr("Poor");
+    return tr("Bad");
+}
+
+void AppModel::applyAdaptiveSettings(Session* session) const
+{
+    StreamingPreferences* prefs = StreamingPreferences::get();
+    if (!prefs->networkAdaptiveBitrate || m_MeasuredRttMs < 0) {
+        return;
+    }
+
+    int fps = prefs->fps;
+    int bitrateKbps = prefs->bitrateKbps;
+
+    // Reduce fps for very high latency connections (>= 150ms)
+    if (m_MeasuredRttMs >= 150 && fps > 30) {
+        fps = 30;
+    }
+
+    // Scale bitrate based on measured RTT
+    float bitrateMultiplier;
+    if (m_MeasuredRttMs < 20)       bitrateMultiplier = 1.00f; // Excellent - LAN
+    else if (m_MeasuredRttMs < 50)  bitrateMultiplier = 0.85f; // Good
+    else if (m_MeasuredRttMs < 100) bitrateMultiplier = 0.70f; // Fair
+    else if (m_MeasuredRttMs < 150) bitrateMultiplier = 0.55f; // Poor
+    else                             bitrateMultiplier = 0.40f; // Bad
+
+    // Calculate the "full quality" bitrate for the selected resolution and fps,
+    // then apply the network quality multiplier as a ceiling
+    int fullBitrate = StreamingPreferences::getDefaultBitrate(
+        prefs->width, prefs->height, fps, prefs->enableYUV444);
+    int recommendedBitrate = qMax(2000, (int)(fullBitrate * bitrateMultiplier));
+
+    // Only reduce — never increase beyond what user configured
+    if (recommendedBitrate < bitrateKbps) {
+        bitrateKbps = recommendedBitrate;
+    }
+
+    // Only apply overrides if they differ from user's settings
+    if (fps != prefs->fps || bitrateKbps != prefs->bitrateKbps) {
+        session->setNetworkOverrides(fps, bitrateKbps);
+        qDebug() << "[NetAdapt] RTT" << m_MeasuredRttMs << "ms → applying"
+                 << fps << "fps /" << bitrateKbps << "kbps";
+    }
 }
 
 int AppModel::getRunningAppId()
@@ -57,7 +210,13 @@ Session* AppModel::createSessionForApp(int appIndex)
     Q_ASSERT(appIndex < m_VisibleApps.count());
     NvApp app = m_VisibleApps.at(appIndex);
 
-    return new Session(m_Computer, app);
+    Session* session = new Session(m_Computer, app);
+
+    // Apply network-adaptive fps/bitrate overrides based on pre-stream measurement.
+    // This modifies only this session's settings without touching saved preferences.
+    applyAdaptiveSettings(session);
+
+    return session;
 }
 
 int AppModel::getDirectLaunchAppIndex()
@@ -350,8 +509,15 @@ void AppModel::createDesktopShortcut(int appIndex)
     QThreadPool::globalInstance()->start([computerUuid, computerName, appName, appPath]() {
         QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
         QString linkName = appName;
-        // Sanitize filename
-        linkName.replace(QRegularExpression("[\\\\/:*?\"<>|]"), "_");
+        // Sanitize filename - use manual character replacement for better performance
+        // than QRegularExpression for simple character substitution
+        for (int i = 0; i < linkName.size(); ++i) {
+            QChar c = linkName.at(i);
+            if (c == u'\\' || c == u'/' || c == u':' || c == u'*' ||
+                c == u'?' || c == u'"' || c == u'<' || c == u'>' || c == u'|') {
+                linkName[i] = u'_';
+            }
+        }
         QString linkPath = QDir(desktopPath).filePath(linkName + ".lnk");
 
         QString nativeAppPath = QDir::toNativeSeparators(appPath);
@@ -359,30 +525,28 @@ void AppModel::createDesktopShortcut(int appIndex)
         // Quote the app name if it contains spaces
         QString arguments = QString("stream \"%1\" \"%2\" --resolution auto").arg(computerUuid).arg(appName);
 
-        HRESULT hres;
-        IShellLink* psl;
-
         // Initialize COM library for this worker thread
         CoInitialize(nullptr);
 
-        hres = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
-        if (SUCCEEDED(hres))
-        {
-            psl->SetPath((LPCWSTR)nativeAppPath.utf16());
-            psl->SetArguments((LPCWSTR)arguments.utf16());
-            psl->SetDescription((LPCWSTR)QString("Stream %1 from %2").arg(appName).arg(computerName).utf16());
+        // Use RAII wrappers for COM pointers to ensure proper cleanup
+        ComPtr<IShellLink> psl;
+        HRESULT hres = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER,
+                                        IID_IShellLink, reinterpret_cast<LPVOID*>(psl.put()));
+        if (SUCCEEDED(hres)) {
+            psl->SetPath(reinterpret_cast<LPCWSTR>(nativeAppPath.utf16()));
+            psl->SetArguments(reinterpret_cast<LPCWSTR>(arguments.utf16()));
+            psl->SetDescription(reinterpret_cast<LPCWSTR>(
+                QString("Stream %1 from %2").arg(appName).arg(computerName).utf16()));
 
             // Set the icon to the Moonlight executable
-            psl->SetIconLocation((LPCWSTR)nativeAppPath.utf16(), 0);
+            psl->SetIconLocation(reinterpret_cast<LPCWSTR>(nativeAppPath.utf16()), 0);
 
-            IPersistFile* ppf;
-            hres = psl->QueryInterface(IID_IPersistFile, (LPVOID*)&ppf);
-            if (SUCCEEDED(hres))
-            {
-                hres = ppf->Save((LPCWSTR)linkPath.utf16(), TRUE);
-                ppf->Release();
+            ComPtr<IPersistFile> ppf;
+            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<LPVOID*>(ppf.put()));
+            if (SUCCEEDED(hres)) {
+                ppf->Save(reinterpret_cast<LPCWSTR>(linkPath.utf16()), TRUE);
             }
-            psl->Release();
+            // ComPtr automatically releases ppf and psl when going out of scope
         }
 
         CoUninitialize();

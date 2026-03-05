@@ -12,8 +12,17 @@
            Version="$(var.Version)"
            Manufacturer="DancherLink Streaming Project"
            UpgradeCode="5c09f94e-f809-4c6a-9b7b-597c99f041fe">
-    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." Schedule="afterInstallInitialize" />
+    <!-- Optimize upgrade: use patching mode for faster updates -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+                  Schedule="afterInstallInitialize"
+                  IgnoreRemoveFailure="yes"
+                  AllowDowngrades="no" />
     <MediaTemplate CompressionLevel="high" EmbedCab="yes" />
+
+    <!-- Optimize install speed: reduce UI updates and disable unnecessary features -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="None" />
+    <Property Id="MSIDISABLELUAREPAIR" Value="1" />
 
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />

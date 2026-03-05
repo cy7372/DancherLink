@@ -43,6 +43,9 @@ public:
 
     void run();
 
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(DelayedFlushThread)
+
 private:
     ComputerManager* m_ComputerManager;
 };
@@ -74,6 +77,9 @@ public:
     virtual ~MdnsPendingComputer()
     {
     }
+
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(MdnsPendingComputer)
 
     QString hostname()
     {
@@ -171,6 +177,9 @@ public:
         QMutexLocker locker(&m_WakeLock);
         m_WakeCondition.wakeAll();
     }
+
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(PcMonitorThread)
 
 private:
     bool tryPollComputer(QNetworkAccessManager* nam, NvAddress address, bool& changed)
@@ -328,6 +337,9 @@ public:
         }
     }
 
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(ComputerPollingEntry)
+
     bool isActive()
     {
         cleanInactiveList();
@@ -388,11 +400,14 @@ class ComputerManager : public QObject
     friend class PendingQuitTask;
     friend class PendingAddTask;
 
-
 public:
     explicit ComputerManager(StreamingPreferences* prefs);
 
     virtual ~ComputerManager();
+
+    // Prevent copying of ComputerManager due to complex resource management
+    // and singleton-like behavior with host tracking
+    Q_DISABLE_COPY_MOVE(ComputerManager)
 
     Q_INVOKABLE void startPolling();
 
@@ -498,6 +513,9 @@ public:
         return m_Cancelled.load();
     }
 
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(PendingPairingTask)
+
 signals:
     void pairingCompleted(NvComputer* computer, QString error);
 
@@ -585,6 +603,9 @@ public:
                 computerManager, &ComputerManager::quitAppCompleted);
     }
 
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(PendingQuitTask)
+
 signals:
     void quitAppFailed(QString error);
 
@@ -641,6 +662,9 @@ public:
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
                 this, &PendingAddTask::handleAboutToQuit);
     }
+
+    // Prevent copying
+    Q_DISABLE_COPY_MOVE(PendingAddTask)
 
 signals:
     void computerAddCompleted(QVariant success, QVariant detectedPortBlocking);

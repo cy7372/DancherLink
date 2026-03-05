@@ -2,9 +2,12 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 
+import "."
+
 import AppModel 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
+import StreamingPreferences 1.0
 
 CenteredGridView {
     property int computerIndex
@@ -81,12 +84,12 @@ CenteredGridView {
         opacity: model.hidden ? 0.4 : 1.0
 
         background: Rectangle {
-            color: parent.highlighted ? "#505050" : (parent.hovered ? "#404040" : "transparent")
-            border.color: parent.highlighted ? "#87CEEB" : "transparent"
-            border.width: parent.highlighted ? 2 : 0
-            radius: 8
+            color: parent.highlighted ? AppTheme.backgroundHighlighted : (parent.hovered ? AppTheme.backgroundHover : "transparent")
+            border.color: parent.highlighted ? AppTheme.accentPrimary : "transparent"
+            border.width: parent.highlighted ? AppTheme.borderWidth : 0
+            radius: AppTheme.borderRadius
 
-            Behavior on color { ColorAnimation { duration: 100 } }
+            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
         }
 
         Image {

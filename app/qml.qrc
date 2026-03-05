@@ -1,5 +1,17 @@
 <RCC>
     <qresource prefix="/">
+        <file>gui/qmldir</file>
+        <file>gui/AppTheme.qml</file>
+        <file>gui/AppAnimations.qml</file>
+        <file>gui/InputDialog.qml</file>
+        <file>gui/settings/SettingsGroupBox.qml</file>
+        <file>gui/settings/AudioSettings.qml</file>
+        <file>gui/settings/HostSettings.qml</file>
+        <file>gui/settings/UpdateSettings.qml</file>
+        <file>gui/settings/InputSettings.qml</file>
+        <file>gui/settings/GamepadSettings.qml</file>
+        <file>gui/settings/UISettings.qml</file>
+        <file>gui/settings/AdvancedSettings.qml</file>
         <file>gui/main.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
