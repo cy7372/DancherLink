@@ -367,18 +367,6 @@ ApplicationWindow {
                     }
 
                     Label {
-                        id: settingsLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            return " @ " + StreamingPreferences.fps + "fps / " + (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + "M"
-                        }
-                        color: "#FFEB3B"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
                         id: adaptiveLabel
                         visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
                         text: {
@@ -396,11 +384,15 @@ ApplicationWindow {
 
                             if (fpsSteps > 0 && baseFps > 30) {
                                 // Standard FPS tiers: 30, 60, 90, 120, 144
-                                if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
-                                if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
-                                if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
-                                if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
-                                if (fpsReduced < 30) fpsReduced = 30
+                                // Match appmodel.cpp reduceFpsBySteps() logic
+                                var fpsTiers = [30, 60, 90, 120, 144]
+                                var tierIndex = 0
+                                for (var i = 0; i < fpsTiers.length; i++) {
+                                    if (baseFps >= fpsTiers[i]) tierIndex = i
+                                }
+                                tierIndex -= fpsSteps
+                                if (tierIndex < 0) tierIndex = 0
+                                fpsReduced = fpsTiers[tierIndex]
                             }
 
                             // Calculate bitrate multiplier based on RTT
