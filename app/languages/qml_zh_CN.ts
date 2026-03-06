@@ -622,42 +622,42 @@
 <context>
     <name>NetworkQualityMonitor</name>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="201"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="225"/>
         <source>Network quality is poor. Consider reducing bitrate or check your connection.</source>
         <translation>网络质量较差。建议降低比特率或检查网络连接。</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="203"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="227"/>
         <source>Network quality is degraded. Some frames may be dropped.</source>
         <translation>网络质量下降。部分帧可能会丢失。</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="314"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="337"/>
         <source>Excellent</source>
         <translation>极好</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="316"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="339"/>
         <source>Good</source>
         <translation>良好</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="318"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="341"/>
         <source>Fair</source>
         <translation>一般</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="320"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="343"/>
         <source>Poor</source>
         <translation>较差</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="322"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="345"/>
         <source>Bad</source>
         <translation>很差</translation>
     </message>
     <message>
-        <location filename="../streaming/networkqualitymonitor.cpp" line="324"/>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="347"/>
         <source>Unknown</source>
         <translation>未知</translation>
     </message>
@@ -1974,6 +1974,11 @@ Restart stream?</source>
         <location filename="../gui/main.qml" line="348"/>
         <source>N/A</source>
         <translation>不适用</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="387"/>
+        <source>Loss:</source>
+        <translation>丢包:</translation>
     </message>
     <message>
         <location filename="../gui/main.qml" line="469"/>

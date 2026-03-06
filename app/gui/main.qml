@@ -315,12 +315,12 @@ ApplicationWindow {
                 }
             }
 
-            // Network latency indicator - positioned after the back button
+            // Network latency indicator - centered in toolbar
             Rectangle {
                 id: networkIndicator
                 visible: currentAppModel != null
                 height: 24
-                Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                 // Dynamic width based on content
                 width: networkIndicatorRow.implicitWidth + 16
                 radius: 4
@@ -384,7 +384,7 @@ ApplicationWindow {
                         text: {
                             if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                             var lossRate = currentAppModel.packetLossRate * 100
-                            return " | 丢包：" + lossRate.toFixed(1) + "%"
+                            return " | " + qsTr("Loss:") + " " + lossRate.toFixed(1) + "%"
                         }
                         color: "#CCCCCC"
                         font.pointSize: 9
