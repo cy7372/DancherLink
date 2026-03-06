@@ -304,9 +304,9 @@ ApplicationWindow {
 
             NavigableToolButton {
                 // Only make the button visible if the user has navigated somewhere.
-                visible: stackView.depth > 1
-                // Keep the button's space even when hidden to prevent layout shift
-                Layout.preferredWidth: visible ? implicitWidth : 0
+                // Use opacity instead of visible to preserve layout space
+                opacity: stackView.depth > 1 ? 1 : 0
+                enabled: stackView.depth > 1
 
                 iconSource: "qrc:/res/arrow_left.svg"
 
