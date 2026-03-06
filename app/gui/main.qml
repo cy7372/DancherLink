@@ -338,127 +338,127 @@ ApplicationWindow {
                         return "#880E4F"                    // Bad (purple)
                     }
 
-                Row {
-                    id: networkIndicatorRow
-                    anchors.centerIn: parent
-                    spacing: 6
+                    Row {
+                        id: networkIndicatorRow
+                        anchors.centerIn: parent
+                        spacing: 6
 
-                    Label {
-                        id: latencyLabel
-                        text: {
-                            if (!currentAppModel) return ""
-                            var ms = currentAppModel.networkLatencyMs
-                            if (ms === -1) return qsTr("Measuring...")
-                            if (ms < 0)   return qsTr("N/A")
-                            return ms + " ms"
-                        }
-                        color: "white"
-                        font.pointSize: 10
-                        font.bold: true
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
-                        id: qualityLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            return currentAppModel.networkQualityString
-                        }
-                        color: "#CCCCCC"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
-                        id: packetLossLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            var lossRate = currentAppModel.packetLossRate * 100
-                            return " | 丢包：" + lossRate.toFixed(1) + "%"
-                        }
-                        color: "#CCCCCC"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
-                        id: currentFpsLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            var ms = currentAppModel.networkLatencyMs
-                            var baseFps = StreamingPreferences.fps
-
-                            // Calculate adaptive FPS based on RTT thresholds
-                            var fpsSteps = 0
-                            if (ms >= 50) fpsSteps = 2
-                            else if (ms >= 30) fpsSteps = 1
-
-                            var currentFps = baseFps
-                            if (fpsSteps > 0 && baseFps > 30) {
-                                if (baseFps >= 144) currentFps = (fpsSteps >= 1) ? 120 : baseFps
-                                else if (baseFps >= 120) currentFps = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
-                                else if (baseFps >= 90)  currentFps = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
-                                else if (baseFps >= 60)  currentFps = (fpsSteps >= 1) ? 30 : baseFps
-                                if (currentFps < 30) currentFps = 30
+                        Label {
+                            id: latencyLabel
+                            text: {
+                                if (!currentAppModel) return ""
+                                var ms = currentAppModel.networkLatencyMs
+                                if (ms === -1) return qsTr("Measuring...")
+                                if (ms < 0)   return qsTr("N/A")
+                                return ms + " ms"
                             }
-
-                            // Calculate adaptive bitrate
-                            var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
-                            var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
-                            kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
-
-                            return " @ " + currentFps + "fps / " + (kbps/1000).toFixed(0) + "M"
+                            color: "white"
+                            font.pointSize: 10
+                            font.bold: true
+                            verticalAlignment: Text.AlignVCenter
                         }
-                        color: "#FFEB3B"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
 
-                    Label {
-                        id: adaptiveLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate && currentAppModel.networkLatencyMs >= 30
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 30 || !StreamingPreferences.networkAdaptiveBitrate) return ""
-                            var ms = currentAppModel.networkLatencyMs
-
-                            // Calculate FPS reduction
-                            var baseFps = StreamingPreferences.fps
-                            var fpsSteps = (ms >= 50) ? 2 : 1
-                            var fpsReduced = baseFps
-
-                            if (fpsSteps > 0 && baseFps > 30) {
-                                if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
-                                else if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
-                                else if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
-                                else if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
-                                if (fpsReduced < 30) fpsReduced = 30
+                        Label {
+                            id: qualityLabel
+                            visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                            text: {
+                                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                                return currentAppModel.networkQualityString
                             }
-
-                            // Calculate original configured bitrate
-                            var originalKbps = StreamingPreferences.bitrateKbps
-
-                            return " (原始：" + fpsReduced + "fps / " + (originalKbps/1000).toFixed(0) + "M)"
+                            color: "#CCCCCC"
+                            font.pointSize: 9
+                            verticalAlignment: Text.AlignVCenter
                         }
-                        color: "#81C784"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
+
+                        Label {
+                            id: packetLossLabel
+                            visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                            text: {
+                                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                                var lossRate = currentAppModel.packetLossRate * 100
+                                return " | 丢包：" + lossRate.toFixed(1) + "%"
+                            }
+                            color: "#CCCCCC"
+                            font.pointSize: 9
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        Label {
+                            id: currentFpsLabel
+                            visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                            text: {
+                                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                                var ms = currentAppModel.networkLatencyMs
+                                var baseFps = StreamingPreferences.fps
+
+                                // Calculate adaptive FPS based on RTT thresholds
+                                var fpsSteps = 0
+                                if (ms >= 50) fpsSteps = 2
+                                else if (ms >= 30) fpsSteps = 1
+
+                                var currentFps = baseFps
+                                if (fpsSteps > 0 && baseFps > 30) {
+                                    if (baseFps >= 144) currentFps = (fpsSteps >= 1) ? 120 : baseFps
+                                    else if (baseFps >= 120) currentFps = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
+                                    else if (baseFps >= 90)  currentFps = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
+                                    else if (baseFps >= 60)  currentFps = (fpsSteps >= 1) ? 30 : baseFps
+                                    if (currentFps < 30) currentFps = 30
+                                }
+
+                                // Calculate adaptive bitrate
+                                var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
+                                var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
+                                kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
+
+                                return " @ " + currentFps + "fps / " + (kbps/1000).toFixed(0) + "M"
+                            }
+                            color: "#FFEB3B"
+                            font.pointSize: 9
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        Label {
+                            id: adaptiveLabel
+                            visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate && currentAppModel.networkLatencyMs >= 30
+                            text: {
+                                if (!currentAppModel || currentAppModel.networkLatencyMs < 30 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                                var ms = currentAppModel.networkLatencyMs
+
+                                // Calculate FPS reduction
+                                var baseFps = StreamingPreferences.fps
+                                var fpsSteps = (ms >= 50) ? 2 : 1
+                                var fpsReduced = baseFps
+
+                                if (fpsSteps > 0 && baseFps > 30) {
+                                    if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
+                                    else if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
+                                    else if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
+                                    else if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
+                                    if (fpsReduced < 30) fpsReduced = 30
+                                }
+
+                                // Calculate original configured bitrate
+                                var originalKbps = StreamingPreferences.bitrateKbps
+
+                                return " (原始：" + fpsReduced + "fps / " + (originalKbps/1000).toFixed(0) + "M)"
+                            }
+                            color: "#81C784"
+                            font.pointSize: 9
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
-                }
 
-                MouseArea {
-                    id: networkIndicatorMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton  // Only for hover detection
-                }
+                    MouseArea {
+                        id: networkIndicatorMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton  // Only for hover detection
+                    }
 
-                ToolTip.delay: 500
-                ToolTip.timeout: 5000
-                ToolTip.visible: networkIndicatorMouseArea.containsMouse
-                ToolTip.text: {
+                    ToolTip.delay: 500
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: networkIndicatorMouseArea.containsMouse
+                    ToolTip.text: {
                     if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                     var ms = currentAppModel.networkLatencyMs
                     var quality = currentAppModel.networkQualityString
