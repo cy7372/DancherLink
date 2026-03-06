@@ -332,10 +332,6 @@ Page {
                                     StreamingPreferences.bitrateKbps = value
                                 }
                             }
-
-                            onEditingFinished: {
-                                to = StreamingPreferences.unlockBitrate ? 100000 : StreamingPreferences.getMaxBitrate(resolutionComboBox.model.get(resolutionComboBox.currentIndex).video_width, resolutionComboBox.model.get(resolutionComboBox.currentIndex).video_height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
-                            }
                         }
 
                         Label {
