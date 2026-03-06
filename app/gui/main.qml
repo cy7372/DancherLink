@@ -316,23 +316,27 @@ ApplicationWindow {
             }
 
             // Network latency indicator - positioned after the back button
-            Rectangle {
-                id: networkIndicator
+            // Uses Item to maintain stable positioning regardless of back button visibility
+            Item {
+                id: networkIndicatorContainer
                 visible: currentAppModel != null
                 height: 24
-                Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                // Dynamic width based on content
                 width: networkIndicatorRow.implicitWidth + 16
-                radius: 4
-                color: {
-                    var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
-                    if (ms < 0)   return "#555555"      // Unknown
-                    if (ms < 10)  return "#1B5E20"      // Excellent (dark green)
-                    if (ms < 20)  return "#2E7D32"      // Good (green)
-                    if (ms < 30)  return "#E65100"      // Fair (orange)
-                    if (ms < 50)  return "#B71C1C"      // Poor (red)
-                    return "#880E4F"                    // Bad (purple)
-                }
+                Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+
+                Rectangle {
+                    id: networkIndicator
+                    anchors.fill: parent
+                    radius: 4
+                    color: {
+                        var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
+                        if (ms < 0)   return "#555555"      // Unknown
+                        if (ms < 10)  return "#1B5E20"      // Excellent (dark green)
+                        if (ms < 20)  return "#2E7D32"      // Good (green)
+                        if (ms < 30)  return "#E65100"      // Fair (orange)
+                        if (ms < 50)  return "#B71C1C"      // Poor (red)
+                        return "#880E4F"                    // Bad (purple)
+                    }
 
                 Row {
                     id: networkIndicatorRow
