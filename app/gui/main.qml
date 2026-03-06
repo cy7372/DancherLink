@@ -301,6 +301,7 @@ ApplicationWindow {
             anchors.leftMargin: 10
             anchors.rightMargin: 10
             anchors.fill: parent
+            z: 1  // Ensure RowLayout is above titleLabel for proper event handling
 
             NavigableToolButton {
                 // Only make the button visible if the user has navigated somewhere.
