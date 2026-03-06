@@ -11,12 +11,13 @@ SettingsGroupBox {
     title: qsTr("Gamepad Settings")
 
     Column {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         spacing: 5
 
         CheckBox {
             id: swapFaceButtonsCheck
-            width: parent.width
             text: qsTr("Swap A/B and X/Y gamepad buttons")
             font.pointSize: 12
             checked: StreamingPreferences.swapFaceButtons

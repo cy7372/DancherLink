@@ -12,13 +12,14 @@ SettingsGroupBox {
     title: qsTr("Input Settings")
 
     Column {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         spacing: 5
 
         CheckBox {
             id: absoluteMouseCheck
             hoverEnabled: true
-            width: parent.width
             text: qsTr("Optimize mouse for remote desktop instead of games")
             font.pointSize: 12
             checked: StreamingPreferences.absoluteMouseMode

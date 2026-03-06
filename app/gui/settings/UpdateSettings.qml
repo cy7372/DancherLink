@@ -12,11 +12,12 @@ SettingsGroupBox {
     title: qsTr("Update Settings")
 
     Column {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         spacing: 5
 
         Label {
-            width: parent.width
             text: qsTr("Subscription URL")
             font.pointSize: 12
             wrapMode: Text.Wrap

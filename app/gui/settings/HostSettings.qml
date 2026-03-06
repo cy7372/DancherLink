@@ -10,12 +10,13 @@ SettingsGroupBox {
     title: qsTr("Host Settings")
 
     Column {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         spacing: 5
 
         CheckBox {
             id: optimizeGameSettingsCheck
-            width: parent.width
             text: qsTr("Optimize game settings for streaming")
             font.pointSize: 12
             checked: StreamingPreferences.gameOptimizations
