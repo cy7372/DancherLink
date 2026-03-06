@@ -138,11 +138,33 @@ QString AppModel::networkQualityString() const
 {
     if (m_MeasuredRttMs == -1) return tr("Measuring...");
     if (m_MeasuredRttMs < 0)  return tr("Unavailable");
-    if (m_MeasuredRttMs < 20) return tr("Excellent");
-    if (m_MeasuredRttMs < 50) return tr("Good");
-    if (m_MeasuredRttMs < 100) return tr("Fair");
-    if (m_MeasuredRttMs < 150) return tr("Poor");
-    return tr("Bad");
+    if (m_MeasuredRttMs < 10)  return tr("Excellent");  // <10ms
+    if (m_MeasuredRttMs < 20)  return tr("Good");       // 10-20ms
+    if (m_MeasuredRttMs < 30)  return tr("Fair");       // 20-30ms
+    if (m_MeasuredRttMs < 50)  return tr("Poor");       // 30-50ms
+    return tr("Bad");                                  // >=50ms
+}
+
+// Helper function to reduce FPS by steps, respecting standard FPS tiers
+static int reduceFpsBySteps(int originalFps, int steps)
+{
+    // Standard FPS tiers: 30 ← 60 ← 90 ← 120 ← 144
+    static const int fpsTiers[] = {30, 60, 90, 120, 144};
+    const int numTiers = sizeof(fpsTiers) / sizeof(fpsTiers[0]);
+
+    // Find the current tier index
+    int index = 0;
+    for (int i = 0; i < numTiers; i++) {
+        if (originalFps >= fpsTiers[i]) {
+            index = i;
+        }
+    }
+
+    // Reduce by steps, but never below 30fps
+    index -= steps;
+    if (index < 0) index = 0;
+
+    return fpsTiers[index];
 }
 
 void AppModel::applyAdaptiveSettings(Session* session) const
@@ -155,18 +177,27 @@ void AppModel::applyAdaptiveSettings(Session* session) const
     int fps = prefs->fps;
     int bitrateKbps = prefs->bitrateKbps;
 
-    // Reduce fps for very high latency connections (>= 150ms)
-    if (m_MeasuredRttMs >= 150 && fps > 30) {
-        fps = 30;
+    // Reduce FPS starting from Poor quality (RTT >= 30ms)
+    // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
+    int fpsReductionSteps = 0;
+    if (m_MeasuredRttMs >= 50) {
+        fpsReductionSteps = 2;  // Bad: reduce 2 tiers
+    } else if (m_MeasuredRttMs >= 30) {
+        fpsReductionSteps = 1;  // Poor: reduce 1 tier
+    }
+
+    if (fpsReductionSteps > 0 && fps > 30) {
+        fps = reduceFpsBySteps(fps, fpsReductionSteps);
     }
 
     // Scale bitrate based on measured RTT
+    // Thresholds: Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
     float bitrateMultiplier;
-    if (m_MeasuredRttMs < 20)       bitrateMultiplier = 1.00f; // Excellent - LAN
-    else if (m_MeasuredRttMs < 50)  bitrateMultiplier = 0.85f; // Good
-    else if (m_MeasuredRttMs < 100) bitrateMultiplier = 0.70f; // Fair
-    else if (m_MeasuredRttMs < 150) bitrateMultiplier = 0.55f; // Poor
-    else                             bitrateMultiplier = 0.40f; // Bad
+    if (m_MeasuredRttMs < 10)       bitrateMultiplier = 1.00f;  // Excellent
+    else if (m_MeasuredRttMs < 20)  bitrateMultiplier = 0.90f;  // Good
+    else if (m_MeasuredRttMs < 30)  bitrateMultiplier = 0.70f;  // Fair
+    else if (m_MeasuredRttMs < 50)  bitrateMultiplier = 0.50f;  // Poor
+    else                             bitrateMultiplier = 0.30f;  // Bad
 
     // Calculate the "full quality" bitrate for the selected resolution and fps,
     // then apply the network quality multiplier as a ceiling

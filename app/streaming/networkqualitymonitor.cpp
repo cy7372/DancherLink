@@ -227,6 +227,7 @@ NetworkQuality NetworkQualityMonitor::assessQualityFromMetrics(float lossRate, f
 void NetworkQualityMonitor::calculateRecommendations()
 {
     // Calculate recommended bitrate based on current quality
+    // Bitrate multipliers: Excellent 100%, Good 90%, Fair 70%, Poor 50%, Bad 30%
     float bitrateMultiplier = 1.0f;
 
     switch (m_CurrentStats.quality) {
@@ -240,29 +241,31 @@ void NetworkQualityMonitor::calculateRecommendations()
         break;
 
     case NetworkQuality::Good:
-        // Maintain current bitrate
-        bitrateMultiplier = 1.0f;
+        // Maintain current bitrate (90% of original)
+        bitrateMultiplier = 0.90f;
         m_CurrentStats.shouldIncreaseFec = false;
         m_CurrentStats.shouldReduceBitrate = false;
         break;
 
     case NetworkQuality::Fair:
-        // Slightly reduce bitrate for stability
-        bitrateMultiplier = 0.85f;
+        // Reduce bitrate to 70% for stability
+        bitrateMultiplier = 0.70f;
         m_CurrentStats.shouldIncreaseFec = true;
         m_CurrentStats.shouldReduceBitrate = true;
         break;
 
     case NetworkQuality::Poor:
-        // Significantly reduce bitrate
-        bitrateMultiplier = 0.7f;
+        // Significantly reduce bitrate to 50%
+        // Also recommend reducing FPS by 1 tier (e.g., 60→30, 120→60)
+        bitrateMultiplier = 0.50f;
         m_CurrentStats.shouldIncreaseFec = true;
         m_CurrentStats.shouldReduceBitrate = true;
         break;
 
     case NetworkQuality::Bad:
-        // Reduce to minimum viable bitrate
-        bitrateMultiplier = 0.5f;
+        // Reduce to minimum viable bitrate (30%)
+        // Also recommend reducing FPS by 2 tiers (e.g., 120→30, 60→30)
+        bitrateMultiplier = 0.30f;
         m_CurrentStats.shouldIncreaseFec = true;
         m_CurrentStats.shouldReduceBitrate = true;
         break;

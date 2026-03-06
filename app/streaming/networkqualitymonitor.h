@@ -125,12 +125,15 @@ private:
     QList<float> m_LossRateHistory;
     static const int HISTORY_SIZE = 10;
 
-    // Thresholds
-    static constexpr float LOSS_RATE_EXCELLENT = 0.01f;
-    static constexpr float LOSS_RATE_GOOD = 0.03f;
-    static constexpr float LOSS_RATE_FAIR = 0.05f;
-    static constexpr float LOSS_RATE_POOR = 0.10f;
+    // Thresholds (updated for more lenient network adaptation)
+    // RTT thresholds: Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
+    // Packet loss thresholds: Excellent <2%, Good 2-5%, Fair 5-8%, Poor 8-15%, Bad >=15%
+    static constexpr float LOSS_RATE_EXCELLENT = 0.02f;
+    static constexpr float LOSS_RATE_GOOD = 0.05f;
+    static constexpr float LOSS_RATE_FAIR = 0.08f;
+    static constexpr float LOSS_RATE_POOR = 0.15f;
 
+    // FEC rate thresholds for reference
     static constexpr float FEC_RATE_GOOD = 0.15f;
     static constexpr float FEC_RATE_FAIR = 0.30f;
     static constexpr float FEC_RATE_POOR = 0.50f;

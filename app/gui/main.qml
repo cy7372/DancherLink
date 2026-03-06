@@ -326,12 +326,12 @@ ApplicationWindow {
                 radius: 4
                 color: {
                     var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
-                    if (ms < 0)   return "#555555"
-                    if (ms < 20)  return "#1B5E20"
-                    if (ms < 50)  return "#2E7D32"
-                    if (ms < 100) return "#E65100"
-                    if (ms < 150) return "#B71C1C"
-                    return "#880E4F"
+                    if (ms < 0)   return "#555555"      // Unknown
+                    if (ms < 10)  return "#1B5E20"      // Excellent (dark green)
+                    if (ms < 20)  return "#2E7D32"      // Good (green)
+                    if (ms < 30)  return "#E65100"      // Fair (orange)
+                    if (ms < 50)  return "#B71C1C"      // Poor (red)
+                    return "#880E4F"                    // Bad (purple)
                 }
 
                 Row {
@@ -385,12 +385,30 @@ ApplicationWindow {
                             if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
                             var ms = currentAppModel.networkLatencyMs
                             if (ms < 0) return ""
-                            var fpsReduced = ms >= 150 && StreamingPreferences.fps > 30
-                            var mult = ms < 20 ? 1.00 : ms < 50 ? 0.85 : ms < 100 ? 0.70 : ms < 150 ? 0.55 : 0.40
-                            var fps = fpsReduced ? 30 : StreamingPreferences.fps
+
+                            // Calculate FPS reduction based on RTT thresholds
+                            // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
+                            var baseFps = StreamingPreferences.fps
+                            var fpsReduced = baseFps
+                            var fpsSteps = 0
+                            if (ms >= 50) fpsSteps = 2
+                            else if (ms >= 30) fpsSteps = 1
+
+                            if (fpsSteps > 0 && baseFps > 30) {
+                                // Standard FPS tiers: 30, 60, 90, 120, 144
+                                if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
+                                if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
+                                if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
+                                if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
+                                if (fpsReduced < 30) fpsReduced = 30
+                            }
+
+                            // Calculate bitrate multiplier based on RTT
+                            // Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
+                            var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
                             var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
                             kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
-                            return " \u2192 " + fps + "fps / " + (kbps/1000).toFixed(0) + "M"
+                            return " → " + fpsReduced + "fps / " + (kbps/1000).toFixed(0) + "M"
                         }
                         color: "#81C784"
                         font.pointSize: 9
