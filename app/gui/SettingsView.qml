@@ -123,18 +123,17 @@ Page {
                 font.pointSize: 12
 
                 Column {
-                    anchors.fill: parent
                     spacing: 5
 
                     Label {
-                        width: parent.width
+                        width: parent.width - parent.leftPadding - parent.rightPadding
                         text: qsTr("Resolution and FPS")
                         font.pointSize: 12
                         wrapMode: Text.Wrap
                     }
 
                     Label {
-                        width: parent.width
+                        width: parent.width - parent.leftPadding - parent.rightPadding
                         text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                         font.pointSize: 9
                         wrapMode: Text.Wrap
@@ -142,7 +141,7 @@ Page {
 
                     Row {
                         spacing: 5
-                        width: parent.width
+                        width: parent.width - parent.leftPadding - parent.rightPadding
 
                         AutoResizingComboBox {
                             property int lastIndexValue
