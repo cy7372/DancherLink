@@ -328,12 +328,10 @@ ApplicationWindow {
                 radius: 4
                 color: {
                     var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
-                    if (ms < 0)   return "#555555"      // Unknown
-                    if (ms < 10)  return "#1B5E20"      // Excellent (dark green)
+                    if (ms < 0)   return "#555555"      // Unknown (gray)
                     if (ms < 20)  return "#2E7D32"      // Good (green)
-                    if (ms < 30)  return "#E65100"      // Fair (orange)
-                    if (ms < 50)  return "#B71C1C"      // Poor (red)
-                    return "#880E4F"                    // Bad (purple)
+                    if (ms < 50)  return "#F9A825"      // Fair (yellow)
+                    return "#C62828"                    // Poor (red)
                 }
 
                 Row {
