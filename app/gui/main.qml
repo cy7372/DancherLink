@@ -429,9 +429,16 @@ ApplicationWindow {
                     }
                 }
 
+                MouseArea {
+                    id: networkIndicatorMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                }
+
                 ToolTip.delay: 500
                 ToolTip.timeout: 5000
-                ToolTip.visible: hovered
+                ToolTip.visible: networkIndicatorMouseArea.containsMouse
                 ToolTip.text: {
                     if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                     var ms = currentAppModel.networkLatencyMs
