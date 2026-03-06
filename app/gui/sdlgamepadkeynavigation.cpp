@@ -287,7 +287,9 @@ void SdlGamepadKeyNavigation::setUiNavMode(bool uiNavMode)
 
 int SdlGamepadKeyNavigation::getConnectedGamepads()
 {
-    Q_ASSERT(m_Enabled);
+    if (!m_Enabled) {
+        return 0;
+    }
 
     int count = 0;
     int numJoysticks = SDL_NumJoysticks();
