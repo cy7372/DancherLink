@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QReadWriteLock>
+#include <QString>
 
 // Network quality level enumeration
 enum class NetworkQuality {
@@ -87,7 +88,8 @@ private:
     ~NetworkQualityMonitor();
 
     void calculateMetrics();
-    void assessQuality();
+    void assessQuality(bool& qualityChangedOut, NetworkQuality& newQualityOut,
+                       bool& idrRequestedOut, QString& warningOut);
     void calculateRecommendations();
     NetworkQuality assessQualityFromMetrics(float lossRate, float fecRate);
 

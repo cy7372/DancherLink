@@ -67,39 +67,62 @@ void NetworkQualityMonitor::updateStats(quint32 videoPackets, quint32 fecPackets
                                          quint32 fecRecovered, quint32 fecFailed,
                                          quint32 outOfSequence)
 {
-    QWriteLocker lock(&m_Lock);
+    // Collect signals to emit after releasing the lock to prevent deadlock
+    bool emitStatsUpdated = false;
+    bool emitQualityChanged = false;
+    NetworkQuality newQuality = NetworkQuality::Excellent;
+    bool emitIdrFrameRequested = false;
+    QString warningMessage;
 
-    m_CurrentStats.videoPackets = videoPackets;
-    m_CurrentStats.fecPackets = fecPackets;
-    m_CurrentStats.fecRecovered = fecRecovered;
-    m_CurrentStats.fecFailed = fecFailed;
-    m_CurrentStats.outOfSequence = outOfSequence;
+    {
+        QWriteLocker lock(&m_Lock);
 
-    // Only process every ~60 frames (~1 second at 60fps) to reduce overhead
-    m_FrameCount++;
-    if (m_FrameCount < 60) {
-        return;
+        m_CurrentStats.videoPackets = videoPackets;
+        m_CurrentStats.fecPackets = fecPackets;
+        m_CurrentStats.fecRecovered = fecRecovered;
+        m_CurrentStats.fecFailed = fecFailed;
+        m_CurrentStats.outOfSequence = outOfSequence;
+
+        // Only process every ~60 frames (~1 second at 60fps) to reduce overhead
+        m_FrameCount++;
+        if (m_FrameCount < 60) {
+            return;
+        }
+        m_FrameCount = 0;
+
+        // Calculate deltas from last update
+        m_DeltaVideoPackets = m_CurrentStats.videoPackets - m_PreviousStats.videoPackets;
+        m_DeltaFecRecovered = m_CurrentStats.fecRecovered - m_PreviousStats.fecRecovered;
+        m_DeltaFecFailed = m_CurrentStats.fecFailed - m_PreviousStats.fecFailed;
+
+        // Store previous stats
+        m_PreviousStats = m_CurrentStats;
+
+        // Calculate metrics
+        calculateMetrics();
+
+        // Assess quality - collect signals instead of emitting
+        assessQuality(emitQualityChanged, newQuality, emitIdrFrameRequested, warningMessage);
+
+        // Calculate recommendations
+        calculateRecommendations();
+
+        emitStatsUpdated = true;
     }
-    m_FrameCount = 0;
+    // Lock released here - now it's safe to emit signals
 
-    // Calculate deltas from last update
-    m_DeltaVideoPackets = m_CurrentStats.videoPackets - m_PreviousStats.videoPackets;
-    m_DeltaFecRecovered = m_CurrentStats.fecRecovered - m_PreviousStats.fecRecovered;
-    m_DeltaFecFailed = m_CurrentStats.fecFailed - m_PreviousStats.fecFailed;
-
-    // Store previous stats
-    m_PreviousStats = m_CurrentStats;
-
-    // Calculate metrics
-    calculateMetrics();
-
-    // Assess quality
-    assessQuality();
-
-    // Calculate recommendations
-    calculateRecommendations();
-
-    emit statsUpdated();
+    if (emitStatsUpdated) {
+        emit statsUpdated();
+    }
+    if (emitQualityChanged) {
+        emit qualityChanged(newQuality);
+    }
+    if (emitIdrFrameRequested) {
+        emit idrFrameRequested();
+    }
+    if (!warningMessage.isEmpty()) {
+        emit networkWarning(warningMessage);
+    }
 }
 
 void NetworkQualityMonitor::calculateMetrics()
@@ -139,7 +162,8 @@ void NetworkQualityMonitor::calculateMetrics()
     }
 }
 
-void NetworkQualityMonitor::assessQuality()
+void NetworkQualityMonitor::assessQuality(bool& qualityChangedOut, NetworkQuality& newQualityOut,
+                                           bool& idrRequestedOut, QString& warningOut)
 {
     NetworkQuality previousQuality = m_CurrentStats.quality;
 
@@ -154,7 +178,8 @@ void NetworkQualityMonitor::assessQuality()
                  << static_cast<int>(m_CurrentStats.quality)
                  << "Loss:" << m_CurrentStats.packetLossRate * 100 << "%"
                  << "FEC Recovery:" << m_CurrentStats.fecRecoveryRate * 100 << "%";
-        emit qualityChanged(m_CurrentStats.quality);
+        qualityChangedOut = true;
+        newQualityOut = m_CurrentStats.quality;
     }
 
     // Smart IDR request: Request IDR frame when network is recovering
@@ -188,21 +213,19 @@ void NetworkQualityMonitor::assessQuality()
 
     if (shouldRequestIdr) {
         m_LastIdrRequestTime = now;
-        emit idrFrameRequested();
+        idrRequestedOut = true;
     }
 
     m_PreviousQuality = m_CurrentStats.quality;
 
-    // Emit warning for poor/bad quality
+    // Collect warning for poor/bad quality
     if (m_CurrentStats.quality == NetworkQuality::Poor ||
         m_CurrentStats.quality == NetworkQuality::Bad) {
-        QString message;
         if (m_CurrentStats.quality == NetworkQuality::Bad) {
-            message = tr("Network quality is poor. Consider reducing bitrate or check your connection.");
+            warningOut = tr("Network quality is poor. Consider reducing bitrate or check your connection.");
         } else {
-            message = tr("Network quality is degraded. Some frames may be dropped.");
+            warningOut = tr("Network quality is degraded. Some frames may be dropped.");
         }
-        emit networkWarning(message);
     }
 }
 

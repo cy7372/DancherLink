@@ -141,50 +141,111 @@
     </message>
 </context>
 <context>
+    <name>AppModel</name>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="151"/>
+        <source>Measuring...</source>
+        <translation>测量中...</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="152"/>
+        <source>Unavailable</source>
+        <translation>不可用</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="153"/>
+        <source>Excellent</source>
+        <translation>极好</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="154"/>
+        <source>Good</source>
+        <translation>良好</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="155"/>
+        <source>Fair</source>
+        <translation>一般</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="156"/>
+        <source>Poor</source>
+        <translation>较差</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="157"/>
+        <source>Bad</source>
+        <translation>很差</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="172"/>
+        <source>N/A</source>
+        <translation>不适用</translation>
+    </message>
+    <message>
+        <location filename="../gui/appmodel.cpp" line="176"/>
+        <source>丢包 %1%</source>
+        <translation>丢包 %1%</translation>
+    </message>
+</context>
+<context>
     <name>AppView</name>
     <message>
+        <location filename="../gui/AppView.qml" line="152"/>
+        <location filename="../gui/AppView.qml" line="317"/>
         <source>Resume Game</source>
-        <translation type="vanished">继续游戏</translation>
+        <translation>继续游戏</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="175"/>
+        <location filename="../gui/AppView.qml" line="321"/>
         <source>Quit Game</source>
-        <translation type="vanished">退出游戏</translation>
+        <translation>退出游戏</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="317"/>
         <source>Launch Game</source>
-        <translation type="vanished">启动游戏</translation>
+        <translation>启动游戏</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="328"/>
         <source>Direct Launch</source>
-        <translation type="vanished">直接启动</translation>
+        <translation>直接启动</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="332"/>
         <source>Launch this app immediately when the host is selected, bypassing the app selection grid.</source>
-        <translation type="vanished">选择目标计算机后立即启动此应用程序，绕过应用程序选择网格。</translation>
+        <translation>选择目标计算机后立即启动此应用程序，绕过应用程序选择网格。</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="340"/>
         <source>Hide Game</source>
-        <translation type="vanished">隐藏游戏</translation>
+        <translation>隐藏游戏</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="344"/>
         <source>Hide this game from the app grid. To access hidden games, right-click on the host and choose %1.</source>
-        <translation type="vanished">从应用程序网格中隐藏此游戏。要访问隐藏的游戏，请右键单击目标计算机并选择 %1。</translation>
+        <translation>从应用程序网格中隐藏此游戏。要访问隐藏的游戏，请右键单击目标计算机并选择 %1。</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="344"/>
         <source>View All Apps</source>
-        <translation type="vanished">查看所有应用程序</translation>
+        <translation>查看所有应用程序</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="350"/>
         <source>Create Desktop Shortcut</source>
-        <translation type="vanished">创建桌面快捷方式</translation>
+        <translation>创建桌面快捷方式</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="364"/>
         <source>This computer doesn&apos;t seem to have any applications or some applications are hidden</source>
-        <translation type="vanished">这台计算机上似乎没有任何应用程序，或者有些应用程序已被隐藏</translation>
+        <translation>这台计算机上似乎没有任何应用程序，或者有些应用程序已被隐藏</translation>
     </message>
     <message>
+        <location filename="../gui/AppView.qml" line="377"/>
         <source>Are you sure you want to quit %1? Any unsaved progress will be lost.</source>
-        <translation type="vanished">你确定要退出 %1 吗？所有未保存的游戏进度都将丢失。</translation>
+        <translation>你确定要退出 %1 吗？所有未保存的游戏进度都将丢失。</translation>
     </message>
 </context>
 <context>
@@ -248,136 +309,170 @@
 <context>
     <name>CliPair</name>
     <message>
+        <location filename="../gui/CliPair.qml" line="8"/>
         <source>Establishing connection to PC...</source>
-        <translation type="vanished">正在建立与目标计算机的连接...</translation>
+        <translation>正在建立与目标计算机的连接...</translation>
     </message>
     <message>
+        <location filename="../gui/CliPair.qml" line="12"/>
         <source>Pairing... Please enter &apos;%1&apos; on %2.</source>
-        <translation type="vanished">配对中……请在 %2 输入 “%1”。</translation>
+        <translation>配对中……请在 %2 输入 “%1”。</translation>
     </message>
     <message>
+        <location filename="../gui/CliPair.qml" line="81"/>
         <source>Pairing completed successfully</source>
-        <translation type="vanished">配对成功</translation>
+        <translation>配对成功</translation>
     </message>
 </context>
 <context>
     <name>CliQuitStreamSegue</name>
     <message>
+        <location filename="../gui/CliQuitStreamSegue.qml" line="9"/>
         <source>Establishing connection to PC...</source>
-        <translation type="vanished">正在建立与目标计算机的连接...</translation>
+        <translation>正在建立与目标计算机的连接...</translation>
     </message>
     <message>
+        <location filename="../gui/CliQuitStreamSegue.qml" line="13"/>
         <source>Quitting app...</source>
-        <translation type="vanished">应用程序退出中...</translation>
+        <translation>应用程序退出中...</translation>
     </message>
 </context>
 <context>
     <name>CliStartStreamSegue</name>
     <message>
+        <location filename="../gui/CliStartStreamSegue.qml" line="8"/>
         <source>Establishing connection to PC...</source>
-        <translation type="vanished">正在建立与目标计算机的连接...</translation>
+        <translation>正在建立与目标计算机的连接...</translation>
     </message>
     <message>
+        <location filename="../gui/CliStartStreamSegue.qml" line="12"/>
         <source>Loading app list...</source>
-        <translation type="vanished">应用程序列表加载中...</translation>
+        <translation>应用程序列表加载中...</translation>
     </message>
     <message>
+        <location filename="../gui/CliStartStreamSegue.qml" line="78"/>
         <source>Are you sure you want to quit %1? Any unsaved progress will be lost.</source>
-        <translation type="vanished">你确定要退出 %1 吗？任何未保存的进度都将丢失。</translation>
+        <translation>你确定要退出 %1 吗？任何未保存的进度都将丢失。</translation>
     </message>
 </context>
 <context>
     <name>ComputerModel</name>
     <message>
+        <location filename="../gui/computermodel.cpp" line="50"/>
         <source>Online</source>
-        <translation type="vanished">在线</translation>
+        <translation>在线</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="53"/>
         <source>Offline</source>
-        <translation type="vanished">离线</translation>
+        <translation>离线</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="56"/>
+        <location filename="../gui/computermodel.cpp" line="68"/>
+        <location filename="../gui/computermodel.cpp" line="80"/>
+        <location filename="../gui/computermodel.cpp" line="82"/>
+        <location filename="../gui/computermodel.cpp" line="83"/>
         <source>Unknown</source>
-        <translation type="vanished">未知</translation>
+        <translation>未知</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="62"/>
         <source>Paired</source>
-        <translation type="vanished">已配对</translation>
+        <translation>已配对</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="65"/>
         <source>Unpaired</source>
-        <translation type="vanished">未配对</translation>
+        <translation>未配对</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="72"/>
         <source>Name: %1</source>
-        <translation type="vanished">名称: %1</translation>
+        <translation>名称: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="73"/>
         <source>Status: %1</source>
-        <translation type="vanished">状态: %1</translation>
+        <translation>状态: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="74"/>
         <source>Active Address: %1</source>
-        <translation type="vanished">活动地址: %1</translation>
+        <translation>活动地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="75"/>
         <source>UUID: %1</source>
-        <translation type="vanished">UUID: %1</translation>
+        <translation>UUID: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="76"/>
         <source>Local Address: %1</source>
-        <translation type="vanished">本地地址: %1</translation>
+        <translation>本地地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="77"/>
         <source>Remote Address: %1</source>
-        <translation type="vanished">远程地址: %1</translation>
+        <translation>远程地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="78"/>
         <source>IPv6 Address: %1</source>
-        <translation type="vanished">IPv6 地址: %1</translation>
+        <translation>IPv6 地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="79"/>
         <source>Manual Address: %1</source>
-        <translation type="vanished">手动地址: %1</translation>
+        <translation>手动地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="80"/>
         <source>MAC Address: %1</source>
-        <translation type="vanished">MAC 地址: %1</translation>
+        <translation>MAC 地址: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="81"/>
         <source>Pair State: %1</source>
-        <translation type="vanished">配对状态: %1</translation>
+        <translation>配对状态: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="82"/>
         <source>Running Game ID: %1</source>
-        <translation type="vanished">正在运行的游戏 ID: %1</translation>
+        <translation>正在运行的游戏 ID: %1</translation>
     </message>
     <message>
+        <location filename="../gui/computermodel.cpp" line="83"/>
         <source>HTTPS Port: %1</source>
-        <translation type="vanished">HTTPS 端口: %1</translation>
+        <translation>HTTPS 端口: %1</translation>
     </message>
 </context>
 <context>
     <name>GamepadMapper</name>
     <message>
+        <location filename="../gui/GamepadMapper.qml" line="9"/>
         <source>Gamepad Mapping</source>
-        <translation type="vanished">手柄按键映射</translation>
+        <translation>手柄按键映射</translation>
     </message>
     <message>
+        <location filename="../gui/GamepadMapper.qml" line="33"/>
         <source>Connected Gamepads</source>
-        <translation type="vanished">已连接的手柄</translation>
+        <translation>已连接的手柄</translation>
     </message>
     <message>
+        <location filename="../gui/GamepadMapper.qml" line="58"/>
         <source>Map</source>
-        <translation type="vanished">映射</translation>
+        <translation>映射</translation>
     </message>
     <message>
+        <location filename="../gui/GamepadMapper.qml" line="76"/>
         <source>No gamepads detected</source>
-        <translation type="vanished">未检测到手柄</translation>
+        <translation>未检测到手柄</translation>
     </message>
     <message>
+        <location filename="../gui/GamepadMapper.qml" line="84"/>
         <source>Refresh</source>
-        <translation type="vanished">刷新</translation>
+        <translation>刷新</translation>
     </message>
 </context>
 <context>
@@ -525,117 +620,195 @@
     </message>
 </context>
 <context>
+    <name>NetworkQualityMonitor</name>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="201"/>
+        <source>Network quality is poor. Consider reducing bitrate or check your connection.</source>
+        <translation>网络质量较差。建议降低比特率或检查网络连接。</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="203"/>
+        <source>Network quality is degraded. Some frames may be dropped.</source>
+        <translation>网络质量下降。部分帧可能会丢失。</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="314"/>
+        <source>Excellent</source>
+        <translation>极好</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="316"/>
+        <source>Good</source>
+        <translation>良好</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="318"/>
+        <source>Fair</source>
+        <translation>一般</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="320"/>
+        <source>Poor</source>
+        <translation>较差</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="322"/>
+        <source>Bad</source>
+        <translation>很差</translation>
+    </message>
+    <message>
+        <location filename="../streaming/networkqualitymonitor.cpp" line="324"/>
+        <source>Unknown</source>
+        <translation>未知</translation>
+    </message>
+</context>
+<context>
     <name>NvHTTP</name>
     <message>
+        <location filename="../backend/nvhttp.cpp" line="357"/>
         <source>Missing audio capture device. Reinstalling GeForce Experience should resolve this error.</source>
-        <translation type="vanished">缺少音频捕获设备。重新安装 GeForce Experience 可以解决此错误。</translation>
+        <translation>缺少音频捕获设备。重新安装 GeForce Experience 可以解决此错误。</translation>
     </message>
 </context>
 <context>
     <name>PcView</name>
     <message>
+        <location filename="../gui/PcView.qml" line="23"/>
         <source>Computers</source>
-        <translation type="vanished">计算机列表</translation>
+        <translation>计算机列表</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="65"/>
         <source>Unable to connect to the specified PC.</source>
-        <translation type="vanished">无法连接到目标计算机。</translation>
+        <translation>无法连接到目标计算机。</translation>
     </message>
     <message>
         <source>This PC&apos;s Internet connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.</source>
         <translation type="vanished">此计算机的互联网连接被阻塞。当连接到此网络时，互联网上的流式传输可能无法工作。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="68"/>
         <source>This PC&apos;s Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.</source>
-        <translation type="vanished">此计算机的互联网连接阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
+        <translation>此计算机的互联网连接阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="71"/>
         <source>Click the Help button for possible solutions.</source>
-        <translation type="vanished">单击帮助按钮以获取可能的解决方案。</translation>
+        <translation>单击帮助按钮以获取可能的解决方案。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="101"/>
         <source>Searching for compatible hosts on your local network...</source>
-        <translation type="vanished">在你的本地网络中搜索兼容的主机...</translation>
+        <translation>在你的本地网络中搜索兼容的主机...</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="102"/>
         <source>Automatic PC discovery is disabled. Add your PC manually.</source>
-        <translation type="vanished">已禁用计算机自动发现。需要手动添加计算机。</translation>
+        <translation>已禁用计算机自动发现。需要手动添加计算机。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="149"/>
+        <source>PC is offline</source>
+        <translation>电脑离线</translation>
+    </message>
+    <message>
+        <location filename="../gui/PcView.qml" line="149"/>
+        <source>PC is not paired</source>
+        <translation>电脑未配对</translation>
+    </message>
+    <message>
+        <location filename="../gui/PcView.qml" line="190"/>
         <source>PC Status: %1</source>
-        <translation type="vanished">计算机状态: %1</translation>
+        <translation>计算机状态: %1</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="190"/>
         <source>Online</source>
-        <translation type="vanished">在线</translation>
+        <translation>在线</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="190"/>
         <source>Offline</source>
-        <translation type="vanished">离线</translation>
+        <translation>离线</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="195"/>
         <source>View All Apps</source>
-        <translation type="vanished">查看所有应用程序</translation>
+        <translation>查看所有应用程序</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="204"/>
         <source>Wake PC</source>
-        <translation type="vanished">唤醒目标计算机</translation>
+        <translation>唤醒目标计算机</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="209"/>
         <source>Test Network</source>
-        <translation type="vanished">网络测试</translation>
+        <translation>网络测试</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="217"/>
         <source>Rename PC</source>
-        <translation type="vanished">重命名计算机</translation>
+        <translation>重命名计算机</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="225"/>
         <source>Delete PC</source>
-        <translation type="vanished">删除计算机</translation>
+        <translation>删除计算机</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="233"/>
         <source>View Details</source>
-        <translation type="vanished">查看详情</translation>
+        <translation>查看详情</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="245"/>
         <source>The version of GeForce Experience on %1 is not supported by this build of DancherLink. You must update DancherLink to stream from %1.</source>
-        <translation type="vanished">此版本的 DancherLink 不支持 %1 上的 GeForce Experience 版本。您必须更新 DancherLink 才能从 %1 进行串流。</translation>
+        <translation>此版本的 DancherLink 不支持 %1 上的 GeForce Experience 版本。您必须更新 DancherLink 才能从 %1 进行串流。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="349"/>
         <source>DancherLink is testing your network connection to determine if any required ports are blocked.</source>
-        <translation type="vanished">DancherLink 正在测试您的网络连接，以确定是否有任何必需的端口被阻止。</translation>
+        <translation>DancherLink 正在测试您的网络连接，以确定是否有任何必需的端口被阻止。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="349"/>
         <source>This may take a few seconds...</source>
-        <translation type="vanished">这可能需要几秒钟...</translation>
+        <translation>这可能需要几秒钟...</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="356"/>
         <source>The network test could not be performed because none of DancherLink&apos;s connection testing servers were reachable from this PC. Check your Internet connection or try again later.</source>
-        <translation type="vanished">无法执行网络测试，因为此计算机无法连接到 DancherLink 的任何连接测试服务器。请检查您的互联网连接或稍后再试。</translation>
+        <translation>无法执行网络测试，因为此计算机无法连接到 DancherLink 的任何连接测试服务器。请检查您的互联网连接或稍后再试。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="360"/>
         <source>This network does not appear to be blocking DancherLink. If you still have trouble connecting, check your PC&apos;s firewall settings.</source>
-        <translation type="vanished">此网络似乎未阻止 DancherLink。如果您仍然无法连接，请检查计算机的防火墙设置。</translation>
+        <translation>此网络似乎未阻止 DancherLink。如果您仍然无法连接，请检查计算机的防火墙设置。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="360"/>
         <source>If you are trying to stream over the Internet, install the DancherLink Internet Hosting Tool on your gaming PC and run the included Internet Streaming Tester to check your gaming PC&apos;s Internet connection.</source>
-        <translation type="vanished">如果您尝试通过互联网进行串流，请在游戏电脑上安装 DancherLink Internet Hosting Tool，并运行其中包含的 Internet Streaming Tester 来检查游戏电脑的互联网连接。</translation>
+        <translation>如果您尝试通过互联网进行串流，请在游戏电脑上安装 DancherLink Internet Hosting Tool，并运行其中包含的 Internet Streaming Tester 来检查游戏电脑的互联网连接。</translation>
     </message>
     <message>
         <source>The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.</source>
         <translation type="vanished">此版本 Moonlight 不支持 %1 版本的 GeForce Experience，请更新 Moonlight 以支持从 %1 串流。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="321"/>
         <source>Please enter %1 on your host PC. This dialog will close when pairing is completed.</source>
-        <translation type="vanished">请在你的主机上输入 %1 。配对完成后，此对话框将关闭。</translation>
+        <translation>请在你的主机上输入 %1 。配对完成后，此对话框将关闭。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="322"/>
         <source>If your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.</source>
-        <translation type="vanished">如果你的主机正在运行 Sunshine，那请前往Sunshine的网页界面输入PIN码。</translation>
+        <translation>如果你的主机正在运行 Sunshine，那请前往Sunshine的网页界面输入PIN码。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="335"/>
         <source>Are you sure you want to remove &apos;%1&apos;?</source>
-        <translation type="vanished">你确定需要移除 &apos;%1&apos;吗？</translation>
+        <translation>你确定需要移除 &apos;%1&apos;吗？</translation>
     </message>
     <message>
         <source>This may take a few seconds…</source>
@@ -662,327 +835,419 @@
         <translation type="vanished">此计算机当前的网络连接似乎被阻塞了。当连接到此网络时，互联网上的流式传输可能无法工作。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="364"/>
         <source>The following network ports were blocked:</source>
-        <translation type="vanished">下列网络端口被阻止:</translation>
+        <translation>下列网络端口被阻止:</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="364"/>
         <source>Your PC&apos;s current network connection seems to be blocking DancherLink. Streaming over the Internet may not work while connected to this network.</source>
-        <translation type="vanished">您电脑当前的互联网连接似乎阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
+        <translation>您电脑当前的互联网连接似乎阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
     </message>
     <message>
+        <location filename="../gui/PcView.qml" line="376"/>
         <source>Enter the new name for this PC:</source>
-        <translation type="vanished">输入这台计算机的新名称:</translation>
+        <translation>输入这台计算机的新名称:</translation>
     </message>
 </context>
 <context>
     <name>PendingPairingTask</name>
     <message>
+        <location filename="../backend/computermanager.h" line="527"/>
+        <location filename="../backend/computermanager.h" line="546"/>
+        <source>Pairing was cancelled.</source>
+        <translation>配对已取消。</translation>
+    </message>
+    <message>
+        <location filename="../backend/computermanager.h" line="553"/>
         <source>The PIN from the PC didn&apos;t match. Please try again.</source>
-        <translation type="vanished">来自电脑的密码不匹配。请再试一次。</translation>
+        <translation>来自电脑的密码不匹配。请再试一次。</translation>
     </message>
     <message>
+        <location filename="../backend/computermanager.h" line="557"/>
         <source>You cannot pair while a previous session is still running on the host PC. Quit any running games or reboot the host PC, then try pairing again.</source>
-        <translation type="vanished">当主机 PC 上仍在运行之前的会话时，你无法配对。 退出任何正在运行的游戏或重新启动主机 PC，然后再次尝试配对。</translation>
+        <translation>当主机 PC 上仍在运行之前的会话时，你无法配对。 退出任何正在运行的游戏或重新启动主机 PC，然后再次尝试配对。</translation>
     </message>
     <message>
+        <location filename="../backend/computermanager.h" line="560"/>
         <source>Pairing failed. Please try again.</source>
-        <translation type="vanished">配对失败，请重试。</translation>
+        <translation>配对失败，请重试。</translation>
     </message>
     <message>
+        <location filename="../backend/computermanager.h" line="564"/>
         <source>Another pairing attempt is already in progress.</source>
-        <translation type="vanished">另一个配对请求正在进程中。</translation>
+        <translation>另一个配对请求正在进程中。</translation>
     </message>
     <message>
+        <location filename="../backend/computermanager.h" line="575"/>
         <source>GeForce Experience returned error: %1</source>
-        <translation type="vanished">GeForce Experience 返回错误: %1</translation>
+        <translation>GeForce Experience 返回错误: %1</translation>
+    </message>
+    <message>
+        <location filename="../backend/computermanager.h" line="583"/>
+        <source>Pairing failed due to an unexpected error.</source>
+        <translation>由于意外错误，配对失败。</translation>
     </message>
 </context>
 <context>
     <name>PendingQuitTask</name>
     <message>
+        <location filename="../backend/computermanager.h" line="628"/>
         <source>The running game wasn&apos;t started by this PC. You must quit the game on the host PC manually or use the device that originally started the game.</source>
-        <translation type="vanished">正在运行的游戏不是由这台计算机启动的。你必须在目标计算机上手动退出游戏或使用最初启动游戏的设备。</translation>
+        <translation>正在运行的游戏不是由这台计算机启动的。你必须在目标计算机上手动退出游戏或使用最初启动游戏的设备。</translation>
     </message>
 </context>
 <context>
     <name>QObject</name>
     <message>
+        <location filename="../cli/pair.cpp" line="83"/>
         <source>%1 is already paired</source>
-        <translation type="vanished">%1 已被配对</translation>
+        <translation>%1 已被配对</translation>
     </message>
     <message>
+        <location filename="../cli/pair.cpp" line="112"/>
+        <location filename="../cli/quitstream.cpp" line="79"/>
+        <location filename="../cli/startstream.cpp" line="135"/>
         <source>Failed to connect to %1</source>
-        <translation type="vanished">无法连接到 %1</translation>
+        <translation>无法连接到 %1</translation>
     </message>
     <message>
+        <location filename="../cli/quitstream.cpp" line="91"/>
+        <location filename="../cli/startstream.cpp" line="91"/>
         <source>Computer %1 has not been paired. Please open Moonlight to pair before streaming.</source>
-        <translation type="vanished">计算机 %1 尚未配对。</translation>
+        <translation>计算机 %1 尚未配对。</translation>
     </message>
     <message>
+        <location filename="../cli/quitstream.cpp" line="105"/>
+        <location filename="../cli/startstream.cpp" line="128"/>
         <source>Quitting app failed, reason: %1</source>
-        <translation type="vanished">退出应用程序失败，原因: %1</translation>
+        <translation>退出应用程序失败，原因: %1</translation>
     </message>
     <message>
+        <location filename="../cli/startstream.cpp" line="139"/>
         <source>Failed to find application %1</source>
-        <translation type="vanished">找不到应用程序 %1</translation>
+        <translation>找不到应用程序 %1</translation>
     </message>
     <message>
+        <location filename="../cli/listapps.cpp" line="107"/>
         <source>Computer %1 has not been paired. Please open Moonlight to pair before retrieving games list.</source>
-        <translation type="vanished">电脑 %1 未配对，请在请求游戏列表前使用 Moonlight 配对。</translation>
+        <translation>电脑 %1 未配对，请在请求游戏列表前使用 Moonlight 配对。</translation>
     </message>
 </context>
 <context>
     <name>QPlatformTheme</name>
     <message>
+        <location filename="../main.cpp" line="556"/>
         <source>&amp;Yes</source>
-        <translation type="vanished">是(&amp;Y)</translation>
+        <translation>是(&amp;Y)</translation>
     </message>
     <message>
+        <location filename="../main.cpp" line="557"/>
         <source>&amp;No</source>
-        <translation type="vanished">否(&amp;N)</translation>
+        <translation>否(&amp;N)</translation>
     </message>
     <message>
+        <location filename="../main.cpp" line="558"/>
         <source>OK</source>
-        <translation type="vanished">确定</translation>
+        <translation>确定</translation>
     </message>
     <message>
+        <location filename="../main.cpp" line="559"/>
         <source>Help</source>
-        <translation type="vanished">帮助</translation>
+        <translation>帮助</translation>
     </message>
     <message>
+        <location filename="../main.cpp" line="560"/>
         <source>Cancel</source>
-        <translation type="vanished">取消</translation>
+        <translation>取消</translation>
     </message>
 </context>
 <context>
     <name>QuitSegue</name>
     <message>
+        <location filename="../gui/QuitSegue.qml" line="13"/>
         <source>Quitting %1...</source>
-        <translation type="vanished">正在退出 %1...</translation>
+        <translation>正在退出 %1...</translation>
     </message>
 </context>
 <context>
     <name>Session</name>
     <message>
+        <location filename="../streaming/session.cpp" line="246"/>
         <source>No video received from host.</source>
-        <translation type="vanished">没有从目标计算机接收到视频画面。</translation>
+        <translation>没有从目标计算机接收到视频画面。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="247"/>
         <source>Check your firewall and port forwarding rules for port(s): %1</source>
-        <translation type="vanished">检查防火墙和端口转发规则: %1</translation>
+        <translation>检查防火墙和端口转发规则: %1</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="252"/>
         <source>Your network connection isn&apos;t performing well. Reduce your video bitrate setting or try a faster connection.</source>
-        <translation type="vanished">网络连接性能不佳。请降低视频比特率或尝试更快的网络连接。</translation>
+        <translation>网络连接性能不佳。请降低视频比特率或尝试更快的网络连接。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="258"/>
         <source>Something went wrong on your host PC when starting the stream.</source>
-        <translation type="vanished">目标计算机启动流式传输时出现问题。</translation>
+        <translation>目标计算机启动流式传输时出现问题。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="259"/>
         <source>Make sure you don&apos;t have any DRM-protected content open on your host PC. You can also try restarting your host PC.</source>
-        <translation type="vanished">确保目标计算机上没有打开任何受 DRM 保护的内容。你也可以尝试重新启动目标计算机。</translation>
+        <translation>确保目标计算机上没有打开任何受 DRM 保护的内容。你也可以尝试重新启动目标计算机。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="264"/>
         <source>The host PC reported a fatal video encoding error.</source>
-        <translation type="vanished">主机 PC 报告了致命的视频编码错误。</translation>
+        <translation>主机 PC 报告了致命的视频编码错误。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="265"/>
         <source>Try disabling HDR mode, changing the streaming resolution, or changing your host PC&apos;s display resolution.</source>
-        <translation type="vanished">尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</translation>
+        <translation>尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="273"/>
         <source>Connection terminated</source>
-        <translation type="vanished">会话已终止</translation>
+        <translation>会话已终止</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="274"/>
         <source>Error code: %1</source>
-        <translation type="vanished">错误代码: %1</translation>
+        <translation>错误代码: %1</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1331"/>
         <source>The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.</source>
-        <translation type="vanished">在 %1 安装的 GeForce Experience 版本不受当前版本的 Moonlight 支持。你必须升级 Moonlight 才能从 %1 串流。</translation>
+        <translation>在 %1 安装的 GeForce Experience 版本不受当前版本的 Moonlight 支持。你必须升级 Moonlight 才能从 %1 串流。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1336"/>
         <source>Your selection to enable remote desktop mouse mode may cause problems in games.</source>
-        <translation type="vanished">启用远程桌面鼠标模式可能会导致游戏出现问题。</translation>
+        <translation>启用远程桌面鼠标模式可能会导致游戏出现问题。</translation>
     </message>
     <message>
         <source>HDR is not supported with software decoding.</source>
         <translation type="vanished">软件解码不支持 HDR。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1340"/>
         <source>Your settings selection to force software decoding may cause poor streaming performance.</source>
-        <translation type="vanished">你选择的用于强制软件解码的设置可能会导致流式传输性能不佳。</translation>
+        <translation>你选择的用于强制软件解码的设置可能会导致流式传输性能不佳。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1376"/>
         <source>Your host PC doesn&apos;t support encoding HEVC.</source>
-        <translation type="vanished">你的 PC 主机不支持使用HEVC编码。</translation>
+        <translation>你的 PC 主机不支持使用HEVC编码。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1394"/>
         <source>Using software decoding due to your selection to force HEVC without GPU support. This may cause poor streaming performance.</source>
-        <translation type="vanished">根据你的选择使用软件解码，以在没有显卡支持的情况下强制 HEVC。这可能会导致流式传输性能不佳。</translation>
+        <translation>根据你的选择使用软件解码，以在没有显卡支持的情况下强制 HEVC。这可能会导致流式传输性能不佳。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1346"/>
         <source>Your host software or GPU doesn&apos;t support encoding AV1.</source>
-        <translation type="vanished">你的主机软件或显卡不支持进行 AV1 编码。</translation>
+        <translation>你的主机软件或显卡不支持进行 AV1 编码。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1364"/>
         <source>Using software decoding due to your selection to force AV1 without GPU support. This may cause poor streaming performance.</source>
-        <translation type="vanished">由于你选择在没有显卡支持的情况下强制使用 AV1，因此目前使用软件解码。这可能会导致视频流解码处理性能不佳。</translation>
+        <translation>由于你选择在没有显卡支持的情况下强制使用 AV1，因此目前使用软件解码。这可能会导致视频流解码处理性能不佳。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1441"/>
         <source>Your host PC doesn&apos;t support HDR streaming.</source>
-        <translation type="vanished">你的 PC 主机不支持 HDR 串流。</translation>
+        <translation>你的 PC 主机不支持 HDR 串流。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1433"/>
         <source>HDR is not supported using the H.264 codec.</source>
-        <translation type="vanished">使用 H.264 编解码器的情况下不支持 HDR。</translation>
+        <translation>使用 H.264 编解码器的情况下不支持 HDR。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1456"/>
         <source>This PC&apos;s GPU doesn&apos;t support AV1 Main10 decoding for HDR streaming.</source>
-        <translation type="vanished">这台电脑的显卡不支持包含 HDR 的 AV1 Main10 解码。</translation>
+        <translation>这台电脑的显卡不支持包含 HDR 的 AV1 Main10 解码。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1437"/>
         <source>This PC&apos;s GPU doesn&apos;t support 10-bit HEVC or AV1 decoding for HDR streaming.</source>
-        <translation type="vanished">这台电脑的显卡不支持包含 HDR 的 HEVC 或 AV1 Main10 解码。</translation>
+        <translation>这台电脑的显卡不支持包含 HDR 的 HEVC 或 AV1 Main10 解码。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1489"/>
         <source>Your host PC and client PC don&apos;t support the same HDR video codecs.</source>
-        <translation type="vanished">主机电脑和客户端电脑不支持相同的 HDR 视频编解码器。</translation>
+        <translation>主机电脑和客户端电脑不支持相同的 HDR 视频编解码器。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1582"/>
         <source>Video resolutions over 4K are not supported by the H.264 codec.</source>
-        <translation type="vanished">H.264 编解码器不支持超过 4K 的视频分辨率。</translation>
+        <translation>H.264 编解码器不支持超过 4K 的视频分辨率。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="2011"/>
         <source>Host returned error: %1</source>
-        <translation type="vanished">主机返回错误：%1</translation>
+        <translation>主机返回错误：%1</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1413"/>
         <source>Using software decoding due to your selection to force H.264 without GPU support. This may cause poor streaming performance.</source>
-        <translation type="vanished">使用软件解码，因为你选择强制使用没有 GPU 支持的 H.264。这可能会导致较差的流性能。</translation>
+        <translation>使用软件解码，因为你选择强制使用没有 GPU 支持的 H.264。这可能会导致较差的流性能。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1423"/>
         <source>Your host PC and client PC don&apos;t support the same video codecs. This may cause poor streaming performance.</source>
-        <translation type="vanished">你的主机和客户端 PC 不支持相同的视频编解码器。这可能会导致较差的流性能。</translation>
+        <translation>你的主机和客户端 PC 不支持相同的视频编解码器。这可能会导致较差的流性能。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1426"/>
         <source>Your client GPU doesn&apos;t support H.264 decoding. This may cause poor streaming performance.</source>
-        <translation type="vanished">你的客户端 GPU 不支持 H.264 解码。这可能会导致较差的流性能。</translation>
+        <translation>你的客户端 GPU 不支持 H.264 解码。这可能会导致较差的流性能。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1462"/>
+        <location filename="../streaming/session.cpp" line="1480"/>
         <source>Using software decoding due to your selection to force HDR without GPU support. This may cause poor streaming performance.</source>
-        <translation type="vanished">由于您选择强制使用未经 GPU 支持的 HDR，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
+        <translation>由于您选择强制使用未经 GPU 支持的 HDR，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1474"/>
         <source>This PC&apos;s GPU doesn&apos;t support HEVC Main10 decoding for HDR streaming.</source>
-        <translation type="vanished">此计算机的显卡不支持 HEVC Main10 解码 HDR 流。</translation>
+        <translation>此计算机的显卡不支持 HEVC Main10 解码 HDR 流。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1496"/>
         <source>Your host PC doesn&apos;t support YUV 4:4:4 streaming.</source>
-        <translation type="vanished">您的主机 PC 不支持 YUV 4:4:4 串流。</translation>
+        <translation>您的主机 PC 不支持 YUV 4:4:4 串流。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1504"/>
         <source>Your host PC doesn&apos;t support YUV 4:4:4 streaming for selected video codec.</source>
-        <translation type="vanished">您的主机 PC 不支持所选视频编解码器的 YUV 4:4:4 串流。</translation>
+        <translation>您的主机 PC 不支持所选视频编解码器的 YUV 4:4:4 串流。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1519"/>
         <source>Using software decoding due to your selection to force YUV 4:4:4 without GPU support. This may cause poor streaming performance.</source>
-        <translation type="vanished">由于您选择强制使用未经 GPU 支持的 YUV 4:4:4，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
+        <translation>由于您选择强制使用未经 GPU 支持的 YUV 4:4:4，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1525"/>
         <source>This PC&apos;s GPU doesn&apos;t support YUV 4:4:4 decoding for selected video codec.</source>
-        <translation type="vanished">这台 PC 的 GPU 不支持所选视频编解码器的 YUV 4:4:4 解码。</translation>
+        <translation>这台 PC 的 GPU 不支持所选视频编解码器的 YUV 4:4:4 解码。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1534"/>
         <source>GeForce Experience 3.0 or higher is required for 4K streaming.</source>
-        <translation type="vanished">4K 流式传输需要 GeForce Experience 3.0 或更高版本。</translation>
+        <translation>4K 流式传输需要 GeForce Experience 3.0 或更高版本。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1549"/>
         <source>Your selected surround sound setting is not supported by the current audio device.</source>
-        <translation type="vanished">当前音频设备不支持你选择的环绕声设置。</translation>
+        <translation>当前音频设备不支持你选择的环绕声设置。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1555"/>
         <source>Failed to open audio device. Audio will be unavailable during this session.</source>
-        <translation type="vanished">无法打开音频设备。音频在此会话期间将不可用。</translation>
+        <translation>无法打开音频设备。音频在此会话期间将不可用。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1560"/>
         <source>An attached gamepad has no mapping and won&apos;t be usable. Visit the Moonlight help to resolve this.</source>
-        <translation type="vanished">附加的手柄没有映射，因此无法使用。请访问 Moonlight 帮助解决此问题。</translation>
+        <translation>附加的手柄没有映射，因此无法使用。请访问 Moonlight 帮助解决此问题。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1578"/>
         <source>Your host PC&apos;s GPU doesn&apos;t support streaming video resolutions over 4K.</source>
-        <translation type="vanished">目标计算机的显卡不支持 4K 以上的流式传输视频分辨率。</translation>
+        <translation>目标计算机的显卡不支持 4K 以上的流式传输视频分辨率。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1596"/>
         <source>Your selection to force hardware decoding cannot be satisfied due to missing hardware decoding support on this PC&apos;s GPU.</source>
-        <translation type="vanished">由于此计算机的显卡上缺少硬件解码支持，无法满足强制硬件解码的选择。</translation>
+        <translation>由于此计算机的显卡上缺少硬件解码支持，无法满足强制硬件解码的选择。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="1599"/>
         <source>Your codec selection and force hardware decoding setting are not compatible. This PC&apos;s GPU lacks support for decoding your chosen codec.</source>
-        <translation type="vanished">你选择的编解码器和强制硬件解码设置不兼容。此计算机的显卡不支持解码你选择的编解码器。</translation>
+        <translation>你选择的编解码器和强制硬件解码设置不兼容。此计算机的显卡不支持解码你选择的编解码器。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="2921"/>
         <source>Failed to initialize audio device. Please check your audio settings.</source>
-        <translation type="vanished">无法初始化音频设备。请检查您的音频设置。</translation>
+        <translation>无法初始化音频设备。请检查您的音频设置。</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="3002"/>
+        <location filename="../streaming/session.cpp" line="3140"/>
+        <location filename="../streaming/session.cpp" line="3527"/>
         <source>Resolution Changed</source>
-        <translation type="vanished">分辨率已更改</translation>
+        <translation>分辨率已更改</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="3141"/>
         <source>Host resolution changed to %1x%2.
 Restart stream?</source>
-        <translation type="vanished">主机分辨率已更改为 %1x%2。
+        <translation>主机分辨率已更改为 %1x%2。
 重启串流？</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="3143"/>
         <source>Restart</source>
-        <translation type="vanished">重启</translation>
+        <translation>重启</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="3144"/>
         <source>Ignore</source>
-        <translation type="vanished">忽略</translation>
+        <translation>忽略</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="3384"/>
         <source>Unable to initialize video decoder. Please check your streaming settings and try again.</source>
-        <translation type="vanished">无法初始化视频解码器。请检查你的流式传输设置，然后重试。</translation>
+        <translation>无法初始化视频解码器。请检查你的流式传输设置，然后重试。</translation>
     </message>
 </context>
 <context>
     <name>SettingsView</name>
     <message>
+        <location filename="../gui/SettingsView.qml" line="22"/>
         <source>Settings</source>
-        <translation type="vanished">设置</translation>
+        <translation>设置</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="121"/>
         <source>Basic Settings</source>
-        <translation type="vanished">基本设置</translation>
+        <translation>基本设置</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="132"/>
         <source>Resolution and FPS</source>
-        <translation type="vanished">分辨率和 FPS</translation>
+        <translation>分辨率和 FPS</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="139"/>
         <source>Setting values too high for your PC or network connection may cause lag, stuttering, or errors.</source>
-        <translation type="vanished">如果你的计算机或网络连接设置的值过高，可能会导致延迟，卡顿或错误。</translation>
+        <translation>如果你的计算机或网络连接设置的值过高，可能会导致延迟，卡顿或错误。</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="260"/>
         <source>720p</source>
-        <translation type="vanished">720p</translation>
+        <translation>720p</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="261"/>
         <source>1080p</source>
-        <translation type="vanished">1080p</translation>
+        <translation>1080p</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="262"/>
         <source>1440p</source>
-        <translation type="vanished">1440p</translation>
+        <translation>1440p</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="263"/>
         <source>4K</source>
-        <translation type="vanished">4K</translation>
+        <translation>4K</translation>
     </message>
     <message>
         <source>Custom resolutions are not officially supported by GeForce Experience, so it will not set your host display resolution. You will need to set it manually while in game.</source>
@@ -993,100 +1258,171 @@ Restart stream?</source>
         <translation type="vanished">使用当前计算机或目标计算机不支持的分辨率可能会导致流式传输错误。</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="612"/>
         <source>Enter a custom resolution:</source>
-        <translation type="vanished">输入自定义分辨率:</translation>
+        <translation>输入自定义分辨率:</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="342"/>
+        <location filename="../gui/SettingsView.qml" line="741"/>
         <source>Custom (%1 FPS)</source>
-        <translation type="vanished">自定义(%1 FPS)</translation>
+        <translation>自定义(%1 FPS)</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="603"/>
+        <source>Custom Resolution</source>
+        <translation>自定义分辨率</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="623"/>
+        <source>Width</source>
+        <translation>宽度</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="631"/>
+        <source>Height</source>
+        <translation>高度</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="659"/>
+        <source>Custom Frame Rate</source>
+        <translation>自定义帧率</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="668"/>
+        <source>Resolutions that are not officially supported by GeForce Experience, The host will not set your host display resolution. You will need to set it manually while in game.</source>
+        <translation>GeForce Experience 不正式支持自定义分辨率，主机不会设置显示分辨率。你需要在游戏中手动设置。</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="669"/>
+        <source>Frame rates that are not supported by your client or host PC may cause streaming errors.</source>
+        <translation>客户端或主机不支持的帧率可能会导致串流错误。</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="675"/>
         <source>Enter a custom frame rate:</source>
-        <translation type="vanished">输入自定义帧率:</translation>
+        <translation>输入自定义帧率:</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="327"/>
         <source>%1 FPS</source>
-        <translation type="vanished">%1 FPS</translation>
+        <translation>%1 FPS</translation>
     </message>
     <message>
         <source>Video bitrate:</source>
         <translation type="vanished">视频比特率:</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="383"/>
         <source>Lower the bitrate on slower connections. Raise the bitrate to increase image quality.</source>
-        <translation type="vanished">在较慢的连接上降低比特率。提高比特率以提高图像质量。</translation>
+        <translation>在较慢的连接上降低比特率。提高比特率以提高图像质量。</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="376"/>
+        <location filename="../gui/SettingsView.qml" line="407"/>
         <source>Video bitrate: %1 Mbps</source>
-        <translation type="vanished">视频比特率: %1 Mbps</translation>
+        <translation>视频比特率: %1 Mbps</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="420"/>
+        <source>Use Default</source>
+        <translation>使用默认值</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="437"/>
+        <source>Automatically adjust video bitrate for optimal performance</source>
+        <translation>自动调整视频比特率以获得最佳性能</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="453"/>
+        <source>With automatic bitrate adjustment, the video codec and YUV 4:4:4 settings will be used to determine the target bitrate.</source>
+        <translation>启用自动比特率调整时，视频编解码器和 YUV 4:4:4 设置将用于确定目标比特率。</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="462"/>
         <source>Display mode</source>
-        <translation type="vanished">显示模式</translation>
+        <translation>显示模式</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="485"/>
         <source>(Recommended)</source>
-        <translation type="vanished">(推荐)</translation>
+        <translation>(推荐)</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="477"/>
         <source>Fullscreen</source>
-        <translation type="vanished">全屏</translation>
+        <translation>全屏</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="183"/>
         <source>Native</source>
-        <translation type="vanished">原生</translation>
+        <translation>原生</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="184"/>
         <source>Native (Excluding Notch)</source>
-        <translation type="vanished">原生(不包括刻痕)</translation>
+        <translation>原生(不包括刻痕)</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="214"/>
+        <location filename="../gui/SettingsView.qml" line="222"/>
+        <location filename="../gui/SettingsView.qml" line="344"/>
         <source>Custom</source>
-        <translation type="vanished">自定义</translation>
+        <translation>自定义</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="259"/>
         <source>Auto</source>
-        <translation type="vanished">自动</translation>
+        <translation>自动</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="359"/>
         <source>30 FPS</source>
-        <translation type="vanished">30 帧</translation>
+        <translation>30 帧</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="360"/>
         <source>60 FPS</source>
-        <translation type="vanished">60 帧</translation>
+        <translation>60 帧</translation>
     </message>
     <message>
         <source>Use Default (%1 Mbps)</source>
         <translation type="vanished">使用默认 (%1 Mbps)</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="478"/>
         <source>Borderless windowed</source>
-        <translation type="vanished">无边框窗口</translation>
+        <translation>无边框窗口</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="479"/>
         <source>Windowed</source>
-        <translation type="vanished">窗口化</translation>
+        <translation>窗口化</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="519"/>
         <source>Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.</source>
-        <translation type="vanished">全屏通常提供最好的性能，但是无边框窗口可以更好地与 macOS Spaces、Alt+Tab、屏幕截图工具、屏幕覆盖等功能配合使用。</translation>
+        <translation>全屏通常提供最好的性能，但是无边框窗口可以更好地与 macOS Spaces、Alt+Tab、屏幕截图工具、屏幕覆盖等功能配合使用。</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="526"/>
         <source>V-Sync</source>
-        <translation type="vanished">垂直同步</translation>
+        <translation>垂直同步</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="536"/>
         <source>Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing</source>
-        <translation type="vanished">禁用垂直同步可允许子帧渲染延迟，但会显示可见的撕裂</translation>
+        <translation>禁用垂直同步可允许子帧渲染延迟，但会显示可见的撕裂</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="543"/>
         <source>Frame pacing</source>
-        <translation type="vanished">帧速调节</translation>
+        <translation>帧速调节</translation>
     </message>
     <message>
+        <location filename="../gui/SettingsView.qml" line="554"/>
         <source>Frame pacing reduces micro-stutter by delaying frames that come in too early</source>
-        <translation type="vanished">通过延迟过早进入的帧来减少卡顿</translation>
+        <translation>通过延迟过早进入的帧来减少卡顿</translation>
     </message>
     <message>
         <source>Audio Settings</source>
@@ -1440,44 +1776,54 @@ Restart stream?</source>
 <context>
     <name>StreamSegue</name>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="14"/>
         <source>Resuming %1...</source>
-        <translation type="vanished">正在恢复 %1...</translation>
+        <translation>正在恢复 %1...</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="15"/>
+        <location filename="../gui/StreamSegue.qml" line="60"/>
         <source>Starting %1...</source>
-        <translation type="vanished">正在启动 %1...</translation>
+        <translation>正在启动 %1...</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="66"/>
         <source>Starting %1 failed: Error %2</source>
-        <translation type="vanished">启动 %1 失败: 错误 %2</translation>
+        <translation>启动 %1 失败: 错误 %2</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="69"/>
         <source>Check your firewall and port forwarding rules for port(s): %1</source>
-        <translation type="vanished">检查防火墙和端口转发规则: %1</translation>
+        <translation>检查防火墙和端口转发规则: %1</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="109"/>
         <source>This PC&apos;s Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.</source>
-        <translation type="vanished">此计算机的互联网连接阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
+        <translation>此计算机的互联网连接阻碍了 DancherLink。连接到此网络时，可能无法进行互联网串流。</translation>
     </message>
     <message>
         <source>This PC&apos;s Internet connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.</source>
         <translation type="vanished">此计算机的互联网连接被阻塞。当连接到此网络时，互联网上的流式传输可能无法工作。</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="274"/>
         <source>Tip:</source>
-        <translation type="vanished">提示:</translation>
+        <translation>提示:</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="274"/>
         <source>Press %1 to disconnect your session</source>
-        <translation type="vanished">按 %1 来断开会话</translation>
+        <translation>按 %1 来断开会话</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="275"/>
         <source>Start+Select+L1+R1</source>
-        <translation type="vanished">Start+Select+L1+R1</translation>
+        <translation>Start+Select+L1+R1</translation>
     </message>
     <message>
+        <location filename="../gui/StreamSegue.qml" line="275"/>
         <source>Ctrl+Alt+Shift+Q</source>
-        <translation type="vanished">Ctrl+Alt+Shift+Q</translation>
+        <translation>Ctrl+Alt+Shift+Q</translation>
     </message>
 </context>
 <context>
@@ -1579,20 +1925,23 @@ Restart stream?</source>
 <context>
     <name>main</name>
     <message>
+        <location filename="../gui/main.qml" line="611"/>
         <source>Settings</source>
-        <translation type="vanished">设置</translation>
+        <translation>设置</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="618"/>
         <source>Version %1</source>
-        <translation type="vanished">版本 %1</translation>
+        <translation>版本 %1</translation>
     </message>
     <message>
         <source>Join our community on Discord</source>
         <translation type="vanished">加入我们的社区</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="504"/>
         <source>Add PC manually</source>
-        <translation type="vanished">手动添加计算机</translation>
+        <translation>手动添加计算机</translation>
     </message>
     <message>
         <source>Update available for Moonlight: Version %1</source>
@@ -1603,48 +1952,89 @@ Restart stream?</source>
         <translation type="vanished">帮助</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="580"/>
         <source>Gamepad Mapper</source>
-        <translation type="vanished">手柄按键映射</translation>
+        <translation>手柄按键映射</translation>
     </message>
     <message>
         <source>No functioning hardware accelerated video decoder was detected by Moonlight. Your streaming performance may be severely degraded in this configuration.</source>
         <translation type="vanished">Moonlight 未检测到有效的硬件加速视频解码器。在此配置中，你的流性能可能会严重下降。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="117"/>
         <source>Update check failed: %1</source>
-        <translation type="vanished">检查更新失败：%1</translation>
+        <translation>检查更新失败：%1</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="347"/>
+        <source>Measuring...</source>
+        <translation>测量中...</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="348"/>
+        <source>N/A</source>
+        <translation>不适用</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="469"/>
+        <source>Network Latency: %1 ms (%2)
+Packet Loss: %3%
+Configured: %4fps / %5M
+Adaptive: %6fps / %7M</source>
+        <translation>网络延迟: %1 ms (%2)
+丢包率: %3%
+配置: %4fps / %5M
+自适应: %6fps / %7M</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="473"/>
+        <source>Network Latency: %1 ms (%2)
+Packet Loss: %3%
+Configured: %4fps / %5M</source>
+        <translation>网络延迟: %1 ms (%2)
+丢包率: %3%
+配置: %4fps / %5M</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="544"/>
+        <location filename="../gui/main.qml" line="675"/>
         <source>Update Available</source>
-        <translation type="vanished">可用更新</translation>
+        <translation>可用更新</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="559"/>
         <source>A new version of DancherLink (%1) is available. Do you want to download it now?</source>
-        <translation type="vanished">DancherLink 的新版本 (%1) 可用。您想现在下载吗？</translation>
+        <translation>DancherLink 的新版本 (%1) 可用。您想现在下载吗？</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="629"/>
         <source>No functioning hardware accelerated video decoder was detected by DancherLink. Your streaming performance may be severely degraded in this configuration.</source>
-        <translation type="vanished">DancherLink 未检测到有效的硬件加速视频解码器。在此配置下，您的串流性能可能会严重下降。</translation>
+        <translation>DancherLink 未检测到有效的硬件加速视频解码器。在此配置下，您的串流性能可能会严重下降。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="631"/>
         <source>Click the Help button for more information on solving this problem.</source>
-        <translation type="vanished">单击帮助按钮以获取有关解决此问题的更多信息。</translation>
+        <translation>单击帮助按钮以获取有关解决此问题的更多信息。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="637"/>
         <source>Hardware acceleration doesn&apos;t work on XWayland. Continuing on XWayland may result in poor streaming performance. Try running with QT_QPA_PLATFORM=wayland or switch to X11.</source>
-        <translation type="vanished">硬件加速在 XWayland 上不起作用。在 XWayland 上继续操作可能会导致流式传输性能下降。</translation>
+        <translation>硬件加速在 XWayland 上不起作用。在 XWayland 上继续操作可能会导致流式传输性能下降。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="639"/>
         <source>Click the Help button for more information.</source>
-        <translation type="vanished">单击帮助按钮以获取更多信息。</translation>
+        <translation>单击帮助按钮以获取更多信息。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="646"/>
         <source>This version of DancherLink isn&apos;t optimized for your PC. Please download the &apos;%1&apos; version of DancherLink for the best streaming performance.</source>
-        <translation type="vanished">此版本的 DancherLink 未针对您的 PC 进行优化。请下载“%1”版本的 DancherLink 以获得最佳串流性能。</translation>
+        <translation>此版本的 DancherLink 未针对您的 PC 进行优化。请下载“%1”版本的 DancherLink 以获得最佳串流性能。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="655"/>
         <source>DancherLink detected gamepads without a mapping:</source>
-        <translation type="vanished">DancherLink 检测到未映射的手柄：</translation>
+        <translation>DancherLink 检测到未映射的手柄：</translation>
     </message>
     <message>
         <source>This version of Moonlight isn&apos;t optimized for your PC. Please download the &apos;%1&apos; version of Moonlight for the best streaming performance.</source>
@@ -1655,34 +2045,41 @@ Restart stream?</source>
         <translation type="vanished">Moonlight 检测到没有映射的手柄:</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="657"/>
         <source>Click the Help button for information on how to map your gamepads.</source>
-        <translation type="vanished">单击帮助按钮以获取有关如何映射手柄的信息。</translation>
+        <translation>单击帮助按钮以获取有关如何映射手柄的信息。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="665"/>
         <source>Are you sure you want to quit?</source>
-        <translation type="vanished">确定要退出吗？</translation>
+        <translation>确定要退出吗？</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="691"/>
         <source>Failed to open update file. Please manually navigate to:
 %1</source>
-        <translation type="vanished">无法打开更新文件。请手动导航到：
+        <translation>无法打开更新文件。请手动导航到：
 %1</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="700"/>
         <source>No Update Available</source>
-        <translation type="vanished">无可用更新</translation>
+        <translation>无可用更新</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="701"/>
         <source>You are already running the latest version of DancherLink.</source>
-        <translation type="vanished">您已经在运行最新版本的 DancherLink。</translation>
+        <translation>您已经在运行最新版本的 DancherLink。</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="707"/>
         <source>Update Check Failed</source>
-        <translation type="vanished">检查更新失败</translation>
+        <translation>检查更新失败</translation>
     </message>
     <message>
+        <location filename="../gui/main.qml" line="713"/>
         <source>Enter the IP address of your host PC:</source>
-        <translation type="vanished">输入你主机的 IP 地址：</translation>
+        <translation>输入你主机的 IP 地址：</translation>
     </message>
 </context>
 </TS>
