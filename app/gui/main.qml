@@ -296,145 +296,6 @@ ApplicationWindow {
             verticalAlignment: Qt.AlignVCenter
         }
 
-        // Network latency indicator - anchored to toolbar center, independent of RowLayout
-        // This ensures position stability regardless of other items' visibility changes
-        Rectangle {
-            id: networkIndicator
-            visible: currentAppModel != null
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            height: 24
-            width: networkIndicatorRow.implicitWidth + 16
-            radius: 4
-            z: 1  // Render above RowLayout items
-            color: {
-                var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
-                if (ms < 0)   return "#555555"      // Unknown (gray)
-                if (ms < 20)  return "#2E7D32"      // Good (green)
-                if (ms < 50)  return "#F9A825"      // Fair (yellow)
-                return "#C62828"                    // Poor (red)
-            }
-
-            Row {
-                id: networkIndicatorRow
-                anchors.centerIn: parent
-                spacing: 6
-
-                Label {
-                    id: latencyLabel
-                    text: {
-                        if (!currentAppModel) return ""
-                        var ms = currentAppModel.networkLatencyMs
-                        if (ms === -1) return qsTr("Measuring...")
-                        if (ms < 0)   return qsTr("N/A")
-                        return ms + " ms"
-                    }
-                    color: "white"
-                    font.pointSize: 10
-                    font.bold: true
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                Label {
-                    id: qualityLabel
-                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                    text: {
-                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                        return currentAppModel.networkQualityString
-                    }
-                    color: "white"
-                    font.pointSize: 9
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                Label {
-                    id: adaptiveLabel
-                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
-                    text: {
-                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
-                        var ms = currentAppModel.networkLatencyMs
-                        if (ms < 0) return ""
-
-                        // Calculate FPS reduction based on RTT thresholds
-                        // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
-                        var baseFps = StreamingPreferences.fps
-                        var fpsReduced = baseFps
-                        var fpsSteps = 0
-                        if (ms >= 50) fpsSteps = 2
-                        else if (ms >= 30) fpsSteps = 1
-
-                        if (fpsSteps > 0 && baseFps > 30) {
-                            // Standard FPS tiers: 30, 60, 90, 120, 144
-                            // Match appmodel.cpp reduceFpsBySteps() logic
-                            var fpsTiers = [30, 60, 90, 120, 144]
-                            var tierIndex = 0
-                            for (var i = 0; i < fpsTiers.length; i++) {
-                                if (baseFps >= fpsTiers[i]) tierIndex = i
-                            }
-                            tierIndex -= fpsSteps
-                            if (tierIndex < 0) tierIndex = 0
-                            fpsReduced = fpsTiers[tierIndex]
-                        }
-
-                        // Calculate bitrate multiplier based on RTT
-                        // Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
-                        var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
-                        var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
-                        kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
-                        return " → " + fpsReduced + "fps / " + (kbps/1000).toFixed(0) + "M"
-                    }
-                    color: "#81C784"
-                    font.pointSize: 9
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-
-            MouseArea {
-                id: networkIndicatorMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-            }
-
-            ToolTip.delay: 500
-            ToolTip.timeout: 5000
-            ToolTip.visible: networkIndicatorMouseArea.containsMouse
-            ToolTip.text: {
-                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                var ms = currentAppModel.networkLatencyMs
-                var quality = currentAppModel.networkQualityString
-                var fps = StreamingPreferences.fps
-                var bitrate = StreamingPreferences.bitrateKbps / 1000
-
-                // Calculate adaptive FPS and bitrate based on RTT thresholds
-                var fpsReduced = fps
-                var fpsSteps = 0
-                if (ms >= 50) fpsSteps = 2
-                else if (ms >= 30) fpsSteps = 1
-
-                if (fpsSteps > 0 && fps > 30) {
-                    if (fps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : fps
-                    else if (fps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : fps
-                    else if (fps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : fps
-                    else if (fps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : fps
-                    if (fpsReduced < 30) fpsReduced = 30
-                }
-
-                var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
-                var adaptiveBitrate = Math.max(2, Math.floor(bitrate * mult))
-                adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
-
-                if (StreamingPreferences.networkAdaptiveBitrate) {
-                    return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M\nAdaptive: %5fps / %6M")
-                        .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
-                        .arg(fpsReduced).arg(adaptiveBitrate.toFixed(0))
-                } else {
-                    return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M")
-                        .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
-                }
-            }
-        }
-
         RowLayout {
             id: toolBarRowLayout
             spacing: 10
@@ -601,6 +462,147 @@ ApplicationWindow {
                 horizontalAlignment: Qt.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+            }
+        }
+    }
+
+    // Network latency indicator - fixed position at bottom center
+    footer: Item {
+        height: 32
+
+        Rectangle {
+            id: networkIndicator
+            visible: currentAppModel != null
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            height: 24
+            width: networkIndicatorRow.implicitWidth + 16
+            radius: 4
+            color: {
+                var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
+                if (ms < 0)   return "#555555"      // Unknown (gray)
+                if (ms < 20)  return "#2E7D32"      // Good (green)
+                if (ms < 50)  return "#F9A825"      // Fair (yellow)
+                return "#C62828"                    // Poor (red)
+            }
+
+            Row {
+                id: networkIndicatorRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Label {
+                    id: latencyLabel
+                    text: {
+                        if (!currentAppModel) return ""
+                        var ms = currentAppModel.networkLatencyMs
+                        if (ms === -1) return qsTr("Measuring...")
+                        if (ms < 0)   return qsTr("N/A")
+                        return ms + " ms"
+                    }
+                    color: "white"
+                    font.pointSize: 10
+                    font.bold: true
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                Label {
+                    id: qualityLabel
+                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                    text: {
+                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                        return currentAppModel.networkQualityString
+                    }
+                    color: "white"
+                    font.pointSize: 9
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                Label {
+                    id: adaptiveLabel
+                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
+                    text: {
+                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                        var ms = currentAppModel.networkLatencyMs
+                        if (ms < 0) return ""
+
+                        // Calculate FPS reduction based on RTT thresholds
+                        // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
+                        var baseFps = StreamingPreferences.fps
+                        var fpsReduced = baseFps
+                        var fpsSteps = 0
+                        if (ms >= 50) fpsSteps = 2
+                        else if (ms >= 30) fpsSteps = 1
+
+                        if (fpsSteps > 0 && baseFps > 30) {
+                            // Standard FPS tiers: 30, 60, 90, 120, 144
+                            // Match appmodel.cpp reduceFpsBySteps() logic
+                            var fpsTiers = [30, 60, 90, 120, 144]
+                            var tierIndex = 0
+                            for (var i = 0; i < fpsTiers.length; i++) {
+                                if (baseFps >= fpsTiers[i]) tierIndex = i
+                            }
+                            tierIndex -= fpsSteps
+                            if (tierIndex < 0) tierIndex = 0
+                            fpsReduced = fpsTiers[tierIndex]
+                        }
+
+                        // Calculate bitrate multiplier based on RTT
+                        // Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
+                        var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
+                        var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
+                        kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
+                        return " → " + fpsReduced + "fps / " + (kbps/1000).toFixed(0) + "M"
+                    }
+                    color: "#81C784"
+                    font.pointSize: 9
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            MouseArea {
+                id: networkIndicatorMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+            }
+
+            ToolTip.delay: 500
+            ToolTip.timeout: 5000
+            ToolTip.visible: networkIndicatorMouseArea.containsMouse
+            ToolTip.text: {
+                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                var ms = currentAppModel.networkLatencyMs
+                var quality = currentAppModel.networkQualityString
+                var fps = StreamingPreferences.fps
+                var bitrate = StreamingPreferences.bitrateKbps / 1000
+
+                // Calculate adaptive FPS and bitrate based on RTT thresholds
+                var fpsReduced = fps
+                var fpsSteps = 0
+                if (ms >= 50) fpsSteps = 2
+                else if (ms >= 30) fpsSteps = 1
+
+                if (fpsSteps > 0 && fps > 30) {
+                    if (fps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : fps
+                    else if (fps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : fps
+                    else if (fps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : fps
+                    else if (fps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : fps
+                    if (fpsReduced < 30) fpsReduced = 30
+                }
+
+                var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
+                var adaptiveBitrate = Math.max(2, Math.floor(bitrate * mult))
+                adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
+
+                if (StreamingPreferences.networkAdaptiveBitrate) {
+                    return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M\nAdaptive: %5fps / %6M")
+                        .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
+                        .arg(fpsReduced).arg(adaptiveBitrate.toFixed(0))
+                } else {
+                    return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M")
+                        .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
+                }
             }
         }
     }
