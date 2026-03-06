@@ -367,18 +367,6 @@ ApplicationWindow {
                     }
 
                     Label {
-                        id: settingsLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            return " @ " + StreamingPreferences.fps + "fps / " + (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + "M"
-                        }
-                        color: "#FFEB3B"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
                         id: packetLossLabel
                         visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
                         text: {
@@ -392,36 +380,63 @@ ApplicationWindow {
                     }
 
                     Label {
-                        id: adaptiveLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
+                        id: currentFpsLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
                         text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                             var ms = currentAppModel.networkLatencyMs
-                            if (ms < 0) return ""
-
-                            // Calculate FPS reduction based on RTT thresholds
-                            // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
                             var baseFps = StreamingPreferences.fps
-                            var fpsReduced = baseFps
+
+                            // Calculate adaptive FPS based on RTT thresholds
                             var fpsSteps = 0
                             if (ms >= 50) fpsSteps = 2
                             else if (ms >= 30) fpsSteps = 1
 
+                            var currentFps = baseFps
                             if (fpsSteps > 0 && baseFps > 30) {
-                                // Standard FPS tiers: 30, 60, 90, 120, 144
-                                if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
-                                if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
-                                if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
-                                if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
-                                if (fpsReduced < 30) fpsReduced = 30
+                                if (baseFps >= 144) currentFps = (fpsSteps >= 1) ? 120 : baseFps
+                                else if (baseFps >= 120) currentFps = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
+                                else if (baseFps >= 90)  currentFps = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
+                                else if (baseFps >= 60)  currentFps = (fpsSteps >= 1) ? 30 : baseFps
+                                if (currentFps < 30) currentFps = 30
                             }
 
-                            // Calculate bitrate multiplier based on RTT
-                            // Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
+                            // Calculate adaptive bitrate
                             var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
                             var kbps = Math.max(2000, Math.floor(StreamingPreferences.bitrateKbps * mult))
                             kbps = Math.min(kbps, StreamingPreferences.bitrateKbps)
-                            return " → " + fpsReduced + "fps / " + (kbps/1000).toFixed(0) + "M"
+
+                            return " @ " + currentFps + "fps / " + (kbps/1000).toFixed(0) + "M"
+                        }
+                        color: "#FFEB3B"
+                        font.pointSize: 9
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Label {
+                        id: adaptiveLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate && currentAppModel.networkLatencyMs >= 30
+                        text: {
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 30 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                            var ms = currentAppModel.networkLatencyMs
+
+                            // Calculate FPS reduction
+                            var baseFps = StreamingPreferences.fps
+                            var fpsSteps = (ms >= 50) ? 2 : 1
+                            var fpsReduced = baseFps
+
+                            if (fpsSteps > 0 && baseFps > 30) {
+                                if (baseFps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : baseFps
+                                else if (baseFps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : baseFps
+                                else if (baseFps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : baseFps
+                                else if (baseFps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : baseFps
+                                if (fpsReduced < 30) fpsReduced = 30
+                            }
+
+                            // Calculate original configured bitrate
+                            var originalKbps = StreamingPreferences.bitrateKbps
+
+                            return " (原始：" + fpsReduced + "fps / " + (originalKbps/1000).toFixed(0) + "M)"
                         }
                         color: "#81C784"
                         font.pointSize: 9
@@ -437,34 +452,38 @@ ApplicationWindow {
                     var ms = currentAppModel.networkLatencyMs
                     var quality = currentAppModel.networkQualityString
                     var lossRate = currentAppModel.packetLossRate * 100
+
+                    // Calculate current adaptive FPS and bitrate
                     var fps = StreamingPreferences.fps
                     var bitrate = StreamingPreferences.bitrateKbps / 1000
+                    var currentFps = fps
+                    var currentBitrate = bitrate
 
-                    // Calculate adaptive FPS and bitrate based on new thresholds
-                    var fpsReduced = fps
                     var fpsSteps = 0
                     if (ms >= 50) fpsSteps = 2
                     else if (ms >= 30) fpsSteps = 1
 
                     if (fpsSteps > 0 && fps > 30) {
-                        if (fps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : fps
-                        else if (fps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : fps
-                        else if (fps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : fps
-                        else if (fps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : fps
-                        if (fpsReduced < 30) fpsReduced = 30
+                        if (fps >= 144) currentFps = (fpsSteps >= 1) ? 120 : fps
+                        else if (fps >= 120) currentFps = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : fps
+                        else if (fps >= 90)  currentFps = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : fps
+                        else if (fps >= 60)  currentFps = (fpsSteps >= 1) ? 30 : fps
+                        if (currentFps < 30) currentFps = 30
                     }
 
                     var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
-                    var adaptiveBitrate = Math.max(2, Math.floor(bitrate * mult))
-                    adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
+                    currentBitrate = Math.max(2, Math.floor(bitrate * mult))
+                    currentBitrate = Math.min(currentBitrate, bitrate)
 
-                    if (StreamingPreferences.networkAdaptiveBitrate) {
-                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M\nAdaptive: %6fps / %7M")
-                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
-                            .arg(fpsReduced).arg(adaptiveBitrate.toFixed(0))
+                    if (StreamingPreferences.networkAdaptiveBitrate && ms >= 30) {
+                        return qsTr("Network: %1 ms (%2) | 丢包：%3%\n当前：%4fps / %5M\n原始：%6fps / %7M")
+                            .arg(ms).arg(quality).arg(lossRate.toFixed(1))
+                            .arg(currentFps).arg(currentBitrate.toFixed(0))
+                            .arg(fps).arg(bitrate.toFixed(0))
                     } else {
-                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M")
-                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
+                        return qsTr("Network: %1 ms (%2) | 丢包：%3%\n当前：%4fps / %5M")
+                            .arg(ms).arg(quality).arg(lossRate.toFixed(1))
+                            .arg(currentFps).arg(currentBitrate.toFixed(0))
                     }
                 }
             }
