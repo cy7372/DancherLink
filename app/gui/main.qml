@@ -448,9 +448,16 @@ ApplicationWindow {
                     }
                 }
 
+                MouseArea {
+                    id: networkIndicatorMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton  // Only for hover detection
+                }
+
                 ToolTip.delay: 500
                 ToolTip.timeout: 5000
-                ToolTip.visible: hovered
+                ToolTip.visible: networkIndicatorMouseArea.containsMouse
                 ToolTip.text: {
                     if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                     var ms = currentAppModel.networkLatencyMs
@@ -490,6 +497,7 @@ ApplicationWindow {
                             .arg(currentFps).arg(currentBitrate.toFixed(0))
                     }
                 }
+            }
             }
 
             // This label will appear when the window gets too small and
