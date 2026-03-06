@@ -116,7 +116,7 @@ Page {
             // ========== Basic Settings (inline - complex logic) ==========
             GroupBox {
                 id: basicSettingsGroupBox
-                width: parent.width - (parent.leftPadding + parent.rightPadding)
+                width: parent.width
                 padding: 12
                 title: qsTr("Basic Settings")
                 label: groupBoxLabel.createObject(basicSettingsGroupBox)

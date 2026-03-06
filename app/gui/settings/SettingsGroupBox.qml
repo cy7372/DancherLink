@@ -6,6 +6,9 @@ import ".."
 GroupBox {
     id: groupBox
 
+    // Auto-fill parent container width for responsive layout
+    width: parent ? parent.width : implicitWidth
+
     // Default padding matching original SettingsView style
     padding: 12
     font.pointSize: 12
