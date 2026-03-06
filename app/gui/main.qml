@@ -361,7 +361,7 @@ ApplicationWindow {
                             if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                             return currentAppModel.networkQualityString
                         }
-                        color: "#FFC107"  // Yellow for network quality
+                        color: "white"
                         font.pointSize: 9
                         verticalAlignment: Text.AlignVCenter
                     }
