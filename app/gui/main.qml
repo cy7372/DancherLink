@@ -379,6 +379,19 @@ ApplicationWindow {
                     }
 
                     Label {
+                        id: packetLossLabel
+                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                        text: {
+                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
+                            var lossRate = currentAppModel.packetLossRate * 100
+                            return " | 丢包：" + lossRate.toFixed(1) + "%"
+                        }
+                        color: "#CCCCCC"
+                        font.pointSize: 9
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Label {
                         id: adaptiveLabel
                         visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
                         text: {
@@ -423,21 +436,35 @@ ApplicationWindow {
                     if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                     var ms = currentAppModel.networkLatencyMs
                     var quality = currentAppModel.networkQualityString
+                    var lossRate = currentAppModel.packetLossRate * 100
                     var fps = StreamingPreferences.fps
                     var bitrate = StreamingPreferences.bitrateKbps / 1000
-                    var fpsReduced = ms >= 150 && fps > 30
-                    var mult = ms < 20 ? 1.00 : ms < 50 ? 0.85 : ms < 100 ? 0.70 : ms < 150 ? 0.55 : 0.40
-                    var adaptiveFps = fpsReduced ? 30 : fps
+
+                    // Calculate adaptive FPS and bitrate based on new thresholds
+                    var fpsReduced = fps
+                    var fpsSteps = 0
+                    if (ms >= 50) fpsSteps = 2
+                    else if (ms >= 30) fpsSteps = 1
+
+                    if (fpsSteps > 0 && fps > 30) {
+                        if (fps >= 144) fpsReduced = (fpsSteps >= 1) ? 120 : fps
+                        else if (fps >= 120) fpsReduced = (fpsSteps >= 1) ? 90 : (fpsSteps >= 2) ? 60 : fps
+                        else if (fps >= 90)  fpsReduced = (fpsSteps >= 1) ? 60 : (fpsSteps >= 2) ? 30 : fps
+                        else if (fps >= 60)  fpsReduced = (fpsSteps >= 1) ? 30 : fps
+                        if (fpsReduced < 30) fpsReduced = 30
+                    }
+
+                    var mult = ms < 10 ? 1.00 : ms < 20 ? 0.90 : ms < 30 ? 0.70 : ms < 50 ? 0.50 : 0.30
                     var adaptiveBitrate = Math.max(2, Math.floor(bitrate * mult))
                     adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
 
                     if (StreamingPreferences.networkAdaptiveBitrate) {
-                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M\nAdaptive: %5fps / %6M")
-                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
-                            .arg(adaptiveFps).arg(adaptiveBitrate.toFixed(0))
+                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M\nAdaptive: %6fps / %7M")
+                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
+                            .arg(fpsReduced).arg(adaptiveBitrate.toFixed(0))
                     } else {
-                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M")
-                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
+                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M")
+                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
                     }
                 }
             }
