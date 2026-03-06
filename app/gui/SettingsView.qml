@@ -123,17 +123,17 @@ Page {
                 font.pointSize: 12
 
                 Column {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
                     spacing: 5
 
                     Label {
-                        width: parent.width - parent.leftPadding - parent.rightPadding
                         text: qsTr("Resolution and FPS")
                         font.pointSize: 12
                         wrapMode: Text.Wrap
                     }
 
                     Label {
-                        width: parent.width - parent.leftPadding - parent.rightPadding
                         text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                         font.pointSize: 9
                         wrapMode: Text.Wrap
@@ -141,7 +141,6 @@ Page {
 
                     Row {
                         spacing: 5
-                        width: parent.width - parent.leftPadding - parent.rightPadding
 
                         AutoResizingComboBox {
                             property int lastIndexValue
@@ -304,7 +303,6 @@ Page {
                     }
 
                     Label {
-                        width: parent.width
                         text: qsTr("Video bitrate")
                         font.pointSize: 12
                         wrapMode: Text.Wrap
@@ -344,7 +342,6 @@ Page {
 
                     CheckBox {
                         id: autoBitrateCheck
-                        width: parent.width
                         text: qsTr("Automatically adjust video bitrate for optimal performance")
                         font.pointSize: 12
                         checked: StreamingPreferences.autoAdjustBitrate
@@ -360,7 +357,6 @@ Page {
                     }
 
                     Label {
-                        width: parent.width
                         visible: autoBitrateCheck.checked
                         text: qsTr("With automatic bitrate adjustment, the video codec and YUV 4:4:4 settings will be used to determine the target bitrate.")
                         font.pointSize: 9
@@ -388,6 +384,7 @@ Page {
             rightPadding: isWideLayout ? 20 : 10
             anchors.left: isWideLayout ? settingsColumn1.right : parent.left
             anchors.top: isWideLayout ? parent.top : settingsColumn1.bottom
+            anchors.topMargin: isWideLayout ? 0 : 15
             id: settingsColumn2
             width: isWideLayout ? settingsPage.width / 2 : settingsPage.width
             spacing: 15
