@@ -305,6 +305,8 @@ ApplicationWindow {
             NavigableToolButton {
                 // Only make the button visible if the user has navigated somewhere.
                 visible: stackView.depth > 1
+                // Keep the button's space even when hidden to prevent layout shift
+                Layout.preferredWidth: visible ? implicitWidth : 0
 
                 iconSource: "qrc:/res/arrow_left.svg"
 
@@ -361,7 +363,7 @@ ApplicationWindow {
                             if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                             return currentAppModel.networkQualityString
                         }
-                        color: "#CCCCCC"
+                        color: "#FFC107"  // Yellow for network quality
                         font.pointSize: 9
                         verticalAlignment: Text.AlignVCenter
                     }
