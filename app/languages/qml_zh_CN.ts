@@ -1018,12 +1018,12 @@
         <translation>错误代码: %1</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1331"/>
+        <location filename="../streaming/session.cpp" line="1332"/>
         <source>The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.</source>
         <translation>在 %1 安装的 GeForce Experience 版本不受当前版本的 Moonlight 支持。你必须升级 Moonlight 才能从 %1 串流。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1336"/>
+        <location filename="../streaming/session.cpp" line="1337"/>
         <source>Your selection to enable remote desktop mouse mode may cause problems in games.</source>
         <translation>启用远程桌面鼠标模式可能会导致游戏出现问题。</translation>
     </message>
@@ -1032,177 +1032,177 @@
         <translation type="vanished">软件解码不支持 HDR。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1340"/>
+        <location filename="../streaming/session.cpp" line="1341"/>
         <source>Your settings selection to force software decoding may cause poor streaming performance.</source>
         <translation>你选择的用于强制软件解码的设置可能会导致流式传输性能不佳。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1376"/>
+        <location filename="../streaming/session.cpp" line="1377"/>
         <source>Your host PC doesn&apos;t support encoding HEVC.</source>
         <translation>你的 PC 主机不支持使用HEVC编码。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1394"/>
+        <location filename="../streaming/session.cpp" line="1395"/>
         <source>Using software decoding due to your selection to force HEVC without GPU support. This may cause poor streaming performance.</source>
         <translation>根据你的选择使用软件解码，以在没有显卡支持的情况下强制 HEVC。这可能会导致流式传输性能不佳。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1346"/>
+        <location filename="../streaming/session.cpp" line="1347"/>
         <source>Your host software or GPU doesn&apos;t support encoding AV1.</source>
         <translation>你的主机软件或显卡不支持进行 AV1 编码。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1364"/>
+        <location filename="../streaming/session.cpp" line="1365"/>
         <source>Using software decoding due to your selection to force AV1 without GPU support. This may cause poor streaming performance.</source>
         <translation>由于你选择在没有显卡支持的情况下强制使用 AV1，因此目前使用软件解码。这可能会导致视频流解码处理性能不佳。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1441"/>
+        <location filename="../streaming/session.cpp" line="1442"/>
         <source>Your host PC doesn&apos;t support HDR streaming.</source>
         <translation>你的 PC 主机不支持 HDR 串流。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1433"/>
+        <location filename="../streaming/session.cpp" line="1434"/>
         <source>HDR is not supported using the H.264 codec.</source>
         <translation>使用 H.264 编解码器的情况下不支持 HDR。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1456"/>
+        <location filename="../streaming/session.cpp" line="1457"/>
         <source>This PC&apos;s GPU doesn&apos;t support AV1 Main10 decoding for HDR streaming.</source>
         <translation>这台电脑的显卡不支持包含 HDR 的 AV1 Main10 解码。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1437"/>
+        <location filename="../streaming/session.cpp" line="1438"/>
         <source>This PC&apos;s GPU doesn&apos;t support 10-bit HEVC or AV1 decoding for HDR streaming.</source>
         <translation>这台电脑的显卡不支持包含 HDR 的 HEVC 或 AV1 Main10 解码。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1489"/>
+        <location filename="../streaming/session.cpp" line="1490"/>
         <source>Your host PC and client PC don&apos;t support the same HDR video codecs.</source>
         <translation>主机电脑和客户端电脑不支持相同的 HDR 视频编解码器。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1582"/>
+        <location filename="../streaming/session.cpp" line="1583"/>
         <source>Video resolutions over 4K are not supported by the H.264 codec.</source>
         <translation>H.264 编解码器不支持超过 4K 的视频分辨率。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="2011"/>
+        <location filename="../streaming/session.cpp" line="2012"/>
         <source>Host returned error: %1</source>
         <translation>主机返回错误：%1</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1413"/>
+        <location filename="../streaming/session.cpp" line="1414"/>
         <source>Using software decoding due to your selection to force H.264 without GPU support. This may cause poor streaming performance.</source>
         <translation>使用软件解码，因为你选择强制使用没有 GPU 支持的 H.264。这可能会导致较差的流性能。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1423"/>
+        <location filename="../streaming/session.cpp" line="1424"/>
         <source>Your host PC and client PC don&apos;t support the same video codecs. This may cause poor streaming performance.</source>
         <translation>你的主机和客户端 PC 不支持相同的视频编解码器。这可能会导致较差的流性能。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1426"/>
+        <location filename="../streaming/session.cpp" line="1427"/>
         <source>Your client GPU doesn&apos;t support H.264 decoding. This may cause poor streaming performance.</source>
         <translation>你的客户端 GPU 不支持 H.264 解码。这可能会导致较差的流性能。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1462"/>
-        <location filename="../streaming/session.cpp" line="1480"/>
+        <location filename="../streaming/session.cpp" line="1463"/>
+        <location filename="../streaming/session.cpp" line="1481"/>
         <source>Using software decoding due to your selection to force HDR without GPU support. This may cause poor streaming performance.</source>
         <translation>由于您选择强制使用未经 GPU 支持的 HDR，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1474"/>
+        <location filename="../streaming/session.cpp" line="1475"/>
         <source>This PC&apos;s GPU doesn&apos;t support HEVC Main10 decoding for HDR streaming.</source>
         <translation>此计算机的显卡不支持 HEVC Main10 解码 HDR 流。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1496"/>
+        <location filename="../streaming/session.cpp" line="1497"/>
         <source>Your host PC doesn&apos;t support YUV 4:4:4 streaming.</source>
         <translation>您的主机 PC 不支持 YUV 4:4:4 串流。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1504"/>
+        <location filename="../streaming/session.cpp" line="1505"/>
         <source>Your host PC doesn&apos;t support YUV 4:4:4 streaming for selected video codec.</source>
         <translation>您的主机 PC 不支持所选视频编解码器的 YUV 4:4:4 串流。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1519"/>
+        <location filename="../streaming/session.cpp" line="1520"/>
         <source>Using software decoding due to your selection to force YUV 4:4:4 without GPU support. This may cause poor streaming performance.</source>
         <translation>由于您选择强制使用未经 GPU 支持的 YUV 4:4:4，因此将采用软件解码。这可能会导致串流性能不佳。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1525"/>
+        <location filename="../streaming/session.cpp" line="1526"/>
         <source>This PC&apos;s GPU doesn&apos;t support YUV 4:4:4 decoding for selected video codec.</source>
         <translation>这台 PC 的 GPU 不支持所选视频编解码器的 YUV 4:4:4 解码。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1534"/>
+        <location filename="../streaming/session.cpp" line="1535"/>
         <source>GeForce Experience 3.0 or higher is required for 4K streaming.</source>
         <translation>4K 流式传输需要 GeForce Experience 3.0 或更高版本。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1549"/>
+        <location filename="../streaming/session.cpp" line="1550"/>
         <source>Your selected surround sound setting is not supported by the current audio device.</source>
         <translation>当前音频设备不支持你选择的环绕声设置。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1555"/>
+        <location filename="../streaming/session.cpp" line="1556"/>
         <source>Failed to open audio device. Audio will be unavailable during this session.</source>
         <translation>无法打开音频设备。音频在此会话期间将不可用。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1560"/>
+        <location filename="../streaming/session.cpp" line="1561"/>
         <source>An attached gamepad has no mapping and won&apos;t be usable. Visit the Moonlight help to resolve this.</source>
         <translation>附加的手柄没有映射，因此无法使用。请访问 Moonlight 帮助解决此问题。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1578"/>
+        <location filename="../streaming/session.cpp" line="1579"/>
         <source>Your host PC&apos;s GPU doesn&apos;t support streaming video resolutions over 4K.</source>
         <translation>目标计算机的显卡不支持 4K 以上的流式传输视频分辨率。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1596"/>
+        <location filename="../streaming/session.cpp" line="1597"/>
         <source>Your selection to force hardware decoding cannot be satisfied due to missing hardware decoding support on this PC&apos;s GPU.</source>
         <translation>由于此计算机的显卡上缺少硬件解码支持，无法满足强制硬件解码的选择。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="1599"/>
+        <location filename="../streaming/session.cpp" line="1600"/>
         <source>Your codec selection and force hardware decoding setting are not compatible. This PC&apos;s GPU lacks support for decoding your chosen codec.</source>
         <translation>你选择的编解码器和强制硬件解码设置不兼容。此计算机的显卡不支持解码你选择的编解码器。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="2921"/>
+        <location filename="../streaming/session.cpp" line="2922"/>
         <source>Failed to initialize audio device. Please check your audio settings.</source>
         <translation>无法初始化音频设备。请检查您的音频设置。</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="3002"/>
-        <location filename="../streaming/session.cpp" line="3140"/>
-        <location filename="../streaming/session.cpp" line="3527"/>
+        <location filename="../streaming/session.cpp" line="3003"/>
+        <location filename="../streaming/session.cpp" line="3141"/>
+        <location filename="../streaming/session.cpp" line="3528"/>
         <source>Resolution Changed</source>
         <translation>分辨率已更改</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="3141"/>
+        <location filename="../streaming/session.cpp" line="3142"/>
         <source>Host resolution changed to %1x%2.
 Restart stream?</source>
         <translation>主机分辨率已更改为 %1x%2。
 重启串流？</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="3143"/>
+        <location filename="../streaming/session.cpp" line="3144"/>
         <source>Restart</source>
         <translation>重启</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="3144"/>
+        <location filename="../streaming/session.cpp" line="3145"/>
         <source>Ignore</source>
         <translation>忽略</translation>
     </message>
     <message>
-        <location filename="../streaming/session.cpp" line="3384"/>
+        <location filename="../streaming/session.cpp" line="3385"/>
         <source>Unable to initialize video decoder. Please check your streaming settings and try again.</source>
         <translation>无法初始化视频解码器。请检查你的流式传输设置，然后重试。</translation>
     </message>
@@ -1925,12 +1925,12 @@ Restart stream?</source>
 <context>
     <name>main</name>
     <message>
-        <location filename="../gui/main.qml" line="611"/>
+        <location filename="../gui/main.qml" line="597"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="618"/>
+        <location filename="../gui/main.qml" line="604"/>
         <source>Version %1</source>
         <translation>版本 %1</translation>
     </message>
@@ -1939,7 +1939,7 @@ Restart stream?</source>
         <translation type="vanished">加入我们的社区</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="504"/>
+        <location filename="../gui/main.qml" line="490"/>
         <source>Add PC manually</source>
         <translation>手动添加计算机</translation>
     </message>
@@ -1952,7 +1952,7 @@ Restart stream?</source>
         <translation type="vanished">帮助</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="580"/>
+        <location filename="../gui/main.qml" line="566"/>
         <source>Gamepad Mapper</source>
         <translation>手柄按键映射</translation>
     </message>
@@ -1976,68 +1976,81 @@ Restart stream?</source>
         <translation>不适用</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="387"/>
         <source>Loss:</source>
-        <translation>丢包:</translation>
+        <translation type="vanished">丢包:</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="469"/>
         <source>Network Latency: %1 ms (%2)
 Packet Loss: %3%
 Configured: %4fps / %5M
 Adaptive: %6fps / %7M</source>
-        <translation>网络延迟: %1 ms (%2)
+        <translation type="vanished">网络延迟: %1 ms (%2)
 丢包率: %3%
 配置: %4fps / %5M
 自适应: %6fps / %7M</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="473"/>
         <source>Network Latency: %1 ms (%2)
 Packet Loss: %3%
 Configured: %4fps / %5M</source>
-        <translation>网络延迟: %1 ms (%2)
+        <translation type="vanished">网络延迟: %1 ms (%2)
 丢包率: %3%
 配置: %4fps / %5M</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="544"/>
-        <location filename="../gui/main.qml" line="675"/>
+        <location filename="../gui/main.qml" line="455"/>
+        <source>Network Latency: %1 ms (%2)
+Configured: %3fps / %4M
+Adaptive: %5fps / %6M</source>
+        <translation>网络延迟: %1 ms (%2)
+配置: %3fps / %4M
+自适应: %5fps / %6M</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="459"/>
+        <source>Network Latency: %1 ms (%2)
+Configured: %3fps / %4M</source>
+        <translation>网络延迟: %1 ms (%2)
+配置: %3fps / %4M</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="530"/>
+        <location filename="../gui/main.qml" line="661"/>
         <source>Update Available</source>
         <translation>可用更新</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="559"/>
+        <location filename="../gui/main.qml" line="545"/>
         <source>A new version of DancherLink (%1) is available. Do you want to download it now?</source>
         <translation>DancherLink 的新版本 (%1) 可用。您想现在下载吗？</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="629"/>
+        <location filename="../gui/main.qml" line="615"/>
         <source>No functioning hardware accelerated video decoder was detected by DancherLink. Your streaming performance may be severely degraded in this configuration.</source>
         <translation>DancherLink 未检测到有效的硬件加速视频解码器。在此配置下，您的串流性能可能会严重下降。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="631"/>
+        <location filename="../gui/main.qml" line="617"/>
         <source>Click the Help button for more information on solving this problem.</source>
         <translation>单击帮助按钮以获取有关解决此问题的更多信息。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="637"/>
+        <location filename="../gui/main.qml" line="623"/>
         <source>Hardware acceleration doesn&apos;t work on XWayland. Continuing on XWayland may result in poor streaming performance. Try running with QT_QPA_PLATFORM=wayland or switch to X11.</source>
         <translation>硬件加速在 XWayland 上不起作用。在 XWayland 上继续操作可能会导致流式传输性能下降。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="639"/>
+        <location filename="../gui/main.qml" line="625"/>
         <source>Click the Help button for more information.</source>
         <translation>单击帮助按钮以获取更多信息。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="646"/>
+        <location filename="../gui/main.qml" line="632"/>
         <source>This version of DancherLink isn&apos;t optimized for your PC. Please download the &apos;%1&apos; version of DancherLink for the best streaming performance.</source>
         <translation>此版本的 DancherLink 未针对您的 PC 进行优化。请下载“%1”版本的 DancherLink 以获得最佳串流性能。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="655"/>
+        <location filename="../gui/main.qml" line="641"/>
         <source>DancherLink detected gamepads without a mapping:</source>
         <translation>DancherLink 检测到未映射的手柄：</translation>
     </message>
@@ -2050,39 +2063,39 @@ Configured: %4fps / %5M</source>
         <translation type="vanished">Moonlight 检测到没有映射的手柄:</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="657"/>
+        <location filename="../gui/main.qml" line="643"/>
         <source>Click the Help button for information on how to map your gamepads.</source>
         <translation>单击帮助按钮以获取有关如何映射手柄的信息。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="665"/>
+        <location filename="../gui/main.qml" line="651"/>
         <source>Are you sure you want to quit?</source>
         <translation>确定要退出吗？</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="691"/>
+        <location filename="../gui/main.qml" line="677"/>
         <source>Failed to open update file. Please manually navigate to:
 %1</source>
         <translation>无法打开更新文件。请手动导航到：
 %1</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="700"/>
+        <location filename="../gui/main.qml" line="686"/>
         <source>No Update Available</source>
         <translation>无可用更新</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="701"/>
+        <location filename="../gui/main.qml" line="687"/>
         <source>You are already running the latest version of DancherLink.</source>
         <translation>您已经在运行最新版本的 DancherLink。</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="707"/>
+        <location filename="../gui/main.qml" line="693"/>
         <source>Update Check Failed</source>
         <translation>检查更新失败</translation>
     </message>
     <message>
-        <location filename="../gui/main.qml" line="713"/>
+        <location filename="../gui/main.qml" line="699"/>
         <source>Enter the IP address of your host PC:</source>
         <translation>输入你主机的 IP 地址：</translation>
     </message>

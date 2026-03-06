@@ -379,19 +379,6 @@ ApplicationWindow {
                     }
 
                     Label {
-                        id: packetLossLabel
-                        visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
-                        text: {
-                            if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                            var lossRate = currentAppModel.packetLossRate * 100
-                            return " | " + qsTr("Loss:") + " " + lossRate.toFixed(1) + "%"
-                        }
-                        color: "#CCCCCC"
-                        font.pointSize: 9
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    Label {
                         id: adaptiveLabel
                         visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
                         text: {
@@ -443,11 +430,10 @@ ApplicationWindow {
                     if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
                     var ms = currentAppModel.networkLatencyMs
                     var quality = currentAppModel.networkQualityString
-                    var lossRate = currentAppModel.packetLossRate * 100
                     var fps = StreamingPreferences.fps
                     var bitrate = StreamingPreferences.bitrateKbps / 1000
 
-                    // Calculate adaptive FPS and bitrate based on new thresholds
+                    // Calculate adaptive FPS and bitrate based on RTT thresholds
                     var fpsReduced = fps
                     var fpsSteps = 0
                     if (ms >= 50) fpsSteps = 2
@@ -466,12 +452,12 @@ ApplicationWindow {
                     adaptiveBitrate = Math.min(adaptiveBitrate, bitrate)
 
                     if (StreamingPreferences.networkAdaptiveBitrate) {
-                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M\nAdaptive: %6fps / %7M")
-                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
+                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M\nAdaptive: %5fps / %6M")
+                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
                             .arg(fpsReduced).arg(adaptiveBitrate.toFixed(0))
                     } else {
-                        return qsTr("Network Latency: %1 ms (%2)\nPacket Loss: %3%\nConfigured: %4fps / %5M")
-                            .arg(ms).arg(quality).arg(lossRate.toFixed(1)).arg(fps).arg(bitrate.toFixed(0))
+                        return qsTr("Network Latency: %1 ms (%2)\nConfigured: %3fps / %4M")
+                            .arg(ms).arg(quality).arg(fps).arg(bitrate.toFixed(0))
                     }
                 }
             }
