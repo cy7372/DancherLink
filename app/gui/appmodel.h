@@ -17,6 +17,7 @@ class AppModel : public QAbstractListModel
     Q_PROPERTY(QString networkQualityString READ networkQualityString NOTIFY networkLatencyChanged)
     Q_PROPERTY(float packetLossRate READ packetLossRate NOTIFY packetLossRateChanged)
     Q_PROPERTY(QString networkQualityDetailed READ networkQualityDetailed NOTIFY networkStatusChanged)
+    Q_PROPERTY(int recommendedBitrate READ recommendedBitrate NOTIFY networkStatusChanged)
 
     enum Roles
     {
@@ -55,6 +56,7 @@ public:
     QString networkQualityString() const;
     float packetLossRate() const;
     QString networkQualityDetailed() const;
+    int recommendedBitrate() const;
 
     QVariant data(const QModelIndex &index, int role) const override;
 

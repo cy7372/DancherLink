@@ -176,6 +176,11 @@ QString AppModel::networkQualityDetailed() const
     return QString("%1 (%2)").arg(rttQuality).arg(tr("丢包 %1%").arg(lossRate, 0, 'f', 1));
 }
 
+int AppModel::recommendedBitrate() const
+{
+    return NetworkQualityMonitor::instance()->recommendedBitrate();
+}
+
 // Helper function to reduce FPS by steps, respecting standard FPS tiers
 static int reduceFpsBySteps(int originalFps, int steps)
 {
