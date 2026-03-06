@@ -1022,8 +1022,9 @@ bool Session::initialize(QQuickWindow* qtWindow)
     LiInitializeVideoCallbacks(&m_VideoCallbacks);
     m_VideoCallbacks.setup = drSetup;
 
-    m_StreamConfig.fps = m_Preferences->fps;
-    m_StreamConfig.bitrate = m_Preferences->bitrateKbps;
+    // Use network override values if set, otherwise use preferences
+    m_StreamConfig.fps = (m_NetworkOverrideFps > 0) ? m_NetworkOverrideFps : m_Preferences->fps;
+    m_StreamConfig.bitrate = (m_NetworkOverrideBitrateKbps > 0) ? m_NetworkOverrideBitrateKbps : m_Preferences->bitrateKbps;
 
     // Setup encryption flags based on platform capabilities
     setupEncryptionFlags();
