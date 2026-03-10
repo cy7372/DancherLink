@@ -3,7 +3,6 @@
 #include "backend/boxartmanager.h"
 #include "backend/computermanager.h"
 #include "streaming/session.h"
-#include "streaming/networkqualitymonitor.h"
 
 #include <QAbstractListModel>
 #include <QFutureWatcher>
@@ -15,9 +14,6 @@ class AppModel : public QAbstractListModel
 
     Q_PROPERTY(int networkLatencyMs READ networkLatencyMs NOTIFY networkLatencyChanged)
     Q_PROPERTY(QString networkQualityString READ networkQualityString NOTIFY networkLatencyChanged)
-    Q_PROPERTY(float packetLossRate READ packetLossRate NOTIFY packetLossRateChanged)
-    Q_PROPERTY(QString networkQualityDetailed READ networkQualityDetailed NOTIFY networkStatusChanged)
-    Q_PROPERTY(int recommendedBitrate READ recommendedBitrate NOTIFY networkStatusChanged)
 
     enum Roles
     {
@@ -54,9 +50,6 @@ public:
 
     int networkLatencyMs() const;
     QString networkQualityString() const;
-    float packetLossRate() const;
-    QString networkQualityDetailed() const;
-    int recommendedBitrate() const;
 
     QVariant data(const QModelIndex &index, int role) const override;
 
@@ -69,13 +62,9 @@ private slots:
 
     void handleBoxArtLoaded(NvComputer* computer, NvApp app, QUrl image);
 
-    void handleNetworkQualityChanged();
-
 signals:
     void computerLost();
     void networkLatencyChanged(int rttMs);
-    void packetLossRateChanged(float lossRate);
-    void networkStatusChanged();
 
 private:
     void updateAppList(QVector<NvApp> newList);
@@ -102,7 +91,4 @@ private:
     // Debouncing for latency measurement to avoid redundant network requests
     QElapsedTimer m_LatencyDebounceTimer;
     static constexpr int LATENCY_DEBOUNCE_INTERVAL_MS = 5000; // Minimum 5 seconds between measurements
-
-    // Packet loss rate from NetworkQualityMonitor (0.0 - 1.0)
-    float m_PacketLossRate;
 };

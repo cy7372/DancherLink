@@ -57,7 +57,6 @@ private:
 
 AppModel::AppModel(QObject *parent)
     : QAbstractListModel(parent)
-    , m_PacketLossRate(0.0f)
 {
     connect(&m_BoxArtManager, &BoxArtManager::boxArtLoadComplete,
             this, &AppModel::handleBoxArtLoaded);
@@ -80,17 +79,6 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
     // Start async network quality measurement to the server
     m_MeasuredRttMs = -1;
     measureLatencyAsync();
-
-    // Connect to NetworkQualityMonitor for real-time packet loss updates
-    connect(NetworkQualityMonitor::instance(), &NetworkQualityMonitor::statsUpdated,
-            this, [this]() {
-        float newLossRate = NetworkQualityMonitor::instance()->packetLossRate();
-        if (m_PacketLossRate != newLossRate) {
-            m_PacketLossRate = newLossRate;
-            emit packetLossRateChanged(m_PacketLossRate);
-            emit networkStatusChanged();
-        }
-    });
 }
 
 void AppModel::measureLatencyAsync()
@@ -155,30 +143,6 @@ QString AppModel::networkQualityString() const
     if (m_MeasuredRttMs < 30)  return tr("Fair");       // 20-30ms
     if (m_MeasuredRttMs < 50)  return tr("Poor");       // 30-50ms
     return tr("Bad");                                  // >=50ms
-}
-
-float AppModel::packetLossRate() const
-{
-    return m_PacketLossRate;
-}
-
-QString AppModel::networkQualityDetailed() const
-{
-    // Combine RTT-based quality with packet loss info
-    QString rttQuality = networkQualityString();
-    float lossRate = m_PacketLossRate * 100.0f;  // Convert to percentage
-
-    if (m_MeasuredRttMs < 0) {
-        return tr("N/A");
-    }
-
-    // Format: "Excellent (丢包 1.5%)" or "Good (丢包 0.2%)"
-    return QString("%1 (%2)").arg(rttQuality).arg(tr("丢包 %1%").arg(lossRate, 0, 'f', 1));
-}
-
-int AppModel::recommendedBitrate() const
-{
-    return NetworkQualityMonitor::instance()->recommendedBitrate();
 }
 
 // Helper function to reduce FPS by steps, respecting standard FPS tiers
@@ -559,12 +523,6 @@ void AppModel::handleBoxArtLoaded(NvComputer* computer, NvApp app, QUrl /* image
     else {
         qWarning() << "App not found for box art callback:" << app.name;
     }
-}
-
-void AppModel::handleNetworkQualityChanged()
-{
-    // Network quality changes are handled via the statsUpdated signal connection
-    // This slot is provided for future extensibility
 }
 
 void AppModel::createDesktopShortcut(int appIndex)
