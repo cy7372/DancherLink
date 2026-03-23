@@ -208,6 +208,12 @@ Session* Session::s_ActiveSession;
 QSemaphore Session::s_ActiveSessionSemaphore(1);
 SDL_Window* Session::s_SharedWindow = nullptr;
 
+// =============================================================================
+// SECTION: Connection Callbacks (cl*)
+// These are static callbacks invoked by the Limelight library during connection.
+// They emit Qt signals to communicate with the UI layer.
+// =============================================================================
+
 void Session::clStageStarting(int stage)
 {
     // We know this is called on the same thread as LiStartConnection()
@@ -442,6 +448,12 @@ void Session::clSetAdaptiveTriggers(uint16_t controllerNumber, uint8_t eventFlag
     setControllerLEDEvent.user.data2 = (void *) state;
     SDL_PushEvent(&setControllerLEDEvent);
 }
+
+// =============================================================================
+// SECTION: Video Decoder Management
+// Functions for selecting, initializing, and managing video decoders.
+// Includes decoder selection logic, setup callbacks, and property population.
+// =============================================================================
 
 bool Session::chooseDecoder(StreamingPreferences::VideoDecoderSelection vds,
                             SDL_Window* window, int videoFormat, int width, int height,
@@ -1317,6 +1329,11 @@ bool Session::initialize(QQuickWindow* qtWindow)
     return true;
 }
 
+// =============================================================================
+// SECTION: UI Notifications & Warnings
+// Functions for communicating state changes and warnings to the QML UI.
+// =============================================================================
+
 void Session::emitLaunchWarning(QString text)
 {
     if (m_Preferences->configurationWarnings) {
@@ -1705,6 +1722,12 @@ private:
 
     QPointer<Session> m_Session;
 };
+
+// =============================================================================
+// SECTION: Window Management
+// Functions for handling SDL window state, dimensions, fullscreen mode,
+// and display mode optimization.
+// =============================================================================
 
 void Session::getWindowDimensions(int& x, int& y,
                                   int& width, int& height)
@@ -2251,6 +2274,12 @@ void Session::waitForHostOnline()
     });
 }
 
+// =============================================================================
+// SECTION: Session Lifecycle
+// Core session management: start, interrupt, exec, and cleanup.
+// This is the main entry point for streaming sessions.
+// =============================================================================
+
 void Session::start()
 {
     // Start a new session log file
@@ -2298,6 +2327,16 @@ void Session::interrupt()
     SDL_PushEvent(&event);
 }
 
+// -----------------------------------------------------------------------------
+// Session::exec() - Main Session Loop
+// -----------------------------------------------------------------------------
+// This is the core streaming loop that runs for the duration of the session.
+// It handles:
+//   - SDL event processing (input, window events)
+//   - Video frame decoding and rendering
+//   - Connection state management
+//   - Cleanup on exit (normal or error)
+// -----------------------------------------------------------------------------
 void Session::exec()
 {
     // If the connection failed, clean up and abort the connection.

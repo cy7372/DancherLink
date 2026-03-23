@@ -25,14 +25,6 @@ void MappingFetcher::start()
         return;
     }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1) && !defined(QT_NO_BEARERMANAGEMENT)
-    // HACK: Set network accessibility to work around QTBUG-80947 (introduced in Qt 5.14.0 and fixed in Qt 5.15.1)
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
-    m_Nam->setNetworkAccessible(QNetworkAccessManager::Accessible);
-    QT_WARNING_POP
-#endif
-
     QUrl url("https://moonlight-stream.org/SDL_GameControllerDB/gamecontrollerdb.txt");
     QNetworkRequest request(url);
 

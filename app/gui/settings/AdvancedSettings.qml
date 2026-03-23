@@ -270,14 +270,45 @@ SettingsGroupBox {
             font.pointSize: 12
             // This option is only valid when using "Auto" resolution (0x0).
             // If a fixed resolution is selected, we shouldn't prompt the user to change it.
-            enabled: advancedSettings.resolutionListModel ?
-                         advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
-                       :
-                         true
+            enabled: Qt.binding(function() {
+                if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                    // Default to disabled when properties are not initialized yet
+                    return false
+                }
+                return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+            })
             checked: enabled && StreamingPreferences.detectResolutionChange
             onCheckedChanged: {
                 if (enabled) {
                     StreamingPreferences.detectResolutionChange = checked
+                }
+            }
+
+            // Update enabled state when resolution combo box changes
+            Connections {
+                target: advancedSettings.resolutionComboBox
+                function onCurrentIndexChanged() {
+                    // Force re-evaluation of enabled binding
+                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
+                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                            return false
+                        }
+                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+                    })
+                }
+            }
+
+            // Update when resolutionListModel is assigned
+            Connections {
+                target: advancedSettings
+                function onResolutionListModelChanged() {
+                    // Force re-evaluation of enabled binding
+                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
+                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                            return false
+                        }
+                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+                    })
                 }
             }
 

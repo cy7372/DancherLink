@@ -27,23 +27,12 @@ Item {
 
     property int previousVisibility: Window.Windowed
 
-    Component.onCompleted: {
-        // Delay capturing visibility to ensure the window is fully initialized,
-        // avoiding a race where the window is still transitioning states.
-        // NB: We only capture the visibility here, we don't modify the window state.
-        // Modifying the window state here can interfere with Qt's window management
-        // and cause issues when restoring from minimize.
-        captureVisibilityTimer.start()
-    }
-
-    Timer {
-        id: captureVisibilityTimer
-        interval: 50
-        onTriggered: {
-            // Just capture the visibility for later restoration
-            previousVisibility = window.visibility
-            // Don't call showMaximized() here - it can interfere with Qt's window management
-        }
+    // Note: We capture the window state immediately in StackView.onActivated
+    // to record the user's pre-stream window state before any potential
+    // modifications by Qt or the streaming session.
+    StackView.onActivated: {
+        previousVisibility = window.visibility
+        console.log("StreamSegue: Captured previousVisibility in onActivated =", previousVisibility)
     }
 
     onRestartRequested: {
@@ -134,6 +123,10 @@ Item {
     }
 
     function restoreWindowState() {
+        console.log("StreamSegue: restoreWindowState() called, previousVisibility =", previousVisibility,
+                    ", current window.visibility =", window.visibility,
+                    ", uiDisplayMode =", StreamingPreferences.uiDisplayMode)
+
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
         if (window.visibility !== Window.Minimized) {
@@ -155,18 +148,19 @@ Item {
                 targetVisibility = Window.FullScreen
             }
 
-            // Use Qt.callLater to apply the window state in the next event loop iteration.
-            // This avoids the visible "small window flash" that occurs with a Timer-based approach,
-            // because the window state change happens before the window is painted.
-            Qt.callLater(function() {
-                if (targetVisibility === Window.Maximized) {
-                    window.showMaximized()
-                } else if (targetVisibility === Window.FullScreen) {
-                    window.showFullScreen()
-                } else {
-                    window.showNormal()
-                }
-            })
+            console.log("StreamSegue: Setting targetVisibility =", targetVisibility)
+
+            // Apply the window state immediately before popping the StackView.
+            // This ensures the window state is applied in the correct order
+            // and avoids conflicts with Qt's window management after pop().
+            if (targetVisibility === Window.Maximized) {
+                window.showMaximized()
+            } else if (targetVisibility === Window.FullScreen) {
+                window.showFullScreen()
+            } else {
+                window.showNormal()
+            }
+            console.log("StreamSegue: Window state applied, current visibility =", window.visibility)
         }
     }
 

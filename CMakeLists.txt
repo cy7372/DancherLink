@@ -75,6 +75,9 @@ endif()
 # Add subdirectories
 add_subdirectory(h264bitstream)
 
+# Disable tests for submodules (they have their own BUILD_TESTS options)
+set(BUILD_TESTS OFF CACHE BOOL "Disable tests for submodules" FORCE)
+
 # These submodules have their own CMakeLists.txt
 # We map the target names to match what DancherLink expects if they differ
 add_subdirectory(moonlight-common-c/moonlight-common-c)
@@ -85,3 +88,23 @@ if(WIN32)
 endif()
 
 add_subdirectory(app)
+
+# Testing configuration
+# Re-enable BUILD_TESTS for our own tests (was disabled for submodules)
+unset(BUILD_TESTS CACHE)
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.14.0
+        GIT_SHALLOW TRUE
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+    add_subdirectory(tests)
+endif()

@@ -12,6 +12,18 @@ import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
 
+// =============================================================================
+// Main Application Window
+// =============================================================================
+// Structure:
+//   - Properties & State (pollingActive, currentAppModel, etc.)
+//   - Early Initialization (doEarlyInit, Component.onCompleted)
+//   - Timers (inactivityTimer, checkUpdateTimer)
+//   - Event Handlers (onVisibleChanged, onActiveChanged)
+//   - Dialogs (wow64Dialog, noHardwareAccelDialog, etc.)
+//   - UI Components (header, StackView, network indicator)
+// =============================================================================
+
 ApplicationWindow {
     property bool pollingActive: false
 
@@ -32,6 +44,10 @@ ApplicationWindow {
     }
 
     id: window
+    // Set minimum window size to prevent UI elements from overlapping or being cut off
+    minimumWidth: 1024
+    minimumHeight: 576
+
     // No fixed width/height bindings here - they interfere with Qt's window state
     // restoration on Windows. When the window is restored from minimize, QML property
     // bindings are re-evaluated, which can override Qt's restored geometry.
@@ -468,6 +484,7 @@ ApplicationWindow {
 
     // Network latency indicator - fixed position at bottom center
     footer: Item {
+        visible: networkIndicator.visible
         height: 32
 
         Rectangle {

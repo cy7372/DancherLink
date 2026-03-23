@@ -56,6 +56,7 @@ Page {
 
     property bool isWideLayout: settingsPage.width > 850
     readonly property int bottomSafeMargin: 60
+    readonly property int columnSpacing: 15
 
     // Properties shared with AdvancedSettings component
     property var resolutionListModel: null
@@ -68,7 +69,8 @@ Page {
         anchors.bottomMargin: bottomSafeMargin
         boundsBehavior: Flickable.OvershootBounds
         contentWidth: settingsPage.width
-        contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height) : (settingsColumn1.height + settingsColumn2.height) + bottomSafeMargin
+        contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height)
+                                    : settingsColumn1.height + settingsColumn2.height + columnSpacing
 
         ScrollBar.vertical: ScrollBar {
             anchors.left: parent.right
@@ -110,10 +112,14 @@ Page {
         Column {
             padding: 10
             id: settingsColumn1
-            width: isWideLayout ? settingsPage.width / 2 : settingsPage.width
+            width: isWideLayout ? (flickable.width - 20) / 2 : flickable.width - 20
             spacing: 15
 
-            // ========== Basic Settings (inline - complex logic) ==========
+            // =========================================================================
+            // SECTION: Basic Settings
+            // Resolution, FPS, bitrate, and video codec configuration
+            // =========================================================================
+
             GroupBox {
                 id: basicSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
@@ -568,15 +574,20 @@ Page {
             }
         }
 
-        // ========== Right Column (settingsColumn2) ==========
+        // =========================================================================
+        // SECTION: Right Column (settingsColumn2)
+        // Update, Input, Audio, Gamepad, and Advanced settings
+        // Uses external components from settings/ directory
+        // =========================================================================
+
         Column {
             padding: 10
             rightPadding: isWideLayout ? 20 : 10
             anchors.left: isWideLayout ? settingsColumn1.right : parent.left
             anchors.top: isWideLayout ? parent.top : settingsColumn1.bottom
-            anchors.topMargin: isWideLayout ? 0 : 15
+            anchors.topMargin: isWideLayout ? 0 : columnSpacing
             id: settingsColumn2
-            width: isWideLayout ? settingsPage.width / 2 : settingsPage.width
+            width: isWideLayout ? (flickable.width - 20) / 2 : flickable.width - 20
             spacing: 15
 
             // ========== Update Settings (external component) ==========
@@ -603,6 +614,19 @@ Page {
         title: qsTr("Custom Resolution")
         standardButtons: Dialog.Ok | Dialog.Cancel
 
+        function isInputValid() {
+            // Check if width is valid
+            var widthValid = customWidthField.acceptableInput && customWidthField.text
+            var heightValid = customHeightField.acceptableInput && customHeightField.text
+
+            if (widthValid && heightValid) {
+                var width = parseInt(customWidthField.text)
+                var height = parseInt(customHeightField.text)
+                return width >= 16 && width <= 10000 && height >= 16 && height <= 10000
+            }
+            return false
+        }
+
         Column {
             width: parent.width
             spacing: 10
@@ -623,6 +647,24 @@ Page {
                     placeholderText: qsTr("Width")
                     validator: IntValidator { bottom: 16; top: 10000 }
                     Component.onCompleted: text = StreamingPreferences.width
+
+                    onTextChanged: {
+                        if (customResolutionDialog.standardButton) {
+                            customResolutionDialog.standardButton(Dialog.Ok).enabled = customResolutionDialog.isInputValid()
+                        }
+                    }
+
+                    Keys.onReturnPressed: {
+                        if (customResolutionDialog.isInputValid()) {
+                            customResolutionDialog.accept()
+                        }
+                    }
+
+                    Keys.onEnterPressed: {
+                        if (customResolutionDialog.isInputValid()) {
+                            customResolutionDialog.accept()
+                        }
+                    }
                 }
 
                 TextField {
@@ -631,7 +673,33 @@ Page {
                     placeholderText: qsTr("Height")
                     validator: IntValidator { bottom: 16; top: 10000 }
                     Component.onCompleted: text = StreamingPreferences.height
+
+                    onTextChanged: {
+                        if (customResolutionDialog.standardButton) {
+                            customResolutionDialog.standardButton(Dialog.Ok).enabled = customResolutionDialog.isInputValid()
+                        }
+                    }
+
+                    Keys.onReturnPressed: {
+                        if (customResolutionDialog.isInputValid()) {
+                            customResolutionDialog.accept()
+                        }
+                    }
+
+                    Keys.onEnterPressed: {
+                        if (customResolutionDialog.isInputValid()) {
+                            customResolutionDialog.accept()
+                        }
+                    }
                 }
+            }
+        }
+
+        onOpened: {
+            customWidthField.forceActiveFocus()
+            // Update OK button state when dialog opens
+            if (customResolutionDialog.standardButton) {
+                customResolutionDialog.standardButton(Dialog.Ok).enabled = customResolutionDialog.isInputValid()
             }
         }
 
@@ -702,20 +770,26 @@ Page {
         }
 
         function isInputValid() {
-            if (!customFpsField.acceptableInput && customFpsField.text) {
-                return false
+            // Accept if input is valid number
+            if (customFpsField.acceptableInput && customFpsField.text) {
+                var fps = parseInt(customFpsField.text)
+                return fps >= 10 && fps <= 9999
             }
-            if (!customFpsField.text && !customFpsField.placeholderText) {
-                return false
+            // Accept if we can use placeholder text
+            if (!customFpsField.text && customFpsField.placeholderText) {
+                var placeholderFps = parseInt(customFpsField.placeholderText)
+                return !isNaN(placeholderFps) && placeholderFps >= 10 && placeholderFps <= 9999
             }
-            return true
+            return false
         }
 
         onOpened: {
             customFpsField.forceActiveFocus()
+            // Update OK button state when dialog opens
             if (customFpsDialog.standardButton) {
-                customFpsDialog.standardButton(Dialog.Ok).enabled = isInputValid()
+                customFpsDialog.standardButton(Dialog.Ok).enabled = customFpsDialog.isInputValid()
             }
+            customFpsDialog.standardButton(Dialog.Ok).enabled = isInputValid()
         }
 
         onClosed: {

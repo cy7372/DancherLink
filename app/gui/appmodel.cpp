@@ -9,6 +9,7 @@
 #include <QThreadPool>
 #include <QTcpSocket>
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QtMath>
 
 #ifdef Q_OS_WIN32
@@ -77,9 +78,8 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
 
     updateAppList(m_Computer->appList);
 
-    // Start async network quality measurement to the server
-    m_MeasuredRttMs = -1;
-    measureLatencyAsync();
+    // Start continuous latency measurement
+    startLatencyMeasurement();
 
     // Connect to NetworkQualityMonitor for real-time packet loss updates
     connect(NetworkQualityMonitor::instance(), &NetworkQualityMonitor::statsUpdated,
@@ -93,36 +93,115 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
     });
 }
 
-void AppModel::measureLatencyAsync()
+void AppModel::startLatencyMeasurement()
 {
-    QString address = m_Computer->activeAddress.address();
-    quint16 port = m_Computer->activeAddress.port();
+    // Initialize timer for continuous measurement
+    if (!m_LatencyTimer) {
+        m_LatencyTimer = new QTimer(this);
+        m_LatencyTimer->setSingleShot(false);
+        connect(m_LatencyTimer, &QTimer::timeout, this, &AppModel::measureLatencyAsync);
+    }
 
-    // If a previous measurement is still running, let it finish and ignore its result
+    // Reset state
+    m_LatencySamples.clear();
+    m_MeasuredRttMs = -1;
+    m_MeasuredRttMedian = -1;
+    m_MeasurementBatch = 0;  // Track which batch we're on
+
+    // Start timer - will trigger measurements every 100ms
+    m_LatencyTimer->start(LATENCY_SAMPLE_INTERVAL_MS);
+    qDebug() << "[NetAdapt] Started continuous latency measurement";
+}
+
+void AppModel::stopLatencyMeasurement()
+{
+    if (m_LatencyTimer && m_LatencyTimer->isActive()) {
+        m_LatencyTimer->stop();
+        qDebug() << "[NetAdapt] Stopped continuous latency measurement";
+    }
+
+    // Cancel any in-flight measurement
     if (m_LatencyWatcher) {
         m_LatencyWatcher->disconnect();
         m_LatencyWatcher->deleteLater();
         m_LatencyWatcher = nullptr;
     }
+}
 
-    // Debounce: Skip measurement if we've measured recently
-    // This avoids redundant network requests when switching views rapidly
-    // Note: We check debounce AFTER clearing the previous watcher to avoid blocking new measurements
-    if (m_LatencyDebounceTimer.isValid() &&
-        m_LatencyDebounceTimer.elapsed() < LATENCY_DEBOUNCE_INTERVAL_MS) {
-        qInfo() << "[NetAdapt] Skipping latency measurement (debounced): "
-                << m_LatencyDebounceTimer.elapsed() << "ms since last";
+void AppModel::measureLatencyAsync()
+{
+    // Don't measure if already have enough samples
+    if (m_LatencySamples.size() >= LATENCY_SAMPLE_COUNT) {
+        return;
+    }
+
+    QString address = m_Computer->activeAddress.address();
+    quint16 port = m_Computer->activeAddress.port();
+
+    // If a previous measurement is still running, skip this one
+    if (m_LatencyWatcher) {
         return;
     }
 
     m_LatencyWatcher = new QFutureWatcher<int>(this);
     connect(m_LatencyWatcher, &QFutureWatcher<int>::finished, this, [this]() {
-        m_MeasuredRttMs = m_LatencyWatcher->result();
+        int rttMs = m_LatencyWatcher->result();
         m_LatencyWatcher->deleteLater();
         m_LatencyWatcher = nullptr;
-        m_LatencyDebounceTimer.restart(); // Reset debounce timer on completion
-        emit networkLatencyChanged(m_MeasuredRttMs);
-        qDebug() << "[NetAdapt] Measured RTT to server:" << m_MeasuredRttMs << "ms";
+
+        // Store sample (even failed ones for debugging)
+        if (rttMs >= 0) {
+            m_LatencySamples.append(rttMs);
+            qDebug() << "[NetAdapt] Sample" << m_LatencySamples.size() << "/" << LATENCY_SAMPLE_COUNT << ":" << rttMs << "ms, batch:" << m_MeasurementBatch;
+
+            // First batch (batch 0): update display after each sample
+            // Later batches: only update after completing all 5 samples
+            if (m_MeasurementBatch == 0) {
+                // Calculate running median for display
+                QVector<int> sorted = m_LatencySamples;
+                std::sort(sorted.begin(), sorted.end());
+                int runningMedian = sorted[sorted.size() / 2];
+
+                m_MeasuredRttMs = runningMedian;
+                emit networkLatencyChanged(m_MeasuredRttMs);
+                qDebug() << "[NetAdapt] Batch 0: updating display with running median:" << runningMedian << "ms";
+            }
+
+            // Check if we have enough samples
+            if (m_LatencySamples.size() >= LATENCY_SAMPLE_COUNT) {
+                // Stop timer while we process
+                m_LatencyTimer->stop();
+
+                // Calculate final median
+                QVector<int> sorted = m_LatencySamples;
+                std::sort(sorted.begin(), sorted.end());
+                int median = sorted[sorted.size() / 2];
+
+                // Update with median value
+                m_MeasuredRttMedian = median;
+                if (m_MeasurementBatch > 0) {
+                    // Only update display for batches after the first
+                    m_MeasuredRttMs = median;
+                    emit networkLatencyChanged(m_MeasuredRttMs);
+                }
+
+                qDebug() << "[NetAdapt] Batch complete: median =" << median << "ms, samples =" << m_LatencySamples;
+
+                // Increment batch counter
+                m_MeasurementBatch++;
+
+                // Schedule next batch after 3 seconds
+                QTimer::singleShot(LATENCY_BATCH_INTERVAL_MS, this, [this]() {
+                    if (m_LatencyTimer) {
+                        m_LatencySamples.clear();
+                        m_LatencyTimer->start(LATENCY_SAMPLE_INTERVAL_MS);
+                        qDebug() << "[NetAdapt] Starting batch" << m_MeasurementBatch;
+                    }
+                });
+            }
+        } else {
+            qDebug() << "[NetAdapt] Sample" << (m_LatencySamples.size() + 1) << "/" << LATENCY_SAMPLE_COUNT << ": failed (" << rttMs << ")";
+        }
     });
 
     auto future = QtConcurrent::run([address, port]() -> int {
@@ -130,12 +209,13 @@ void AppModel::measureLatencyAsync()
         QElapsedTimer timer;
         timer.start();
         socket.connectToHost(address, port);
-        if (socket.waitForConnected(2000)) {
+        // Short timeout - LAN should respond within 100-200ms
+        if (socket.waitForConnected(300)) {
             int rttMs = (int)timer.elapsed();
             socket.disconnectFromHost();
             return rttMs;
         }
-        return -2; // Connection failed
+        return -2; // Connection failed or timed out
     });
 
     m_LatencyWatcher->setFuture(future);

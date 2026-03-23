@@ -21,6 +21,11 @@ ComboBox {
     }
 
     function recalculateWidth() {
+        if (!model || count === 0) {
+            textWidth = 100 // Default minimum width
+            return
+        }
+
         textMetrics.font = font
         popupMetrics.font = popup.font
         textWidth = 0
@@ -30,6 +35,17 @@ ComboBox {
             textWidth = Math.max(textMetrics.width, textWidth)
             textWidth = Math.max(popupMetrics.width, textWidth)
         }
+        // Add 10px buffer to prevent text truncation
+        textWidth += 10
+    }
+
+    Component.onCompleted: {
+        recalculateWidth()
+    }
+
+    // Recalculate width when model changes
+    onModelChanged: {
+        recalculateWidth()
     }
 
     // We call this every time the options change (and init)

@@ -62,6 +62,8 @@ CenteredGridView {
     StackView.onDeactivating: {
         appModel.computerLost.disconnect(computerLost)
         activated = false
+        // Stop latency measurement when leaving the app list
+        appModel.stopLatencyMeasurement()
     }
 
     function createModel()
@@ -378,6 +380,9 @@ CenteredGridView {
         standardButtons: Dialog.Yes | Dialog.No
 
         function quitApp() {
+            // Stop latency measurement before starting stream
+            appModel.stopLatencyMeasurement()
+
             var component = Qt.createComponent("QuitSegue.qml")
             var params = {"appName": appName, "quitRunningAppFn": function() { appModel.quitRunningApp() }}
             if (segueToStream) {

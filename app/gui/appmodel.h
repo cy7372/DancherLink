@@ -85,6 +85,8 @@ private:
     bool isAppCurrentlyVisible(const NvApp& app);
 
     void measureLatencyAsync();
+    void startLatencyMeasurement();
+    void stopLatencyMeasurement();
     void applyAdaptiveSettings(Session* session) const;
 
     NvComputer* m_Computer;
@@ -99,9 +101,14 @@ private:
     int m_MeasuredRttMs = -1;
     QFutureWatcher<int>* m_LatencyWatcher = nullptr;
 
-    // Debouncing for latency measurement to avoid redundant network requests
-    QElapsedTimer m_LatencyDebounceTimer;
-    static constexpr int LATENCY_DEBOUNCE_INTERVAL_MS = 5000; // Minimum 5 seconds between measurements
+    // Continuous latency measurement with periodic updates
+    QTimer* m_LatencyTimer = nullptr;         // Timer for periodic measurement
+    QVector<int> m_LatencySamples;             // Current batch of samples
+    int m_MeasuredRttMedian = -1;              // Median of last completed batch
+    int m_MeasurementBatch = 0;                // Batch counter (0 = first batch)
+    static constexpr int LATENCY_SAMPLE_COUNT = 5;      // Samples per batch
+    static constexpr int LATENCY_SAMPLE_INTERVAL_MS = 100; // Time between samples
+    static constexpr int LATENCY_BATCH_INTERVAL_MS = 3000; // Time between batches
 
     // Packet loss rate from NetworkQualityMonitor (0.0 - 1.0)
     float m_PacketLossRate;
