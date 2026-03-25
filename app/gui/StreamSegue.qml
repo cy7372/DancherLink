@@ -235,8 +235,13 @@ Item {
         // Hide the toolbar before we start loading
         toolBar.visible = false
 
-        // Show the splash screen in fullscreen mode
-        window.showFullScreen()
+        // Show the splash screen according to user's UI display mode preference
+        if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+            window.showMaximized()
+        } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+            window.showFullScreen()
+        }
+        // For UI_WINDOWED, keep current window state (just hide toolbar)
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)
