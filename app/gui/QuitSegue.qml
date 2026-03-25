@@ -23,12 +23,20 @@ Item {
 
         // If we're supposed to launch another game after this, do so now
         if (error === undefined && nextSession !== null) {
+            // Capture the current visibility BEFORE creating the new segue
+            // so we can restore to this state after streaming ends
+            var currentVisibility = window.visibility
+
             var component = Qt.createComponent("StreamSegue.qml")
-            var segue = component.createObject(stackView, {"appName": nextAppName, "session": nextSession})
+            var segue = component.createObject(stackView, {
+                "appName": nextAppName,
+                "session": nextSession,
+                "previousVisibility": currentVisibility
+            })
             stackView.replace(segue)
 
-            // Show the splash screen in fullscreen mode
-            window.showFullScreen()
+            // StreamSegue's onActivated will handle showing fullscreen
+            // We don't need to call showFullScreen() here
         }
         else {
             // Exit this view

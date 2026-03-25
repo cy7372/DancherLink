@@ -25,7 +25,9 @@ Item {
 
     signal restartRequested()
 
-    property int previousVisibility: Window.Windowed
+    // Use -1 as default to indicate "not explicitly set"
+    // When explicitly passed (e.g., from QuitSegue), this won't be overwritten
+    property int previousVisibility: -1
 
     onRestartRequested: {
         // Reset the UI state to show we are working
@@ -130,6 +132,7 @@ Item {
             // Apply the desired window state based on previous visibility or preferences
             var targetVisibility = Window.Windowed
 
+            // Treat -1 (not set) as Windowed
             if (previousVisibility === Window.Maximized) {
                 targetVisibility = Window.Maximized
             } else if (previousVisibility === Window.FullScreen) {
@@ -201,7 +204,10 @@ Item {
     StackView.onActivated: {
         // Capture the window state immediately to record the user's pre-stream
         // window state before any potential modifications by Qt or the streaming session.
-        previousVisibility = window.visibility
+        // Only capture if not explicitly passed in (e.g., from QuitSegue).
+        if (previousVisibility === -1) {
+            previousVisibility = window.visibility
+        }
 
         // Hide the toolbar before we start loading
         toolBar.visible = false

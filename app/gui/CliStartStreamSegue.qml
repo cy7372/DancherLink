@@ -17,7 +17,8 @@ Item {
         var segue = component.createObject(stackView, {
             "appName": appName,
             "session": session,
-            "quitAfter": true
+            "quitAfter": true,
+            "previousVisibility": window.visibility
         })
         stackView.push(segue)
     }

@@ -235,7 +235,8 @@ CenteredGridView {
             var segue = component.createObject(stackView, {
                                                    "appName": model.name,
                                                    "session": appModel.createSessionForApp(model.index),
-                                                   "isResume": runningId === model.appid
+                                                   "isResume": runningId === model.appid,
+                                                   "previousVisibility": window.visibility
                                                })
 
             if (!segue) {
