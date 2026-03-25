@@ -34,14 +34,7 @@ ApplicationWindow {
 
     // Cached reference to current AppModel to avoid repeated property lookups
     // This reduces QML binding evaluation overhead in the network indicator
-    property var currentAppModel: stackView.currentItem ? stackView.currentItem.appModel : null
-
-    Connections {
-        target: stackView
-        function onCurrentItemChanged() {
-            currentAppModel = stackView.currentItem ? stackView.currentItem.appModel : null
-        }
-    }
+    property var currentAppModel: stackView.currentItem && stackView.currentItem.appModel ? stackView.currentItem.appModel : null
 
     id: window
     // Set minimum window size to prevent UI elements from overlapping or being cut off
