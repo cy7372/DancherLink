@@ -52,3 +52,37 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 - STUN is disabled for privacy (DancherLink-specific)
 - Network buffers: Socket RCVBUF min 512KB, RTP buffer 8192 packets (optimized for 4K high bitrate)
 - GPU optimization: Auto-detects HAGS, sets GPU process/thread priority for streaming
+
+## Project Memory System
+
+项目维护机构知识在 `docs/project_notes/` 目录中，用于跨会话保持一致性。
+
+### 记忆文件
+
+- **bugs.md** - Bug 日志，含根本原因和解决方案
+- **decisions.md** - 架构决策记录 (ADRs)，含背景和权衡
+- **key_facts.md** - 项目配置、端口、URL、开发规范
+- **issues.md** - 工作日志
+
+### 使用协议
+
+**遇到错误或 Bug 时:**
+- 先搜索 `docs/project_notes/bugs.md` 查找类似问题
+- 如有已知解决方案，优先应用
+- 修复新问题后，记录到 bugs.md
+
+**提议架构变更时:**
+- 检查 `docs/project_notes/decisions.md` 中的现有决策
+- 确保新方案不与过去决策冲突
+- 如需变更，更新决策记录
+
+**查找项目配置时:**
+- 检查 `docs/project_notes/key_facts.md` 获取构建配置、端口、URL
+- 优先使用文档化的事实而非假设
+
+### 风格指南
+
+- 使用项目列表而非表格，便于编辑
+- 保持条目简洁（1-3 行描述）
+- 始终包含日期
+- 包含 URL 链接（工单、文档等）
