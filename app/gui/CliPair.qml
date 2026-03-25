@@ -38,12 +38,21 @@ Item {
         if (!launcher.isExecuted()) {
             toolBar.visible = false
 
+            // Connect signals
             launcher.searchingComputer.connect(onSearchingComputer)
             launcher.pairing.connect(onPairing)
             launcher.failed.connect(onFailed)
             launcher.success.connect(onSuccess)
             launcher.execute(ComputerManager)
         }
+    }
+
+    StackView.onDeactivating: {
+        // Disconnect signals to prevent memory leaks and duplicate triggers
+        launcher.searchingComputer.disconnect(onSearchingComputer)
+        launcher.pairing.disconnect(onPairing)
+        launcher.failed.disconnect(onFailed)
+        launcher.success.disconnect(onSuccess)
     }
 
     Row {

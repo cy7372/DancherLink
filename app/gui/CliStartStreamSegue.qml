@@ -14,12 +14,22 @@ Item {
 
     function onSessionCreated(appName, session) {
         var component = Qt.createComponent("StreamSegue.qml")
+        if (component.status !== Component.Ready) {
+            console.error("Failed to create StreamSegue component:", component.errorString())
+            onLaunchFailed("Failed to create stream view: " + component.errorString())
+            return
+        }
         var segue = component.createObject(stackView, {
             "appName": appName,
             "session": session,
             "quitAfter": true,
             "previousVisibility": window.visibility
         })
+        if (!segue) {
+            console.error("Failed to create StreamSegue object")
+            onLaunchFailed("Failed to create stream view")
+            return
+        }
         stackView.push(segue)
     }
 
@@ -38,6 +48,7 @@ Item {
         if (!launcher.isExecuted()) {
             toolBar.visible = false
 
+            // Connect signals
             launcher.searchingComputer.connect(onSearchingComputer)
             launcher.searchingApp.connect(onSearchingApp)
             launcher.sessionCreated.connect(onSessionCreated)
@@ -45,6 +56,15 @@ Item {
             launcher.appQuitRequired.connect(onAppQuitRequired)
             launcher.execute(ComputerManager)
         }
+    }
+
+    StackView.onDeactivating: {
+        // Disconnect signals to prevent memory leaks and duplicate triggers
+        launcher.searchingComputer.disconnect(onSearchingComputer)
+        launcher.searchingApp.disconnect(onSearchingApp)
+        launcher.sessionCreated.disconnect(onSessionCreated)
+        launcher.failed.disconnect(onLaunchFailed)
+        launcher.appQuitRequired.disconnect(onAppQuitRequired)
     }
 
     Row {
@@ -82,8 +102,17 @@ Item {
 
         function quitApp() {
             var component = Qt.createComponent("QuitSegue.qml")
+            if (component.status !== Component.Ready) {
+                console.error("Failed to create QuitSegue component:", component.errorString())
+                return
+            }
             var params = {"appName": appName, "quitRunningAppFn": function() { launcher.quitRunningApp() }}
-            stackView.push(component.createObject(stackView, params))
+            var segue = component.createObject(stackView, params)
+            if (!segue) {
+                console.error("Failed to create QuitSegue object")
+                return
+            }
+            stackView.push(segue)
         }
 
         onAccepted: quitApp()
