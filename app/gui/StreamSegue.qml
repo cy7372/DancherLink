@@ -27,13 +27,6 @@ Item {
 
     property int previousVisibility: Window.Windowed
 
-    // Note: We capture the window state immediately in StackView.onActivated
-    // to record the user's pre-stream window state before any potential
-    // modifications by Qt or the streaming session.
-    StackView.onActivated: {
-        previousVisibility = window.visibility
-    }
-
     onRestartRequested: {
         // Reset the UI state to show we are working
         window.show()
@@ -206,6 +199,10 @@ Item {
     }
 
     StackView.onActivated: {
+        // Capture the window state immediately to record the user's pre-stream
+        // window state before any potential modifications by Qt or the streaming session.
+        previousVisibility = window.visibility
+
         // Hide the toolbar before we start loading
         toolBar.visible = false
 
