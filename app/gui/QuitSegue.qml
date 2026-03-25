@@ -26,6 +26,9 @@ Item {
             var component = Qt.createComponent("StreamSegue.qml")
             var segue = component.createObject(stackView, {"appName": nextAppName, "session": nextSession})
             stackView.replace(segue)
+
+            // Show the splash screen in fullscreen mode
+            window.showFullScreen()
         }
         else {
             // Exit this view
