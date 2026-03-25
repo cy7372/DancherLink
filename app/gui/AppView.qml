@@ -239,7 +239,7 @@ CenteredGridView {
             segue.restartRequested.connect(function() {
                 // Pop the old segue immediately. This will trigger the destruction of the old Session.
                 stackView.pop(StackView.Immediate)
-                
+
                 // Start a new session for the same app.
                 // launchOrResumeSelectedApp will create a new Session object.
                 launchOrResumeSelectedApp(false)

@@ -32,7 +32,6 @@ Item {
     // modifications by Qt or the streaming session.
     StackView.onActivated: {
         previousVisibility = window.visibility
-        console.log("StreamSegue: Captured previousVisibility in onActivated =", previousVisibility)
     }
 
     onRestartRequested: {

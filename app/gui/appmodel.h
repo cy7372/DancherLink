@@ -86,7 +86,7 @@ private:
 
     void measureLatencyAsync();
     void startLatencyMeasurement();
-    void stopLatencyMeasurement();
+    Q_INVOKABLE void stopLatencyMeasurement();
     void applyAdaptiveSettings(Session* session) const;
 
     NvComputer* m_Computer;
