@@ -69,6 +69,10 @@ CenteredGridView {
     function createModel()
     {
         var model = Qt.createQmlObject('import AppModel 1.0; AppModel {}', parent, '')
+        if (!model) {
+            console.error("Failed to create AppModel")
+            return null
+        }
         model.initialize(ComputerManager, computerIndex, showHiddenGames)
         return model
     }
@@ -395,6 +399,10 @@ CenteredGridView {
             appModel.stopLatencyMeasurement()
 
             var component = Qt.createComponent("QuitSegue.qml")
+            if (component.status !== Component.Ready) {
+                console.error("Failed to create QuitSegue component:", component.errorString())
+                return
+            }
             var params = {"appName": appName, "quitRunningAppFn": function() { appModel.quitRunningApp() }}
             if (segueToStream) {
                 // Store the session and app name if we're going to stream after
@@ -407,7 +415,12 @@ CenteredGridView {
                 params.nextSession = null
             }
 
-            stackView.push(component.createObject(stackView, params))
+            var segue = component.createObject(stackView, params)
+            if (!segue) {
+                console.error("Failed to create QuitSegue object")
+                return
+            }
+            stackView.push(segue)
         }
 
         onAccepted: quitApp()

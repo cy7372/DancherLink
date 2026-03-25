@@ -28,11 +28,23 @@ Item {
             var currentVisibility = window.visibility
 
             var component = Qt.createComponent("StreamSegue.qml")
+            if (component.status !== Component.Ready) {
+                console.error("Failed to create StreamSegue component:", component.errorString())
+                // Exit this view since we can't proceed
+                stackView.pop()
+                return
+            }
             var segue = component.createObject(stackView, {
                 "appName": nextAppName,
                 "session": nextSession,
                 "previousVisibility": currentVisibility
             })
+            if (!segue) {
+                console.error("Failed to create StreamSegue object")
+                // Exit this view since we can't proceed
+                stackView.pop()
+                return
+            }
             stackView.replace(segue)
 
             // StreamSegue's onActivated will handle showing fullscreen

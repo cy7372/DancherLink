@@ -29,6 +29,30 @@
 
 ---
 
+### 2026-03-26 - 修复 QML 稳定性问题（关键路径加固）
+- **状态**: 已完成
+- **描述**:
+  - 问题：项目不稳定，修改代码后之前的 bug 频繁重现
+  - 修复：系统性修复 QML 动态组件创建和信号连接问题
+  - 具体改动：
+    1. `StreamSegue.qml`: 修复 `quitStarting()` 和 `StackView.onDeactivating`
+    2. `CliStartStreamSegue.qml`: 添加信号断开和组件状态检查
+    3. `CliPair.qml`: 添加 `StackView.onDeactivating` 信号断开
+    4. `PcView.qml`: 添加 `createModel()` 和 AppView 创建的 null 检查
+    5. `AppView.qml`: 添加 `createModel()` 和 QuitSegue 创建的 null 检查
+    6. `QuitSegue.qml`: 添加 StreamSegue 创建的组件状态检查
+- **涉及文件**:
+  - `app/gui/StreamSegue.qml`
+  - `app/gui/CliStartStreamSegue.qml`
+  - `app/gui/CliPair.qml`
+  - `app/gui/PcView.qml`
+  - `app/gui/AppView.qml`
+  - `app/gui/QuitSegue.qml`
+- **关键路径文档**: `docs/project_notes/critical-path.md`
+- **备注**: 根本原因分析见关键路径文档，包括信号泄漏、组件创建失败、空指针访问三类问题
+
+---
+
 ### 2026-03-25 - 修复点击串流按钮无响应问题
 - **状态**: 已完成
 - **描述**:

@@ -79,7 +79,16 @@ Item {
     {
         // Avoid the push transition animation
         var component = Qt.createComponent("QuitSegue.qml")
-        stackView.replace(stackView.currentItem, component.createObject(stackView, {"appName": appName}), StackView.Immediate)
+        if (component.status !== Component.Ready) {
+            console.error("Failed to create QuitSegue component:", component.errorString())
+            return
+        }
+        var segue = component.createObject(stackView, {"appName": appName})
+        if (!segue) {
+            console.error("Failed to create QuitSegue object")
+            return
+        }
+        stackView.replace(stackView.currentItem, segue, StackView.Immediate)
 
         // Show the Qt window again to show quit segue.
         // Use showNormal() to ensure the window is in a known state.
@@ -199,6 +208,20 @@ Item {
 
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
+
+        // Safely disconnect signals only if session still exists
+        // Session may be destroyed before this handler runs
+        if (session) {
+            session.stageStarting.disconnect(stageStarting)
+            session.stageFailed.disconnect(stageFailed)
+            session.connectionStarted.disconnect(connectionStarted)
+            session.displayLaunchError.disconnect(displayLaunchError)
+            session.quitStarting.disconnect(quitStarting)
+            session.sessionFinished.disconnect(sessionFinished)
+            session.sessionRestartRequested.disconnect(restartRequested)
+            session.hostReady.disconnect(hostReady)
+            session.readyForDeletion.disconnect(sessionReadyForDeletion)
+        }
     }
 
     StackView.onActivated: {

@@ -78,6 +78,10 @@ CenteredGridView {
     function createModel()
     {
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', parent, '')
+        if (!model) {
+            console.error("Failed to create ComputerModel")
+            return null
+        }
         model.initialize(ComputerManager)
         model.pairingCompleted.connect(pairingComplete)
         model.connectionTestCompleted.connect(testConnectionDialog.connectionTestComplete)
@@ -195,7 +199,15 @@ CenteredGridView {
                     text: qsTr("View All Apps")
                     onTriggered: {
                         var component = Qt.createComponent("AppView.qml")
+                        if (component.status !== Component.Ready) {
+                            console.error("Failed to create AppView component:", component.errorString())
+                            return
+                        }
                         var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true})
+                        if (!appView) {
+                            console.error("Failed to create AppView object")
+                            return
+                        }
                         stackView.push(appView)
                     }
                     visible: model.online && model.paired
@@ -249,7 +261,15 @@ CenteredGridView {
                 else if (model.paired) {
                     // go to game view
                     var component = Qt.createComponent("AppView.qml")
+                    if (component.status !== Component.Ready) {
+                        console.error("Failed to create AppView component:", component.errorString())
+                        return
+                    }
                     var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name})
+                    if (!appView) {
+                        console.error("Failed to create AppView object")
+                        return
+                    }
                     stackView.push(appView)
                 }
                 else {
