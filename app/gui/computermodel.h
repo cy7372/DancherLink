@@ -1,5 +1,6 @@
 #include "backend/computermanager.h"
 #include "streaming/session.h"
+#include "utils/latencymeasurer.h"
 
 #include <QAbstractListModel>
 #include <QRunnable>
@@ -7,6 +8,9 @@
 class ComputerModel : public QAbstractListModel
 {
     Q_OBJECT
+
+    Q_PROPERTY(int networkLatencyMs READ networkLatencyMs NOTIFY networkLatencyChanged)
+    Q_PROPERTY(QString networkQualityString READ networkQualityString NOTIFY networkLatencyChanged)
 
     enum Roles
     {
@@ -22,6 +26,7 @@ class ComputerModel : public QAbstractListModel
 
 public:
     explicit ComputerModel(QObject* object = nullptr);
+    ~ComputerModel();
 
     // Must be called before any QAbstractListModel functions
     Q_INVOKABLE void initialize(ComputerManager* computerManager);
@@ -48,18 +53,29 @@ public:
 
     Q_INVOKABLE Session* createSessionForCurrentGame(int computerIndex);
 
+    // Network latency measurement for selected computer
+    Q_INVOKABLE void startLatencyMeasurement(int computerIndex);
+    Q_INVOKABLE void stopLatencyMeasurement();
+
+    int networkLatencyMs() const;
+    QString networkQualityString() const;
+
 signals:
     void pairingCompleted(QVariant error);
     void connectionTestCompleted(int result, QString blockedPorts);
+    void networkLatencyChanged(int rttMs);
 
 private slots:
     void handleComputerStateChanged(NvComputer* computer);
 
     void handlePairingCompleted(NvComputer* computer, QString error);
 
+    void handleLatencyChanged(int rttMs);
+
 private:
     QVector<NvComputer*> m_Computers;
     ComputerManager* m_ComputerManager;
+    LatencyMeasurer* m_LatencyMeasurer;
 };
 
 class DeferredTestConnectionTask : public QObject, public QRunnable

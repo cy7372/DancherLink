@@ -16,7 +16,7 @@ import SdlGamepadKeyNavigation 1.0
 // Main Application Window
 // =============================================================================
 // Structure:
-//   - Properties & State (pollingActive, currentAppModel, etc.)
+//   - Properties & State (pollingActive, currentNetworkModel, etc.)
 //   - Early Initialization (doEarlyInit, Component.onCompleted)
 //   - Timers (inactivityTimer, checkUpdateTimer)
 //   - Event Handlers (onVisibleChanged, onActiveChanged)
@@ -32,9 +32,14 @@ ApplicationWindow {
     // a retranslate() because AppView breaks for some reason.
     property bool clearOnBack: false
 
-    // Cached reference to current AppModel to avoid repeated property lookups
-    // This reduces QML binding evaluation overhead in the network indicator
-    property var currentAppModel: stackView.currentItem && stackView.currentItem.appModel ? stackView.currentItem.appModel : null
+    // Cached reference to current model for network indicator
+    // Works with both AppModel (app list) and ComputerModel (PC list)
+    property var currentNetworkModel: {
+        if (!stackView.currentItem) return null
+        if (stackView.currentItem.appModel) return stackView.currentItem.appModel
+        if (stackView.currentItem.computerModel) return stackView.currentItem.computerModel
+        return null
+    }
 
     id: window
     // Set minimum window size to prevent UI elements from overlapping or being cut off
@@ -482,14 +487,14 @@ ApplicationWindow {
 
         Rectangle {
             id: networkIndicator
-            visible: currentAppModel != null
+            visible: currentNetworkModel != null
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             height: 24
             width: networkIndicatorRow.implicitWidth + 16
             radius: 4
             color: {
-                var ms = currentAppModel ? currentAppModel.networkLatencyMs : -2
+                var ms = currentNetworkModel ? currentNetworkModel.networkLatencyMs : -2
                 if (ms < 0)   return "#555555"      // Unknown (gray)
                 if (ms < 20)  return "#2E7D32"      // Good (green)
                 if (ms < 50)  return "#F9A825"      // Fair (yellow)
@@ -504,8 +509,8 @@ ApplicationWindow {
                 Label {
                     id: latencyLabel
                     text: {
-                        if (!currentAppModel) return ""
-                        var ms = currentAppModel.networkLatencyMs
+                        if (!currentNetworkModel) return ""
+                        var ms = currentNetworkModel.networkLatencyMs
                         if (ms === -1) return qsTr("Measuring...")
                         if (ms < 0)   return qsTr("N/A")
                         return ms + " ms"
@@ -518,10 +523,10 @@ ApplicationWindow {
 
                 Label {
                     id: qualityLabel
-                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0
+                    visible: currentNetworkModel && currentNetworkModel.networkLatencyMs >= 0
                     text: {
-                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                        return currentAppModel.networkQualityString
+                        if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0) return ""
+                        return currentNetworkModel.networkQualityString
                     }
                     color: "white"
                     font.pointSize: 9
@@ -530,10 +535,10 @@ ApplicationWindow {
 
                 Label {
                     id: adaptiveLabel
-                    visible: currentAppModel && currentAppModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
+                    visible: currentNetworkModel && currentNetworkModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
                     text: {
-                        if (!currentAppModel || currentAppModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
-                        var ms = currentAppModel.networkLatencyMs
+                        if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
+                        var ms = currentNetworkModel.networkLatencyMs
                         if (ms < 0) return ""
 
                         // Calculate FPS reduction based on RTT thresholds
@@ -581,9 +586,9 @@ ApplicationWindow {
             ToolTip.timeout: 5000
             ToolTip.visible: networkIndicatorMouseArea.containsMouse
             ToolTip.text: {
-                if (!currentAppModel || currentAppModel.networkLatencyMs < 0) return ""
-                var ms = currentAppModel.networkLatencyMs
-                var quality = currentAppModel.networkQualityString
+                if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0) return ""
+                var ms = currentNetworkModel.networkLatencyMs
+                var quality = currentNetworkModel.networkQualityString
                 var fps = StreamingPreferences.fps
                 var bitrate = StreamingPreferences.bitrateKbps / 1000
 

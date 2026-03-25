@@ -60,6 +60,7 @@ set(APP_SOURCES
     gui/sdlgamepadkeynavigation.cpp
     streaming/video/overlaymanager.cpp
     backend/systemproperties.cpp
+    utils/latencymeasurer.cpp
     wm.cpp
     
     # Resources

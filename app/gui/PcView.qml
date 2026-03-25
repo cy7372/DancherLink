@@ -36,6 +36,11 @@ CenteredGridView {
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
 
+        // Start latency measurement for selected computer
+        if (pcGrid.currentIndex >= 0) {
+            computerModel.startLatencyMeasurement(pcGrid.currentIndex)
+        }
+
         // Highlight the first item if a gamepad is connected
         if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
             currentIndex = 0
@@ -44,6 +49,15 @@ CenteredGridView {
 
     StackView.onDeactivating: {
         ComputerManager.computerAddCompleted.disconnect(addComplete)
+        // Stop latency measurement when leaving the page
+        computerModel.stopLatencyMeasurement()
+    }
+
+    onCurrentIndexChanged: {
+        // Start measuring latency for the newly selected computer
+        if (currentIndex >= 0) {
+            computerModel.startLatencyMeasurement(currentIndex)
+        }
     }
 
     function pairingComplete(error)
@@ -134,6 +148,50 @@ CenteredGridView {
             sourceSize {
                 width: 200
                 height: 200
+            }
+        }
+
+        // Network latency indicator - shows for currently selected PC
+        Rectangle {
+            id: latencyBadge
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 8
+            width: latencyLabel.implicitWidth + 12
+            height: 24
+            radius: 4
+            color: {
+                if (!model.online) return "#555555"
+                var ms = computerModel.networkLatencyMs
+                if (ms < 0) return "#555555"      // Unknown (gray)
+                if (ms < 20) return "#2E7D32"      // Good (green)
+                if (ms < 50) return "#F9A825"      // Fair (yellow)
+                return "#C62828"                    // Poor (red)
+            }
+            opacity: 0.9
+            visible: index === pcGrid.currentIndex && model.online
+
+            Label {
+                id: latencyLabel
+                anchors.centerIn: parent
+                text: {
+                    var ms = computerModel.networkLatencyMs
+                    if (ms < 0) return "--"
+                    return ms + " ms"
+                }
+                color: "white"
+                font.pointSize: 10
+                font.bold: true
+            }
+
+            ToolTip.visible: latencyMouseArea.containsMouse
+            ToolTip.text: computerModel.networkQualityString
+            ToolTip.delay: 500
+
+            MouseArea {
+                id: latencyMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
             }
         }
 

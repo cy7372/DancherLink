@@ -3,7 +3,17 @@
 #include <QThreadPool>
 
 ComputerModel::ComputerModel(QObject* object)
-    : QAbstractListModel(object) {}
+    : QAbstractListModel(object)
+    , m_LatencyMeasurer(new LatencyMeasurer(this))
+{
+    connect(m_LatencyMeasurer, &LatencyMeasurer::latencyChanged,
+            this, &ComputerModel::handleLatencyChanged);
+}
+
+ComputerModel::~ComputerModel()
+{
+    stopLatencyMeasurement();
+}
 
 void ComputerModel::initialize(ComputerManager* computerManager)
 {
@@ -203,17 +213,6 @@ void ComputerModel::pairComputer(int computerIndex, QString pin)
 
 void ComputerModel::cancelPairing()
 {
-    // The ComputerManager handles the cancellation of any active pairing task
-    // simply by being asked to stop pairing if it was in progress,
-    // or we can implement a specific cancel method in ComputerManager if needed.
-    // For now, let's assume ComputerManager has a way to cancel or we just ignore the result.
-    // Actually, ComputerManager doesn't expose a cancelPairing().
-    // We should add it to ComputerManager or at least ensure no crash happens.
-    // Given the context of the FIXME, it likely meant "we should stop the network request".
-    
-    // Looking at ComputerManager (which I should read next if I haven't), 
-    // usually these are async tasks.
-    // I will add a cancelPendingPairing() to ComputerManager to complete the chain.
     m_ComputerManager->cancelPendingPairing();
 }
 
@@ -239,4 +238,48 @@ void ComputerModel::handleComputerStateChanged(NvComputer* computer)
     }
 }
 
+// Network latency measurement methods
+void ComputerModel::startLatencyMeasurement(int computerIndex)
+{
+    if (computerIndex < 0 || computerIndex >= m_Computers.count()) {
+        stopLatencyMeasurement();
+        return;
+    }
 
+    NvComputer* computer = m_Computers[computerIndex];
+    if (!computer) {
+        stopLatencyMeasurement();
+        return;
+    }
+
+    // Get active address and port
+    QString address = computer->activeAddress.address();
+    quint16 port = computer->activeHttpsPort;
+
+    if (address.isEmpty() || port == 0) {
+        stopLatencyMeasurement();
+        return;
+    }
+
+    m_LatencyMeasurer->start(address, port);
+}
+
+void ComputerModel::stopLatencyMeasurement()
+{
+    m_LatencyMeasurer->stop();
+}
+
+int ComputerModel::networkLatencyMs() const
+{
+    return m_LatencyMeasurer->latencyMs();
+}
+
+QString ComputerModel::networkQualityString() const
+{
+    return m_LatencyMeasurer->qualityString();
+}
+
+void ComputerModel::handleLatencyChanged(int rttMs)
+{
+    emit networkLatencyChanged(rttMs);
+}
