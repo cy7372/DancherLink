@@ -227,11 +227,21 @@ CenteredGridView {
             }
 
             var component = Qt.createComponent("StreamSegue.qml")
+            if (component.status !== Component.Ready) {
+                console.error("Failed to create StreamSegue component:", component.errorString())
+                return
+            }
+
             var segue = component.createObject(stackView, {
                                                    "appName": model.name,
                                                    "session": appModel.createSessionForApp(model.index),
                                                    "isResume": runningId === model.appid
                                                })
+
+            if (!segue) {
+                console.error("component.createObject returned null")
+                return
+            }
 
             // When a restart is requested (e.g. resolution change), we destroy the old session
             // and create a brand new one. This avoids complex state reset logic in C++ and
