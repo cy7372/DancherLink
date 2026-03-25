@@ -92,6 +92,10 @@ StackView.onDeactivating: {
 }
 ```
 
+7. `CliQuitStreamSegue.qml`
+   - 缺少 `StackView.onDeactivating` 信号断开
+   - 导致 launcher 信号泄漏
+
 ## 修复汇总
 
 ### StreamSegue.qml
@@ -197,7 +201,21 @@ stackView.replace(segue)
 
 ## 预防指南
 
-### 代码审查检查清单
+#### CliQuitStreamSegue.qml
+
+**问题**:
+- 缺少 `StackView.onDeactivating` 信号断开
+
+**修复**:
+```qml
+StackView.onDeactivating: {
+    launcher.searchingComputer.disconnect(onSearchingComputer)
+    launcher.quittingApp.disconnect(onQuittingApp)
+    launcher.failed.disconnect(onFailure)
+}
+```
+
+## 代码审查检查清单
 
 1. **信号连接**
    - [ ] 每个 `connect()` 都有对应的 `disconnect()`

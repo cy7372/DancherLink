@@ -28,6 +28,13 @@ Item {
         }
     }
 
+    StackView.onDeactivating: {
+        // Disconnect signals to prevent memory leaks and duplicate triggers
+        launcher.searchingComputer.disconnect(onSearchingComputer)
+        launcher.quittingApp.disconnect(onQuittingApp)
+        launcher.failed.disconnect(onFailure)
+    }
+
     Row {
         anchors.centerIn: parent
         spacing: 5

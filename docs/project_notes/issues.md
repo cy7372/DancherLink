@@ -53,6 +53,15 @@
 
 ---
 
+### 2026-03-26 - 补充修复 CliQuitStreamSegue.qml
+- **状态**: 已完成
+- **描述**:
+  - 问题：`CliQuitStreamSegue.qml` 缺少 `StackView.onDeactivating` 信号断开
+  - 修复：添加信号断开处理器，防止 launcher 信号泄漏
+- **涉及文件**:
+  - `app/gui/CliQuitStreamSegue.qml`
+- **备注**: 完整的关键路径加固完成，共修复 7 个文件
+
 ### 2026-03-25 - 修复点击串流按钮无响应问题
 - **状态**: 已完成
 - **描述**:
