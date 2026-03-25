@@ -206,9 +206,8 @@ Item {
         // Hide the toolbar before we start loading
         toolBar.visible = false
 
-        // Note: Splash screen uses previous window state
-        // If you want fullscreen splash, uncomment the next line:
-        // window.showFullScreen()
+        // Show the splash screen in fullscreen mode
+        window.showFullScreen()
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)
