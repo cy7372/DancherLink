@@ -27,6 +27,11 @@ CenteredGridView {
         // We do this here instead of onActivated to avoid losing the user's
         // selection when backing out of a different page of the app.
         currentIndex = -1
+        console.log("[DEBUG] PcView completed, computerModel:", computerModel)
+    }
+
+    onComputerModelChanged: {
+        console.log("[DEBUG] computerModel changed:", computerModel)
     }
 
     // Note: Any initialization done here that is critical for streaming must
@@ -93,12 +98,13 @@ CenteredGridView {
     {
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', parent, '')
         if (!model) {
-            console.error("Failed to create ComputerModel")
+            console.error("[DEBUG] Failed to create ComputerModel")
             return null
         }
         model.initialize(ComputerManager)
         model.pairingCompleted.connect(pairingComplete)
         model.connectionTestCompleted.connect(testConnectionDialog.connectionTestComplete)
+        console.log("[DEBUG] ComputerModel created successfully:", model)
         return model
     }
 

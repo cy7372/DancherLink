@@ -34,11 +34,51 @@ ApplicationWindow {
 
     // Cached reference to current model for network indicator
     // Works with both AppModel (app list) and ComputerModel (PC list)
-    property var currentNetworkModel: {
-        if (!stackView.currentItem) return null
-        if (stackView.currentItem.appModel) return stackView.currentItem.appModel
-        if (stackView.currentItem.computerModel) return stackView.currentItem.computerModel
-        return null
+    property var currentNetworkModel: null
+
+    // Update the current network model based on StackView's current item
+    function updateCurrentNetworkModel() {
+        var item = stackView.currentItem
+        var newModel = null
+        if (item) {
+            if (item.appModel !== undefined && item.appModel !== null) {
+                newModel = item.appModel
+            } else if (item.computerModel !== undefined && item.computerModel !== null) {
+                newModel = item.computerModel
+            }
+        }
+        if (currentNetworkModel !== newModel) {
+            console.log("[DEBUG] updateCurrentNetworkModel: old=", currentNetworkModel, "new=", newModel,
+                        "item=", item, "has appModel=", item ? (item.appModel !== undefined) : false,
+                        "has computerModel=", item ? (item.computerModel !== undefined) : false)
+            currentNetworkModel = newModel
+        }
+    }
+
+    // Watch for StackView current item changes and update the model reference
+    Connections {
+        target: stackView
+        function onCurrentItemChanged() {
+            console.log("[DEBUG] StackView.onCurrentItemChanged:", stackView.currentItem)
+            updateCurrentNetworkModel()
+
+            // Also connect to the new item's model property changes
+            if (stackView.currentItem) {
+                var item = stackView.currentItem
+                // Force re-evaluation when item's model properties change
+                if (item.appModel !== undefined) {
+                    item.appModelChanged.connect(updateCurrentNetworkModel)
+                }
+                if (item.computerModel !== undefined) {
+                    item.computerModelChanged.connect(updateCurrentNetworkModel)
+                }
+            }
+        }
+    }
+
+    // Debug binding
+    onCurrentNetworkModelChanged: {
+        console.log("[DEBUG] currentNetworkModel changed:", currentNetworkModel)
     }
 
     id: window
@@ -169,6 +209,12 @@ ApplicationWindow {
             // the initial view and pushing it to the StackView
             doEarlyInit()
             push(initialView)
+
+            // Update network model reference after initial view is loaded
+            // Use a small delay to ensure the item is fully initialized
+            Qt.callLater(function() {
+                updateCurrentNetworkModel()
+            })
         }
 
         onCurrentItemChanged: {
