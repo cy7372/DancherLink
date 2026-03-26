@@ -40,39 +40,86 @@ ApplicationWindow {
     function updateCurrentNetworkModel() {
         var item = stackView.currentItem
         var newModel = null
+
+        // Log the current item for debugging
+        console.log("[DEBUG] === updateCurrentNetworkModel called ===")
+        console.log("[DEBUG] stackView.currentItem:", item)
+        console.log("[DEBUG] item type:", item ? item.toString() : "null")
+        console.log("[DEBUG] item.objectName:", item ? item.objectName : "null")
+
         if (item) {
-            if (item.appModel !== undefined && item.appModel !== null) {
-                newModel = item.appModel
-            } else if (item.computerModel !== undefined && item.computerModel !== null) {
-                newModel = item.computerModel
+            // Check for appModel (AppView)
+            console.log("[DEBUG] Checking item.appModel...")
+            console.log("[DEBUG]   item.appModel !== undefined:", item.appModel !== undefined)
+            if (item.appModel !== undefined) {
+                console.log("[DEBUG]   item.appModel value:", item.appModel)
+                if (item.appModel !== null) {
+                    newModel = item.appModel
+                    console.log("[DEBUG]   Using appModel as newModel")
+                }
+            }
+
+            // Check for computerModel (PcView) - only if we haven't found appModel
+            console.log("[DEBUG] Checking item.computerModel...")
+            console.log("[DEBUG]   newModel is null:", newModel === null)
+            console.log("[DEBUG]   item.computerModel !== undefined:", item.computerModel !== undefined)
+            if (!newModel && item.computerModel !== undefined) {
+                console.log("[DEBUG]   item.computerModel value:", item.computerModel)
+                if (item.computerModel !== null) {
+                    newModel = item.computerModel
+                    console.log("[DEBUG]   Using computerModel as newModel")
+                } else {
+                    console.log("[DEBUG]   computerModel is null - model not ready yet!")
+                }
+            }
+
+            // Connect to PcView's networkModelReady signal if not already connected
+            console.log("[DEBUG] Checking networkModelReady signal...")
+            console.log("[DEBUG]   item.networkModelReady !== undefined:", item.networkModelReady !== undefined)
+            console.log("[DEBUG]   item.networkModelReadyConnected:", item.networkModelReadyConnected)
+            if (item.networkModelReady !== undefined && !item.networkModelReadyConnected) {
+                console.log("[DEBUG] Connecting to PcView.networkModelReady signal")
+                item.networkModelReady.connect(function(model) {
+                    console.log("[DEBUG] >>> PcView.networkModelReady signal received, model:", model)
+                    if (currentNetworkModel !== model) {
+                        console.log("[DEBUG] <<< Updating currentNetworkModel via signal from", currentNetworkModel, "to", model)
+                        currentNetworkModel = model
+                    } else {
+                        console.log("[DEBUG] <<< Signal received but model already set")
+                    }
+                })
+                item.networkModelReadyConnected = true
+                console.log("[DEBUG] Signal connected successfully")
+            } else if (item.networkModelReadyConnected) {
+                console.log("[DEBUG] Signal already connected, skipping")
             }
         }
+
+        console.log("[DEBUG] Final newModel value:", newModel)
+        console.log("[DEBUG] currentNetworkModel before update:", currentNetworkModel)
         if (currentNetworkModel !== newModel) {
-            console.log("[DEBUG] updateCurrentNetworkModel: old=", currentNetworkModel, "new=", newModel,
-                        "item=", item, "has appModel=", item ? (item.appModel !== undefined) : false,
-                        "has computerModel=", item ? (item.computerModel !== undefined) : false)
+            console.log("[DEBUG] Updating currentNetworkModel from", currentNetworkModel, "to", newModel)
             currentNetworkModel = newModel
+        } else {
+            console.log("[DEBUG] No change needed - currentNetworkModel already equals newModel")
         }
+        console.log("[DEBUG] === updateCurrentNetworkModel end ===")
+    }
+
+    // This function is kept for backward compatibility but logic moved into updateCurrentNetworkModel
+    function connectPcViewSignals(item) {
+        // No-op: logic moved to updateCurrentNetworkModel
     }
 
     // Watch for StackView current item changes and update the model reference
     Connections {
         target: stackView
         function onCurrentItemChanged() {
-            console.log("[DEBUG] StackView.onCurrentItemChanged:", stackView.currentItem)
+            console.log("[DEBUG] Connections.onCurrentItemChanged triggered")
+            console.log("[DEBUG]   stackView.currentItem:", stackView.currentItem)
+            console.log("[DEBUG]   Calling updateCurrentNetworkModel()...")
             updateCurrentNetworkModel()
-
-            // Also connect to the new item's model property changes
-            if (stackView.currentItem) {
-                var item = stackView.currentItem
-                // Force re-evaluation when item's model properties change
-                if (item.appModel !== undefined) {
-                    item.appModelChanged.connect(updateCurrentNetworkModel)
-                }
-                if (item.computerModel !== undefined) {
-                    item.computerModelChanged.connect(updateCurrentNetworkModel)
-                }
-            }
+            console.log("[DEBUG]   updateCurrentNetworkModel() returned")
         }
     }
 
@@ -205,23 +252,32 @@ ApplicationWindow {
         focus: true
 
         Component.onCompleted: {
+            console.log("[DEBUG] StackView.onCompleted - starting")
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
             doEarlyInit()
+            console.log("[DEBUG] StackView.onCompleted - pushing initialView")
             push(initialView)
+            console.log("[DEBUG] StackView.onCompleted - initialView pushed, currentItem:", currentItem)
 
             // Update network model reference after initial view is loaded
             // Use a small delay to ensure the item is fully initialized
             Qt.callLater(function() {
+                console.log("[DEBUG] Qt.callLater callback - calling updateCurrentNetworkModel")
                 updateCurrentNetworkModel()
             })
         }
 
         onCurrentItemChanged: {
+            console.log("[DEBUG] StackView.onCurrentItemChanged fired")
+            console.log("[DEBUG]   currentItem:", currentItem)
+            console.log("[DEBUG]   currentItem.objectName:", currentItem ? currentItem.objectName : "null")
+            console.log("[DEBUG]   currentItem.computerModel:", currentItem && currentItem.computerModel !== undefined ? currentItem.computerModel : "undefined")
             // Ensure focus travels to the next view when going back
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
+            // Note: updateCurrentNetworkModel is called via Connections below
         }
 
         Keys.onEscapePressed: {

@@ -12,7 +12,13 @@ import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
-    property ComputerModel computerModel : createModel()
+    // Property to track if signal connection is established
+    property bool networkModelReadyConnected: false
+
+    property ComputerModel computerModel : null
+
+    // Signal to notify main window when network model is ready
+    signal networkModelReady(var model)
 
     id: pcGrid
     focus: true
@@ -27,7 +33,21 @@ CenteredGridView {
         // We do this here instead of onActivated to avoid losing the user's
         // selection when backing out of a different page of the app.
         currentIndex = -1
-        console.log("[DEBUG] PcView completed, computerModel:", computerModel)
+        console.log("[DEBUG] PcView.onCompleted - starting")
+
+        // Create the computer model
+        console.log("[DEBUG] PcView.onCompleted - about to create computerModel")
+        computerModel = createModel()
+        console.log("[DEBUG] PcView.onCompleted - computerModel created:", computerModel)
+
+        // Emit signal after a short delay to ensure main.qml has connected
+        Qt.callLater(function() {
+            if (computerModel) {
+                console.log("[DEBUG] PcView emitting networkModelReady via Qt.callLater")
+                networkModelReady(computerModel)
+                console.log("[DEBUG] PcView networkModelReady signal emitted via Qt.callLater")
+            }
+        })
     }
 
     onComputerModelChanged: {
@@ -96,15 +116,19 @@ CenteredGridView {
 
     function createModel()
     {
+        console.log("[DEBUG] createModel() called")
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', parent, '')
         if (!model) {
             console.error("[DEBUG] Failed to create ComputerModel")
             return null
         }
+        console.log("[DEBUG] ComputerModel object created, initializing...")
         model.initialize(ComputerManager)
         model.pairingCompleted.connect(pairingComplete)
         model.connectionTestCompleted.connect(testConnectionDialog.connectionTestComplete)
-        console.log("[DEBUG] ComputerModel created successfully:", model)
+        console.log("[DEBUG] ComputerModel initialized successfully:", model)
+        // Signal will be emitted via Qt.callLater in Component.onCompleted
+        // to ensure main.qml has time to connect to the signal
         return model
     }
 

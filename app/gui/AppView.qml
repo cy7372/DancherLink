@@ -426,6 +426,70 @@ CenteredGridView {
         onAccepted: quitApp()
     }
 
+    // Network latency indicator footer - similar to PC list page
+    footer: Item {
+        visible: networkLatencyBadge.visible
+        height: 32
+
+        Rectangle {
+            id: networkLatencyBadge
+            visible: appModel.networkLatencyMs >= 0 && activated
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: latencyRow.implicitWidth + 20
+            height: 24
+            radius: 4
+            color: {
+                var ms = appModel.networkLatencyMs
+                if (ms < 0)   return "#555555"      // Unknown (gray)
+                if (ms < 20)  return "#2E7D32"      // Good (green)
+                if (ms < 50)  return "#F9A825"      // Fair (yellow)
+                return "#C62828"                    // Poor (red)
+            }
+            opacity: 0.9
+
+            Row {
+                id: latencyRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Label {
+                    text: qsTr("Network:")
+                    color: "white"
+                    font.pointSize: 9
+                    font.bold: true
+                }
+
+                Label {
+                    text: appModel.networkLatencyMs + " ms"
+                    color: "white"
+                    font.pointSize: 9
+                }
+
+                Label {
+                    text: "|"
+                    color: "white"
+                    font.pointSize: 9
+                }
+
+                Label {
+                    text: appModel.networkQualityString
+                    color: "white"
+                    font.pointSize: 9
+                }
+            }
+
+            ToolTip.visible: latencyMouseArea.containsMouse
+            ToolTip.text: qsTr("Network latency to the host PC")
+            ToolTip.delay: 500
+
+            MouseArea {
+                id: latencyMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+            }
+        }
+    }
+
     ScrollBar.vertical: ScrollBar {}
 }
 
