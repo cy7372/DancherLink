@@ -11,10 +11,16 @@ import StreamingPreferences 1.0
 
 CenteredGridView {
     property int computerIndex
-    property AppModel appModel : createModel()
+    property AppModel appModel : null
     property bool activated
     property bool showHiddenGames
     property bool showGames
+
+    // Property to track if signal connection is established
+    property bool networkModelReadyConnected: false
+
+    // Signal to notify main window when network model is ready
+    signal networkModelReady(var model)
 
     id: appGrid
     focus: true
@@ -34,6 +40,25 @@ CenteredGridView {
         // We do this here instead of onActivated to avoid losing the user's
         // selection when backing out of a different page of the app.
         currentIndex = -1
+        console.log("[DEBUG] AppView.onCompleted - starting")
+
+        // Create the app model
+        console.log("[DEBUG] AppView.onCompleted - about to create appModel")
+        appModel = createModel()
+        console.log("[DEBUG] AppView.onCompleted - appModel created:", appModel)
+
+        // Emit signal after a short delay to ensure main.qml has connected
+        Qt.callLater(function() {
+            if (appModel) {
+                console.log("[DEBUG] AppView emitting networkModelReady via Qt.callLater")
+                networkModelReady(appModel)
+                console.log("[DEBUG] AppView networkModelReady signal emitted via Qt.callLater")
+            }
+        })
+    }
+
+    onAppModelChanged: {
+        console.log("[DEBUG] appModel changed:", appModel)
     }
 
     StackView.onActivated: {
@@ -47,7 +72,7 @@ CenteredGridView {
 
         if (!showGames && !showHiddenGames) {
             // Check if there's a direct launch app
-            var directLaunchAppIndex = model.getDirectLaunchAppIndex();
+            var directLaunchAppIndex = appModel.getDirectLaunchAppIndex();
             if (directLaunchAppIndex >= 0) {
                 // Start the direct launch app if nothing else is running
                 currentIndex = directLaunchAppIndex

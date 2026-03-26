@@ -73,14 +73,14 @@ ApplicationWindow {
                 }
             }
 
-            // Connect to PcView's networkModelReady signal if not already connected
-            console.log("[DEBUG] Checking networkModelReady signal...")
+            // Connect to AppView's networkModelReady signal if not already connected
+            console.log("[DEBUG] Checking AppView networkModelReady signal...")
             console.log("[DEBUG]   item.networkModelReady !== undefined:", item.networkModelReady !== undefined)
             console.log("[DEBUG]   item.networkModelReadyConnected:", item.networkModelReadyConnected)
             if (item.networkModelReady !== undefined && !item.networkModelReadyConnected) {
-                console.log("[DEBUG] Connecting to PcView.networkModelReady signal")
+                console.log("[DEBUG] Connecting to networkModelReady signal")
                 item.networkModelReady.connect(function(model) {
-                    console.log("[DEBUG] >>> PcView.networkModelReady signal received, model:", model)
+                    console.log("[DEBUG] >>> networkModelReady signal received, model:", model)
                     if (currentNetworkModel !== model) {
                         console.log("[DEBUG] <<< Updating currentNetworkModel via signal from", currentNetworkModel, "to", model)
                         currentNetworkModel = model
