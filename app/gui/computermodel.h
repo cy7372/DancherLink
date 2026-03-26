@@ -76,6 +76,10 @@ private:
     QVector<NvComputer*> m_Computers;
     ComputerManager* m_ComputerManager;
     LatencyMeasurer* m_LatencyMeasurer;
+    NvComputer* m_MeasuringComputer = nullptr;  // Currently selected computer for latency display
+
+    // Helper to safely check if a computer pointer is still valid
+    bool isComputerValid(NvComputer* computer) const;
 };
 
 class DeferredTestConnectionTask : public QObject, public QRunnable

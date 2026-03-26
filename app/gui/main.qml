@@ -25,6 +25,8 @@ import SdlGamepadKeyNavigation 1.0
 // =============================================================================
 
 ApplicationWindow {
+    id: root
+
     property bool pollingActive: false
 
     // Set by SettingsView to force the back operation to pop all
@@ -34,101 +36,25 @@ ApplicationWindow {
 
     // Cached reference to current model for network indicator
     // Works with both AppModel (app list) and ComputerModel (PC list)
-    property var currentNetworkModel: null
-
-    // Update the current network model based on StackView's current item
-    function updateCurrentNetworkModel() {
+    // Uses property binding for automatic updates - no signals needed
+    property var currentNetworkModel: {
         var item = stackView.currentItem
-        var newModel = null
-
-        // Log the current item for debugging
-        console.log("[DEBUG] === updateCurrentNetworkModel called ===")
-        console.log("[DEBUG] stackView.currentItem:", item)
-        console.log("[DEBUG] item type:", item ? item.toString() : "null")
-        console.log("[DEBUG] item.objectName:", item ? item.objectName : "null")
-
-        if (item) {
-            // Check for appModel (AppView)
-            console.log("[DEBUG] Checking item.appModel...")
-            console.log("[DEBUG]   item.appModel !== undefined:", item.appModel !== undefined)
-            if (item.appModel !== undefined) {
-                console.log("[DEBUG]   item.appModel value:", item.appModel)
-                if (item.appModel !== null) {
-                    newModel = item.appModel
-                    console.log("[DEBUG]   Using appModel as newModel")
-                }
-            }
-
-            // Check for computerModel (PcView) - only if we haven't found appModel
-            console.log("[DEBUG] Checking item.computerModel...")
-            console.log("[DEBUG]   newModel is null:", newModel === null)
-            console.log("[DEBUG]   item.computerModel !== undefined:", item.computerModel !== undefined)
-            if (!newModel && item.computerModel !== undefined) {
-                console.log("[DEBUG]   item.computerModel value:", item.computerModel)
-                if (item.computerModel !== null) {
-                    newModel = item.computerModel
-                    console.log("[DEBUG]   Using computerModel as newModel")
-                } else {
-                    console.log("[DEBUG]   computerModel is null - model not ready yet!")
-                }
-            }
-
-            // Connect to AppView's networkModelReady signal if not already connected
-            console.log("[DEBUG] Checking AppView networkModelReady signal...")
-            console.log("[DEBUG]   item.networkModelReady !== undefined:", item.networkModelReady !== undefined)
-            console.log("[DEBUG]   item.networkModelReadyConnected:", item.networkModelReadyConnected)
-            if (item.networkModelReady !== undefined && !item.networkModelReadyConnected) {
-                console.log("[DEBUG] Connecting to networkModelReady signal")
-                item.networkModelReady.connect(function(model) {
-                    console.log("[DEBUG] >>> networkModelReady signal received, model:", model)
-                    if (currentNetworkModel !== model) {
-                        console.log("[DEBUG] <<< Updating currentNetworkModel via signal from", currentNetworkModel, "to", model)
-                        currentNetworkModel = model
-                    } else {
-                        console.log("[DEBUG] <<< Signal received but model already set")
-                    }
-                })
-                item.networkModelReadyConnected = true
-                console.log("[DEBUG] Signal connected successfully")
-            } else if (item.networkModelReadyConnected) {
-                console.log("[DEBUG] Signal already connected, skipping")
+        if (!item) return null
+        // Check if item is still valid (not being destroyed)
+        if (item.appModel !== undefined && item.appModel !== null) {
+            // Verify the model's computer is still valid
+            if (item.appModel.networkLatencyMs !== undefined) {
+                return item.appModel
             }
         }
-
-        console.log("[DEBUG] Final newModel value:", newModel)
-        console.log("[DEBUG] currentNetworkModel before update:", currentNetworkModel)
-        if (currentNetworkModel !== newModel) {
-            console.log("[DEBUG] Updating currentNetworkModel from", currentNetworkModel, "to", newModel)
-            currentNetworkModel = newModel
-        } else {
-            console.log("[DEBUG] No change needed - currentNetworkModel already equals newModel")
+        if (item.computerModel !== undefined && item.computerModel !== null) {
+            // Verify the model is still valid
+            if (item.computerModel.networkLatencyMs !== undefined) {
+                return item.computerModel
+            }
         }
-        console.log("[DEBUG] === updateCurrentNetworkModel end ===")
+        return null
     }
-
-    // This function is kept for backward compatibility but logic moved into updateCurrentNetworkModel
-    function connectPcViewSignals(item) {
-        // No-op: logic moved to updateCurrentNetworkModel
-    }
-
-    // Watch for StackView current item changes and update the model reference
-    Connections {
-        target: stackView
-        function onCurrentItemChanged() {
-            console.log("[DEBUG] Connections.onCurrentItemChanged triggered")
-            console.log("[DEBUG]   stackView.currentItem:", stackView.currentItem)
-            console.log("[DEBUG]   Calling updateCurrentNetworkModel()...")
-            updateCurrentNetworkModel()
-            console.log("[DEBUG]   updateCurrentNetworkModel() returned")
-        }
-    }
-
-    // Debug binding
-    onCurrentNetworkModelChanged: {
-        console.log("[DEBUG] currentNetworkModel changed:", currentNetworkModel)
-    }
-
-    id: window
     // Set minimum window size to prevent UI elements from overlapping or being cut off
     minimumWidth: 1024
     minimumHeight: 576
@@ -159,19 +85,19 @@ ApplicationWindow {
         // because that can interfere with the window state on Windows.
         if (SystemProperties.hasDesktopEnvironment) {
             if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_MAXIMIZED) {
-                window.showMaximized()
+                root.showMaximized()
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
-                window.showFullScreen()
+                root.showFullScreen()
             }
             else {
                 // For windowed mode, set initial size before showing
-                window.width = 1280
-                window.height = 600
-                window.show()
+                root.width = 1280
+                root.height = 600
+                root.show()
             }
         } else {
-            window.showFullScreen()
+            root.showFullScreen()
         }
 
         // Display any modal dialogs for configuration warnings
@@ -221,20 +147,6 @@ ApplicationWindow {
         }
     }
 
-    // It would be better to use TextMetrics here, but it always lays out
-    // the text slightly more compactly than real Text does in ToolTip,
-    // causing unexpected line breaks to be inserted
-    Text {
-        id: tooltipTextLayoutHelper
-        visible: false
-        font: ToolTip.toolTip.font
-        text: ToolTip.toolTip.text
-    }
-
-    // This configures the maximum width of the singleton attached QML ToolTip. If left unconstrained,
-    // it will never insert a line break and just extend on forever.
-    ToolTip.toolTip.contentWidth: Math.min(tooltipTextLayoutHelper.width, 400)
-
     function goBack() {
         if (clearOnBack) {
             // Pop all items except the first one
@@ -251,33 +163,32 @@ ApplicationWindow {
         anchors.fill: parent
         focus: true
 
+        // This configures the maximum width of the singleton attached QML ToolTip.
+        // Must be inside an Item-derived component (StackView), not ApplicationWindow.
+        ToolTip.toolTip.contentWidth: Math.min(tooltipTextLayoutHelper.width, 400)
+
         Component.onCompleted: {
-            console.log("[DEBUG] StackView.onCompleted - starting")
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
             doEarlyInit()
-            console.log("[DEBUG] StackView.onCompleted - pushing initialView")
             push(initialView)
-            console.log("[DEBUG] StackView.onCompleted - initialView pushed, currentItem:", currentItem)
-
-            // Update network model reference after initial view is loaded
-            // Use a small delay to ensure the item is fully initialized
-            Qt.callLater(function() {
-                console.log("[DEBUG] Qt.callLater callback - calling updateCurrentNetworkModel")
-                updateCurrentNetworkModel()
-            })
         }
 
         onCurrentItemChanged: {
-            console.log("[DEBUG] StackView.onCurrentItemChanged fired")
-            console.log("[DEBUG]   currentItem:", currentItem)
-            console.log("[DEBUG]   currentItem.objectName:", currentItem ? currentItem.objectName : "null")
-            console.log("[DEBUG]   currentItem.computerModel:", currentItem && currentItem.computerModel !== undefined ? currentItem.computerModel : "undefined")
             // Ensure focus travels to the next view when going back
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
-            // Note: updateCurrentNetworkModel is called via Connections below
+        }
+
+        // It would be better to use TextMetrics here, but it always lays out
+        // the text slightly more compactly than real Text does in ToolTip,
+        // causing unexpected line breaks to be inserted
+        Text {
+            id: tooltipTextLayoutHelper
+            visible: false
+            font: ToolTip.toolTip.font
+            text: ToolTip.toolTip.text
         }
 
         Keys.onEscapePressed: {
@@ -463,7 +374,7 @@ ApplicationWindow {
 
                 Shortcut {
                     id: newPcShortcut
-                    sequence: StandardKey.New
+                    sequences: [StandardKey.New]
                     onActivated: addPcButton.clicked()
                 }
 
@@ -559,7 +470,7 @@ ApplicationWindow {
 
                 Shortcut {
                     id: settingsShortcut
-                    sequence: StandardKey.Preferences
+                    sequences: [StandardKey.Preferences]
                     onActivated: settingsButton.clicked()
                 }
 
@@ -583,13 +494,14 @@ ApplicationWindow {
     }
 
     // Network latency indicator - fixed position at bottom center
+    // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
     footer: Item {
-        visible: networkIndicator.visible
-        height: 32
+        // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
+        visible: currentNetworkModel !== null && !(stackView.currentItem instanceof PcView)
+        height: visible ? 32 : 0
 
         Rectangle {
             id: networkIndicator
-            visible: currentNetworkModel != null
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             height: 24
@@ -625,7 +537,7 @@ ApplicationWindow {
 
                 Label {
                     id: qualityLabel
-                    visible: currentNetworkModel && currentNetworkModel.networkLatencyMs >= 0
+                    visible: currentNetworkModel !== null && currentNetworkModel.networkLatencyMs >= 0
                     text: {
                         if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0) return ""
                         return currentNetworkModel.networkQualityString
@@ -637,7 +549,7 @@ ApplicationWindow {
 
                 Label {
                     id: adaptiveLabel
-                    visible: currentNetworkModel && currentNetworkModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
+                    visible: currentNetworkModel !== null && currentNetworkModel.networkLatencyMs >= 0 && StreamingPreferences.networkAdaptiveBitrate
                     text: {
                         if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0 || !StreamingPreferences.networkAdaptiveBitrate) return ""
                         var ms = currentNetworkModel.networkLatencyMs

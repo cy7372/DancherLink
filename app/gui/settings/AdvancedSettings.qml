@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 import ".."
 
@@ -209,7 +210,7 @@ SettingsGroupBox {
                     StreamingPreferences.enableMdns = checked
 
                     // Restart polling so the mDNS change takes effect
-                    if (window.pollingActive) {
+                    if (Window.window.pollingActive) {
                         ComputerManager.stopPollingAsync()
                         ComputerManager.startPolling()
                     }

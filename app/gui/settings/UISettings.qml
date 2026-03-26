@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
+import QtQuick.Window 2.15
 
 import ".."
 
@@ -70,7 +71,7 @@ SettingsGroupBox {
                     else {
                         // Force the back operation to pop any AppView pages that exist.
                         // The AppView stops working after retranslate() for some reason.
-                        window.clearOnBack = true
+                        Window.window.clearOnBack = true
 
                         // Signal other controls to adjust their text
                         uiSettings.languageChanged()

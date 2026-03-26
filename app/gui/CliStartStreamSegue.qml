@@ -1,5 +1,6 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 import ComputerManager 1.0
 
@@ -23,7 +24,7 @@ Item {
             "appName": appName,
             "session": session,
             "quitAfter": true,
-            "previousVisibility": window.visibility
+            "previousVisibility": Window.window.visibility
         })
         if (!segue) {
             console.error("Failed to create StreamSegue object")
@@ -46,7 +47,12 @@ Item {
 
     StackView.onActivated: {
         if (!launcher.isExecuted()) {
-            toolBar.visible = false
+            // Use Qt.callLater to ensure the component is fully attached to the window
+            Qt.callLater(function() {
+                if (Window.window && Window.window.toolBar) {
+                    Window.window.toolBar.visible = false
+                }
+            })
 
             // Connect signals
             launcher.searchingComputer.connect(onSearchingComputer)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "backend/nvcomputer.h"
+
 #include <QObject>
 #include <QFutureWatcher>
 #include <QTimer>
@@ -12,35 +14,33 @@
  * @brief Shared latency measurement utility for network quality monitoring
  *
  * This class provides continuous latency measurement functionality
- * that can be used by both ComputerModel and AppModel.
+ * that stores results in NvComputer for sharing between models.
  */
 class LatencyMeasurer : public QObject
 {
     Q_OBJECT
-
-    Q_PROPERTY(int latencyMs READ latencyMs NOTIFY latencyChanged)
-    Q_PROPERTY(QString qualityString READ qualityString NOTIFY latencyChanged)
-    Q_PROPERTY(bool isMeasuring READ isMeasuring NOTIFY measuringStateChanged)
 
 public:
     explicit LatencyMeasurer(QObject *parent = nullptr);
     ~LatencyMeasurer();
 
     /**
-     * @brief Start continuous latency measurement to the specified host
-     * @param address Target host address
-     * @param port Target port (usually HTTPS port)
+     * @brief Start continuous latency measurement for the specified computer
+     * @param computer The computer to measure (results stored in this object)
      */
-    Q_INVOKABLE void start(const QString &address, quint16 port);
+    Q_INVOKABLE void start(NvComputer *computer);
 
     /**
      * @brief Stop latency measurement
      */
     Q_INVOKABLE void stop();
 
-    int latencyMs() const { return m_MeasuredRttMedian; }
-    QString qualityString() const;
     bool isMeasuring() const { return m_Timer && m_Timer->isActive(); }
+
+    /**
+     * @brief Get quality string for a latency value
+     */
+    static QString qualityString(int latencyMs);
 
     /**
      * @brief Static helper to measure latency once
@@ -52,18 +52,15 @@ public:
 
 signals:
     void latencyChanged(int rttMs);
-    void measuringStateChanged(bool isMeasuring);
 
 private slots:
     void measureSample();
     void handleSampleFinished();
 
 private:
-    QString m_Address;
-    quint16 m_Port = 0;
+    NvComputer *m_Computer = nullptr;
 
-    // Measurement state
-    int m_MeasuredRttMedian = -1;              // Median of last completed batch
+    // Measurement state (temporary, results go to m_Computer)
     int m_MeasurementBatch = 0;
     QVector<int> m_LatencySamples;
     QFutureWatcher<int> *m_Watcher = nullptr;

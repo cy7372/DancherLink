@@ -31,10 +31,12 @@ Item {
 
     onRestartRequested: {
         // Reset the UI state to show we are working
-        window.show()
+        if (Window.window) {
+            Window.window.show()
 
-        // Always show the splash screen in fullscreen mode
-        window.showFullScreen()
+            // Always show the splash screen in fullscreen mode
+            Window.window.showFullScreen()
+        }
     }
 
     function stageStarting(stage)
@@ -65,7 +67,9 @@ Item {
         // Note: The Qt window is set to WS_EX_TOOLWINDOW style in Session::startConnectionAsync()
         // before this signal is emitted. This prevents Windows from restoring the hidden window
         // when the user presses keys during streaming. The style is restored after streaming ends.
-        window.hide()
+        if (Window.window) {
+            Window.window.hide()
+        }
     }
 
     function displayLaunchError(text)
@@ -92,7 +96,9 @@ Item {
 
         // Show the Qt window again to show quit segue.
         // Use showNormal() to ensure the window is in a known state.
-        window.showNormal()
+        if (Window.window) {
+            Window.window.showNormal()
+        }
     }
 
     function sessionFinished(portTestResult)
@@ -126,13 +132,18 @@ Item {
     }
 
     function restoreWindowState() {
+        if (!Window.window) {
+            console.log("StreamSegue: restoreWindowState() called but Window.window is null")
+            return
+        }
+
         console.log("StreamSegue: restoreWindowState() called, previousVisibility =", previousVisibility,
-                    ", current window.visibility =", window.visibility,
+                    ", current window.visibility =", Window.window.visibility,
                     ", uiDisplayMode =", StreamingPreferences.uiDisplayMode)
 
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
-        if (window.visibility !== Window.Minimized) {
+        if (Window.window.visibility !== Window.Minimized) {
             // Restore window style first (Windows only)
             if (session) {
                 session.restoreWindowStyle()
@@ -158,13 +169,13 @@ Item {
             // This ensures the window state is applied in the correct order
             // and avoids conflicts with Qt's window management after pop().
             if (targetVisibility === Window.Maximized) {
-                window.showMaximized()
+                Window.window.showMaximized()
             } else if (targetVisibility === Window.FullScreen) {
-                window.showFullScreen()
+                Window.window.showFullScreen()
             } else {
-                window.showNormal()
+                Window.window.showNormal()
             }
-            console.log("StreamSegue: Window state applied, current visibility =", window.visibility)
+            console.log("StreamSegue: Window state applied, current visibility =", Window.window.visibility)
         }
     }
 
@@ -172,8 +183,10 @@ Item {
         id: errorDialogTimer
         interval: 50
         onTriggered: {
-            window.requestActivate()
-            window.raise()
+            if (Window.window) {
+                Window.window.requestActivate()
+                Window.window.raise()
+            }
             errorDialog.open()
         }
     }
@@ -204,44 +217,58 @@ Item {
 
     StackView.onDeactivating: {
         // Show the toolbar again when popped off the stack
-        toolBar.visible = true
+        if (Window.window && Window.window.toolBar) {
+            Window.window.toolBar.visible = true
+        }
 
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
 
         // Safely disconnect signals only if session still exists
         // Session may be destroyed before this handler runs
-        if (session) {
-            session.stageStarting.disconnect(stageStarting)
-            session.stageFailed.disconnect(stageFailed)
-            session.connectionStarted.disconnect(connectionStarted)
-            session.displayLaunchError.disconnect(displayLaunchError)
-            session.quitStarting.disconnect(quitStarting)
-            session.sessionFinished.disconnect(sessionFinished)
-            session.sessionRestartRequested.disconnect(restartRequested)
-            session.hostReady.disconnect(hostReady)
-            session.readyForDeletion.disconnect(sessionReadyForDeletion)
+        // Use try-catch because session may be a dangling pointer (C++ destroyed but QML ref exists)
+        try {
+            if (session && session.stageStarting) session.stageStarting.disconnect(stageStarting)
+            if (session && session.stageFailed) session.stageFailed.disconnect(stageFailed)
+            if (session && session.connectionStarted) session.connectionStarted.disconnect(connectionStarted)
+            if (session && session.displayLaunchError) session.displayLaunchError.disconnect(displayLaunchError)
+            if (session && session.quitStarting) session.quitStarting.disconnect(quitStarting)
+            if (session && session.sessionFinished) session.sessionFinished.disconnect(sessionFinished)
+            if (session && session.sessionRestartRequested) session.sessionRestartRequested.disconnect(restartRequested)
+            if (session && session.hostReady) session.hostReady.disconnect(hostReady)
+            if (session && session.readyForDeletion) session.readyForDeletion.disconnect(sessionReadyForDeletion)
+        } catch (e) {
+            console.log("StreamSegue: Error disconnecting signals (session may be destroyed):", e)
         }
     }
 
     StackView.onActivated: {
-        // Capture the window state immediately to record the user's pre-stream
-        // window state before any potential modifications by Qt or the streaming session.
-        // Only capture if not explicitly passed in (e.g., from QuitSegue).
-        if (previousVisibility === -1) {
-            previousVisibility = window.visibility
-        }
+        // Use Qt.callLater to ensure the component is fully attached to the window
+        // before we try to access Window.window. StackView.onActivated can fire
+        // before the component is in the window hierarchy.
+        Qt.callLater(function() {
+            // Capture the window state immediately to record the user's pre-stream
+            // window state before any potential modifications by Qt or the streaming session.
+            // Only capture if not explicitly passed in (e.g., from QuitSegue).
+            if (previousVisibility === -1 && Window.window) {
+                previousVisibility = Window.window.visibility
+            }
 
-        // Hide the toolbar before we start loading
-        toolBar.visible = false
+            // Hide the toolbar before we start loading
+            if (Window.window && Window.window.toolBar) {
+                Window.window.toolBar.visible = false
+            }
 
-        // Show the splash screen according to user's UI display mode preference
-        if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-            window.showMaximized()
-        } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-            window.showFullScreen()
-        }
-        // For UI_WINDOWED, keep current window state (just hide toolbar)
+            // Show the splash screen according to user's UI display mode preference
+            if (Window.window) {
+                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                    Window.window.showMaximized()
+                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                    Window.window.showFullScreen()
+                }
+            }
+            // For UI_WINDOWED, keep current window state (just hide toolbar)
+        })
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)
@@ -301,7 +328,7 @@ Item {
             SdlGamepadKeyNavigation.disable()
 
             // Initialize the session and probe for host/client capabilities
-            if (!session.initialize(window)) {
+            if (!session.initialize(Window.window)) {
                 sessionFinished(0);
                 sessionReadyForDeletion();
                 return;

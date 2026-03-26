@@ -7,6 +7,8 @@
 #include <QReadWriteLock>
 #include <QSettings>
 #include <QRunnable>
+#include <QDateTime>
+#include <QVector>
 
 class CopySafeReadWriteLock : public QReadWriteLock
 {
@@ -114,6 +116,12 @@ public:
     QVector<NvApp> appList;
     bool isNvidiaServerSoftware;
     // Remember to update isEqualSerialized() when adding fields here!
+
+    // Network latency measurement (ephemeral, not serialized)
+    int measuredLatencyMs = -1;           // -1 = unknown, -2 = measuring, >= 0 = RTT in ms
+    int latencyMeasurementBatch = 0;      // Which batch we're on (0 = first)
+    QVector<int> latencySamples;          // Current batch of samples
+    QDateTime lastLatencyUpdate;          // Last successful update time
 
     // Synchronization
     mutable CopySafeReadWriteLock lock;

@@ -1,5 +1,6 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 import ComputerManager 1.0
 import Session 1.0
@@ -20,7 +21,12 @@ Item {
 
     StackView.onActivated: {
         if (!launcher.isExecuted()) {
-            toolBar.visible = false
+            // Use Qt.callLater to ensure the component is fully attached to the window
+            Qt.callLater(function() {
+                if (Window.window && Window.window.toolBar) {
+                    Window.window.toolBar.visible = false
+                }
+            })
             launcher.searchingComputer.connect(onSearchingComputer)
             launcher.quittingApp.connect(onQuittingApp)
             launcher.failed.connect(onFailure)

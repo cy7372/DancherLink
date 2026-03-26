@@ -11,6 +11,7 @@
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QtMath>
+#include <QReadLocker>
 
 #ifdef Q_OS_WIN32
 #include <shobjidl.h>
@@ -58,11 +59,22 @@ private:
 
 AppModel::AppModel(QObject *parent)
     : QAbstractListModel(parent)
+    , m_Computer(nullptr)
+    , m_ComputerManager(nullptr)
+    , m_CurrentGameId(0)
+    , m_ShowHiddenGames(false)
+    , m_LatencyMeasurer(new LatencyMeasurer(this))
+    , m_LatencyCheckTimer(nullptr)
+    , m_LastReportedLatency(-1)
     , m_PacketLossRate(0.0f)
 {
     connect(&m_BoxArtManager, &BoxArtManager::boxArtLoadComplete,
             this, &AppModel::handleBoxArtLoaded);
-    // Don't start the debounce timer here - it will be started after the first measurement completes
+}
+
+AppModel::~AppModel()
+{
+    stopLatencyMeasurement();
 }
 
 void AppModel::initialize(ComputerManager* computerManager, int computerIndex, bool showHiddenGames)
@@ -95,146 +107,68 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
 
 void AppModel::startLatencyMeasurement()
 {
-    // Initialize timer for continuous measurement
-    if (!m_LatencyTimer) {
-        m_LatencyTimer = new QTimer(this);
-        m_LatencyTimer->setSingleShot(false);
-        connect(m_LatencyTimer, &QTimer::timeout, this, &AppModel::measureLatencyAsync);
+    if (!m_Computer) {
+        return;
     }
 
-    // Reset state
-    m_LatencySamples.clear();
-    m_MeasuredRttMs = -1;
-    m_MeasuredRttMedian = -1;
-    m_MeasurementBatch = 0;  // Track which batch we're on
+    // Use shared LatencyMeasurer to measure this computer
+    // This ensures latency is shared between ComputerModel and AppModel
+    if (m_LatencyMeasurer) {
+        m_LatencyMeasurer->start(m_Computer);
+    }
 
-    // Start timer - will trigger measurements every 100ms
-    m_LatencyTimer->start(LATENCY_SAMPLE_INTERVAL_MS);
-    qDebug() << "[NetAdapt] Started continuous latency measurement";
+    // Start polling timer to check for updates from NvComputer
+    if (!m_LatencyCheckTimer) {
+        m_LatencyCheckTimer = new QTimer(this);
+        m_LatencyCheckTimer->setInterval(100); // Check every 100ms
+        connect(m_LatencyCheckTimer, &QTimer::timeout, this, &AppModel::checkLatencyUpdate);
+    }
+    m_LatencyCheckTimer->start();
+    qDebug() << "[AppModel] Started latency measurement for" << m_Computer->name;
 }
 
 void AppModel::stopLatencyMeasurement()
 {
-    if (m_LatencyTimer && m_LatencyTimer->isActive()) {
-        m_LatencyTimer->stop();
-        qDebug() << "[NetAdapt] Stopped continuous latency measurement";
+    if (m_LatencyCheckTimer) {
+        m_LatencyCheckTimer->stop();
     }
 
-    // Cancel any in-flight measurement
-    if (m_LatencyWatcher) {
-        m_LatencyWatcher->disconnect();
-        m_LatencyWatcher->deleteLater();
-        m_LatencyWatcher = nullptr;
+    if (m_LatencyMeasurer) {
+        m_LatencyMeasurer->stop();
     }
+
+    qDebug() << "[AppModel] Stopped latency measurement";
 }
 
-void AppModel::measureLatencyAsync()
+void AppModel::checkLatencyUpdate()
 {
-    // Don't measure if already have enough samples
-    if (m_LatencySamples.size() >= LATENCY_SAMPLE_COUNT) {
+    if (!m_Computer) {
         return;
     }
 
-    QString address = m_Computer->activeAddress.address();
-    quint16 port = m_Computer->activeAddress.port();
+    QReadLocker lock(&m_Computer->lock);
+    int currentLatency = m_Computer->measuredLatencyMs;
+    lock.unlock();
 
-    // If a previous measurement is still running, skip this one
-    if (m_LatencyWatcher) {
-        return;
+    // Only emit signal if latency changed
+    if (currentLatency != m_LastReportedLatency) {
+        m_LastReportedLatency = currentLatency;
+        emit networkLatencyChanged(currentLatency);
     }
-
-    m_LatencyWatcher = new QFutureWatcher<int>(this);
-    connect(m_LatencyWatcher, &QFutureWatcher<int>::finished, this, [this]() {
-        int rttMs = m_LatencyWatcher->result();
-        m_LatencyWatcher->deleteLater();
-        m_LatencyWatcher = nullptr;
-
-        // Store sample (even failed ones for debugging)
-        if (rttMs >= 0) {
-            m_LatencySamples.append(rttMs);
-            qDebug() << "[NetAdapt] Sample" << m_LatencySamples.size() << "/" << LATENCY_SAMPLE_COUNT << ":" << rttMs << "ms, batch:" << m_MeasurementBatch;
-
-            // First batch (batch 0): update display after each sample
-            // Later batches: only update after completing all 5 samples
-            if (m_MeasurementBatch == 0) {
-                // Calculate running median for display
-                QVector<int> sorted = m_LatencySamples;
-                std::sort(sorted.begin(), sorted.end());
-                int runningMedian = sorted[sorted.size() / 2];
-
-                m_MeasuredRttMs = runningMedian;
-                emit networkLatencyChanged(m_MeasuredRttMs);
-                qDebug() << "[NetAdapt] Batch 0: updating display with running median:" << runningMedian << "ms";
-            }
-
-            // Check if we have enough samples
-            if (m_LatencySamples.size() >= LATENCY_SAMPLE_COUNT) {
-                // Stop timer while we process
-                m_LatencyTimer->stop();
-
-                // Calculate final median
-                QVector<int> sorted = m_LatencySamples;
-                std::sort(sorted.begin(), sorted.end());
-                int median = sorted[sorted.size() / 2];
-
-                // Update with median value
-                m_MeasuredRttMedian = median;
-                if (m_MeasurementBatch > 0) {
-                    // Only update display for batches after the first
-                    m_MeasuredRttMs = median;
-                    emit networkLatencyChanged(m_MeasuredRttMs);
-                }
-
-                qDebug() << "[NetAdapt] Batch complete: median =" << median << "ms, samples =" << m_LatencySamples;
-
-                // Increment batch counter
-                m_MeasurementBatch++;
-
-                // Schedule next batch after 3 seconds
-                QTimer::singleShot(LATENCY_BATCH_INTERVAL_MS, this, [this]() {
-                    if (m_LatencyTimer) {
-                        m_LatencySamples.clear();
-                        m_LatencyTimer->start(LATENCY_SAMPLE_INTERVAL_MS);
-                        qDebug() << "[NetAdapt] Starting batch" << m_MeasurementBatch;
-                    }
-                });
-            }
-        } else {
-            qDebug() << "[NetAdapt] Sample" << (m_LatencySamples.size() + 1) << "/" << LATENCY_SAMPLE_COUNT << ": failed (" << rttMs << ")";
-        }
-    });
-
-    auto future = QtConcurrent::run([address, port]() -> int {
-        QTcpSocket socket;
-        QElapsedTimer timer;
-        timer.start();
-        socket.connectToHost(address, port);
-        // Short timeout - LAN should respond within 100-200ms
-        if (socket.waitForConnected(300)) {
-            int rttMs = (int)timer.elapsed();
-            socket.disconnectFromHost();
-            return rttMs;
-        }
-        return -2; // Connection failed or timed out
-    });
-
-    m_LatencyWatcher->setFuture(future);
 }
 
 int AppModel::networkLatencyMs() const
 {
-    return m_MeasuredRttMs;
+    if (!m_Computer) {
+        return -1;
+    }
+    QReadLocker lock(&m_Computer->lock);
+    return m_Computer->measuredLatencyMs;
 }
 
 QString AppModel::networkQualityString() const
 {
-    if (m_MeasuredRttMs == -1) return tr("Measuring...");
-    if (m_MeasuredRttMs < 0)  return tr("Unavailable");
-    if (m_MeasuredRttMs < 10)  return tr("Excellent");  // <10ms
-    if (m_MeasuredRttMs < 20)  return tr("Good");       // 10-20ms
-    if (m_MeasuredRttMs < 30)  return tr("Fair");       // 20-30ms
-    if (m_MeasuredRttMs < 50)  return tr("Poor");       // 30-50ms
-    return tr("Bad");                                  // >=50ms
+    return LatencyMeasurer::qualityString(networkLatencyMs());
 }
 
 float AppModel::packetLossRate() const
@@ -248,7 +182,8 @@ QString AppModel::networkQualityDetailed() const
     QString rttQuality = networkQualityString();
     float lossRate = m_PacketLossRate * 100.0f;  // Convert to percentage
 
-    if (m_MeasuredRttMs < 0) {
+    int latencyMs = networkLatencyMs();
+    if (latencyMs < 0) {
         return tr("N/A");
     }
 
@@ -286,7 +221,15 @@ static int reduceFpsBySteps(int originalFps, int steps)
 void AppModel::applyAdaptiveSettings(Session* session) const
 {
     StreamingPreferences* prefs = StreamingPreferences::get();
-    if (!prefs->networkAdaptiveBitrate || m_MeasuredRttMs < 0) {
+
+    // Get current latency from computer
+    int latencyMs = -1;
+    if (m_Computer) {
+        QReadLocker lock(&m_Computer->lock);
+        latencyMs = m_Computer->measuredLatencyMs;
+    }
+
+    if (!prefs->networkAdaptiveBitrate || latencyMs < 0) {
         return;
     }
 
@@ -296,9 +239,9 @@ void AppModel::applyAdaptiveSettings(Session* session) const
     // Reduce FPS starting from Poor quality (RTT >= 30ms)
     // Poor (30-50ms): reduce 1 tier, Bad (>=50ms): reduce 2 tiers
     int fpsReductionSteps = 0;
-    if (m_MeasuredRttMs >= 50) {
+    if (latencyMs >= 50) {
         fpsReductionSteps = 2;  // Bad: reduce 2 tiers
-    } else if (m_MeasuredRttMs >= 30) {
+    } else if (latencyMs >= 30) {
         fpsReductionSteps = 1;  // Poor: reduce 1 tier
     }
 
@@ -309,11 +252,11 @@ void AppModel::applyAdaptiveSettings(Session* session) const
     // Scale bitrate based on measured RTT
     // Thresholds: Excellent <10ms, Good 10-20ms, Fair 20-30ms, Poor 30-50ms, Bad >=50ms
     float bitrateMultiplier;
-    if (m_MeasuredRttMs < 10)       bitrateMultiplier = 1.00f;  // Excellent
-    else if (m_MeasuredRttMs < 20)  bitrateMultiplier = 0.90f;  // Good
-    else if (m_MeasuredRttMs < 30)  bitrateMultiplier = 0.70f;  // Fair
-    else if (m_MeasuredRttMs < 50)  bitrateMultiplier = 0.50f;  // Poor
-    else                             bitrateMultiplier = 0.30f;  // Bad
+    if (latencyMs < 10)       bitrateMultiplier = 1.00f;  // Excellent
+    else if (latencyMs < 20)  bitrateMultiplier = 0.90f;  // Good
+    else if (latencyMs < 30)  bitrateMultiplier = 0.70f;  // Fair
+    else if (latencyMs < 50)  bitrateMultiplier = 0.50f;  // Poor
+    else                       bitrateMultiplier = 0.30f;  // Bad
 
     // Calculate the "full quality" bitrate for the selected resolution and fps,
     // then apply the network quality multiplier as a ceiling
@@ -329,7 +272,7 @@ void AppModel::applyAdaptiveSettings(Session* session) const
     // Only apply overrides if they differ from user's settings
     if (fps != prefs->fps || bitrateKbps != prefs->bitrateKbps) {
         session->setNetworkOverrides(fps, bitrateKbps);
-        qDebug() << "[NetAdapt] RTT" << m_MeasuredRttMs << "ms → applying"
+        qDebug() << "[NetAdapt] RTT" << latencyMs << "ms → applying"
                  << fps << "fps /" << bitrateKbps << "kbps";
     }
 }

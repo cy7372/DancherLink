@@ -4,10 +4,10 @@
 #include "backend/computermanager.h"
 #include "streaming/session.h"
 #include "streaming/networkqualitymonitor.h"
+#include "utils/latencymeasurer.h"
 
 #include <QAbstractListModel>
-#include <QFutureWatcher>
-#include <QElapsedTimer>
+#include <QTimer>
 
 class AppModel : public QAbstractListModel
 {
@@ -32,6 +32,7 @@ class AppModel : public QAbstractListModel
 
 public:
     explicit AppModel(QObject *parent = nullptr);
+    ~AppModel();
 
     // Must be called before any QAbstractListModel functions
     Q_INVOKABLE void initialize(ComputerManager* computerManager, int computerIndex, bool showHiddenGames);
@@ -64,12 +65,18 @@ public:
 
     virtual QHash<int, QByteArray> roleNames() const override;
 
+    // Called from QML to start/stop latency measurement for this computer
+    Q_INVOKABLE void startLatencyMeasurement();
+    Q_INVOKABLE void stopLatencyMeasurement();
+
 private slots:
     void handleComputerStateChanged(NvComputer* computer);
 
     void handleBoxArtLoaded(NvComputer* computer, NvApp app, QUrl image);
 
     void handleNetworkQualityChanged();
+
+    void checkLatencyUpdate();
 
 signals:
     void computerLost();
@@ -84,9 +91,6 @@ private:
 
     bool isAppCurrentlyVisible(const NvApp& app);
 
-    void measureLatencyAsync();
-    void startLatencyMeasurement();
-    Q_INVOKABLE void stopLatencyMeasurement();
     void applyAdaptiveSettings(Session* session) const;
 
     NvComputer* m_Computer;
@@ -96,19 +100,10 @@ private:
     int m_CurrentGameId;
     bool m_ShowHiddenGames;
 
-    // Network quality measurement
-    // -1 = measuring in progress, -2 = measurement failed, >= 0 = RTT in ms
-    int m_MeasuredRttMs = -1;
-    QFutureWatcher<int>* m_LatencyWatcher = nullptr;
-
-    // Continuous latency measurement with periodic updates
-    QTimer* m_LatencyTimer = nullptr;         // Timer for periodic measurement
-    QVector<int> m_LatencySamples;             // Current batch of samples
-    int m_MeasuredRttMedian = -1;              // Median of last completed batch
-    int m_MeasurementBatch = 0;                // Batch counter (0 = first batch)
-    static constexpr int LATENCY_SAMPLE_COUNT = 5;      // Samples per batch
-    static constexpr int LATENCY_SAMPLE_INTERVAL_MS = 100; // Time between samples
-    static constexpr int LATENCY_BATCH_INTERVAL_MS = 3000; // Time between batches
+    // Latency measurement - uses shared LatencyMeasurer
+    LatencyMeasurer* m_LatencyMeasurer;
+    QTimer* m_LatencyCheckTimer;  // Polls for latency updates from m_Computer
+    int m_LastReportedLatency;
 
     // Packet loss rate from NetworkQualityMonitor (0.0 - 1.0)
     float m_PacketLossRate;

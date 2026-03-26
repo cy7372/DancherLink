@@ -252,34 +252,53 @@ void ComputerModel::startLatencyMeasurement(int computerIndex)
         return;
     }
 
-    // Get active address and port
-    QString address = computer->activeAddress.address();
-    quint16 port = computer->activeHttpsPort;
-
-    if (address.isEmpty() || port == 0) {
-        stopLatencyMeasurement();
-        return;
+    // Check if computer is online
+    {
+        QReadLocker lock(&computer->lock);
+        if (computer->state != NvComputer::CS_ONLINE) {
+            stopLatencyMeasurement();
+            return;
+        }
     }
 
-    m_LatencyMeasurer->start(address, port);
+    m_MeasuringComputer = computer;
+    m_LatencyMeasurer->start(computer);
 }
 
 void ComputerModel::stopLatencyMeasurement()
 {
+    m_MeasuringComputer = nullptr;
     m_LatencyMeasurer->stop();
 }
 
 int ComputerModel::networkLatencyMs() const
 {
-    return m_LatencyMeasurer->latencyMs();
+    if (!isComputerValid(m_MeasuringComputer)) {
+        return -1;
+    }
+    QReadLocker lock(&m_MeasuringComputer->lock);
+    return m_MeasuringComputer->measuredLatencyMs;
 }
 
 QString ComputerModel::networkQualityString() const
 {
-    return m_LatencyMeasurer->qualityString();
+    return LatencyMeasurer::qualityString(networkLatencyMs());
 }
 
 void ComputerModel::handleLatencyChanged(int rttMs)
 {
-    emit networkLatencyChanged(rttMs);
+    Q_UNUSED(rttMs)
+    // Verify the measuring computer is still valid before emitting
+    if (isComputerValid(m_MeasuringComputer)) {
+        emit networkLatencyChanged(networkLatencyMs());
+    }
+}
+
+bool ComputerModel::isComputerValid(NvComputer* computer) const
+{
+    if (!computer) {
+        return false;
+    }
+    // Check if the computer is still in our list
+    return m_Computers.contains(computer);
 }

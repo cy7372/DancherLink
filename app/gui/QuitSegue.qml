@@ -1,5 +1,6 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 import ComputerManager 1.0
 import Session 1.0
@@ -25,7 +26,7 @@ Item {
         if (error === undefined && nextSession !== null) {
             // Capture the current visibility BEFORE creating the new segue
             // so we can restore to this state after streaming ends
-            var currentVisibility = window.visibility
+            var currentVisibility = Window.window.visibility
 
             var component = Qt.createComponent("StreamSegue.qml")
             if (component.status !== Component.Ready) {
@@ -57,8 +58,13 @@ Item {
     }
 
     StackView.onActivated: {
-        // Hide the toolbar before we start loading
-        toolBar.visible = false
+        // Use Qt.callLater to ensure the component is fully attached to the window
+        Qt.callLater(function() {
+            // Hide the toolbar before we start loading
+            if (Window.window && Window.window.toolBar) {
+                Window.window.toolBar.visible = false
+            }
+        })
 
         // Connect the quit completion signal
         ComputerManager.quitAppCompleted.connect(quitAppCompleted)
@@ -71,7 +77,9 @@ Item {
 
     StackView.onDeactivating: {
         // Show the toolbar again
-        toolBar.visible = true
+        if (Window.window && Window.window.toolBar) {
+            Window.window.toolBar.visible = true
+        }
 
         // Disconnect the signal
         ComputerManager.quitAppCompleted.disconnect(quitAppCompleted)

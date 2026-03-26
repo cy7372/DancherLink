@@ -12,13 +12,7 @@ import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
-    // Property to track if signal connection is established
-    property bool networkModelReadyConnected: false
-
     property ComputerModel computerModel : null
-
-    // Signal to notify main window when network model is ready
-    signal networkModelReady(var model)
 
     id: pcGrid
     focus: true
@@ -33,25 +27,9 @@ CenteredGridView {
         // We do this here instead of onActivated to avoid losing the user's
         // selection when backing out of a different page of the app.
         currentIndex = -1
-        console.log("[DEBUG] PcView.onCompleted - starting")
 
         // Create the computer model
-        console.log("[DEBUG] PcView.onCompleted - about to create computerModel")
         computerModel = createModel()
-        console.log("[DEBUG] PcView.onCompleted - computerModel created:", computerModel)
-
-        // Emit signal after a short delay to ensure main.qml has connected
-        Qt.callLater(function() {
-            if (computerModel) {
-                console.log("[DEBUG] PcView emitting networkModelReady via Qt.callLater")
-                networkModelReady(computerModel)
-                console.log("[DEBUG] PcView networkModelReady signal emitted via Qt.callLater")
-            }
-        })
-    }
-
-    onComputerModelChanged: {
-        console.log("[DEBUG] computerModel changed:", computerModel)
     }
 
     // Note: Any initialization done here that is critical for streaming must
@@ -62,7 +40,7 @@ CenteredGridView {
         ComputerManager.computerAddCompleted.connect(addComplete)
 
         // Start latency measurement for selected computer
-        if (pcGrid.currentIndex >= 0) {
+        if (pcGrid.currentIndex >= 0 && computerModel) {
             computerModel.startLatencyMeasurement(pcGrid.currentIndex)
         }
 
@@ -75,12 +53,14 @@ CenteredGridView {
     StackView.onDeactivating: {
         ComputerManager.computerAddCompleted.disconnect(addComplete)
         // Stop latency measurement when leaving the page
-        computerModel.stopLatencyMeasurement()
+        if (computerModel) {
+            computerModel.stopLatencyMeasurement()
+        }
     }
 
     onCurrentIndexChanged: {
         // Start measuring latency for the newly selected computer
-        if (currentIndex >= 0) {
+        if (currentIndex >= 0 && computerModel) {
             computerModel.startLatencyMeasurement(currentIndex)
         }
     }
@@ -191,7 +171,7 @@ CenteredGridView {
             height: 24
             radius: 4
             color: {
-                if (!model.online) return "#555555"
+                if (!model.online || !computerModel) return "#555555"
                 var ms = computerModel.networkLatencyMs
                 if (ms < 0) return "#555555"      // Unknown (gray)
                 if (ms < 20) return "#2E7D32"      // Good (green)
@@ -205,6 +185,7 @@ CenteredGridView {
                 id: latencyLabel
                 anchors.centerIn: parent
                 text: {
+                    if (!computerModel) return "--"
                     var ms = computerModel.networkLatencyMs
                     if (ms < 0) return "--"
                     return ms + " ms"
@@ -214,8 +195,8 @@ CenteredGridView {
                 font.bold: true
             }
 
-            ToolTip.visible: latencyMouseArea.containsMouse
-            ToolTip.text: computerModel.networkQualityString
+            ToolTip.visible: latencyMouseArea.containsMouse && computerModel
+            ToolTip.text: computerModel ? computerModel.networkQualityString : ""
             ToolTip.delay: 500
 
             MouseArea {
@@ -302,14 +283,20 @@ CenteredGridView {
                 }
                 NavigableMenuItem {
                     text: qsTr("Wake PC")
-                    onTriggered: computerModel.wakeComputer(index)
+                    onTriggered: {
+                        if (computerModel) {
+                            computerModel.wakeComputer(index)
+                        }
+                    }
                     visible: !model.online && model.wakeable
                 }
                 NavigableMenuItem {
                     text: qsTr("Test Network")
                     onTriggered: {
-                        computerModel.testConnectionForComputer(index)
-                        testConnectionDialog.open()
+                        if (computerModel) {
+                            computerModel.testConnectionForComputer(index)
+                            testConnectionDialog.open()
+                        }
                     }
                 }
 
@@ -361,6 +348,10 @@ CenteredGridView {
                     stackView.push(appView)
                 }
                 else {
+                    if (!computerModel) {
+                        console.error("[PcView] Cannot pair: computerModel is null")
+                        return
+                    }
                     var pin = computerModel.generatePinString()
 
                     // Kick off pairing in the background

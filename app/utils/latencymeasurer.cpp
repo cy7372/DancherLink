@@ -20,20 +20,32 @@ LatencyMeasurer::~LatencyMeasurer()
     stop();
 }
 
-void LatencyMeasurer::start(const QString &address, quint16 port)
+void LatencyMeasurer::start(NvComputer *computer)
 {
+    if (!computer) {
+        qWarning() << "[LatencyMeasurer] Cannot start with null computer";
+        return;
+    }
+
     if (m_Timer && m_Timer->isActive()) {
-        if (m_Address == address && m_Port == port) {
-            // Already measuring same target
+        if (m_Computer == computer) {
+            // Already measuring same computer
             return;
         }
         stop();
     }
 
-    m_Address = address;
-    m_Port = port;
-    m_MeasuredRttMedian = -1;
+    m_Computer = computer;
     m_MeasurementBatch = 0;
+
+    // Initialize computer's latency state
+    {
+        QWriteLocker lock(&m_Computer->lock);
+        m_Computer->measuredLatencyMs = -2;  // Measuring
+        m_Computer->latencyMeasurementBatch = 0;
+        m_Computer->latencySamples.clear();
+    }
+
     m_LatencySamples.clear();
 
     if (!m_Timer) {
@@ -43,8 +55,7 @@ void LatencyMeasurer::start(const QString &address, quint16 port)
     }
 
     m_Timer->start(SAMPLE_INTERVAL_MS);
-    emit measuringStateChanged(true);
-    qDebug() << "[LatencyMeasurer] Started measurement to" << address << ":" << port;
+    qDebug() << "[LatencyMeasurer] Started measurement for" << computer->name;
 }
 
 void LatencyMeasurer::stop()
@@ -60,19 +71,28 @@ void LatencyMeasurer::stop()
     }
 
     m_LatencySamples.clear();
-    emit measuringStateChanged(false);
+
+    // Mark measurement as stopped in computer
+    if (m_Computer) {
+        QWriteLocker lock(&m_Computer->lock);
+        if (m_Computer->measuredLatencyMs == -2) {
+            m_Computer->measuredLatencyMs = -1;  // Unknown
+        }
+        m_Computer = nullptr;
+    }
+
     qDebug() << "[LatencyMeasurer] Stopped measurement";
 }
 
-QString LatencyMeasurer::qualityString() const
+QString LatencyMeasurer::qualityString(int latencyMs)
 {
-    if (m_MeasuredRttMedian < 0) {
+    if (latencyMs < 0) {
         return QObject::tr("Unknown");
     }
-    if (m_MeasuredRttMedian < 10)  return QObject::tr("Excellent");
-    if (m_MeasuredRttMedian < 20)  return QObject::tr("Good");
-    if (m_MeasuredRttMedian < 30)  return QObject::tr("Fair");
-    if (m_MeasuredRttMedian < 50)  return QObject::tr("Poor");
+    if (latencyMs < 10)  return QObject::tr("Excellent");
+    if (latencyMs < 20)  return QObject::tr("Good");
+    if (latencyMs < 30)  return QObject::tr("Fair");
+    if (latencyMs < 50)  return QObject::tr("Poor");
     return QObject::tr("Bad");
 }
 
@@ -97,17 +117,31 @@ int LatencyMeasurer::measureOnce(const QString &address, quint16 port)
 
 void LatencyMeasurer::measureSample()
 {
+    if (!m_Computer) {
+        stop();
+        return;
+    }
+
     // If we have enough samples for this batch, process them and wait
     if (m_LatencySamples.size() >= SAMPLE_COUNT) {
         // Calculate median of samples
         QVector<int> sorted = m_LatencySamples;
         std::sort(sorted.begin(), sorted.end());
-        m_MeasuredRttMedian = sorted[sorted.size() / 2];
+        int median = sorted[sorted.size() / 2];
 
         qDebug() << "[LatencyMeasurer] Batch" << m_MeasurementBatch
-                 << "completed, median RTT:" << m_MeasuredRttMedian << "ms";
+                 << "completed for" << m_Computer->name
+                 << ", median RTT:" << median << "ms";
 
-        emit latencyChanged(m_MeasuredRttMedian);
+        // Store result in computer
+        {
+            QWriteLocker lock(&m_Computer->lock);
+            m_Computer->measuredLatencyMs = median;
+            m_Computer->latencyMeasurementBatch = m_MeasurementBatch;
+            m_Computer->lastLatencyUpdate = QDateTime::currentDateTime();
+        }
+
+        emit latencyChanged(median);
 
         // Clear samples for next batch and restart timer with longer interval
         m_LatencySamples.clear();
@@ -124,11 +158,25 @@ void LatencyMeasurer::measureSample()
         return;
     }
 
+    // Get address from computer
+    QString address;
+    quint16 port;
+    {
+        QReadLocker lock(&m_Computer->lock);
+        address = m_Computer->activeAddress.address();
+        port = m_Computer->activeAddress.port();
+    }
+
+    if (address.isEmpty()) {
+        qDebug() << "[LatencyMeasurer] No active address for" << m_Computer->name;
+        return;
+    }
+
     // Start async measurement
     m_Watcher = new QFutureWatcher<int>(this);
     connect(m_Watcher, &QFutureWatcher<int>::finished, this, &LatencyMeasurer::handleSampleFinished);
 
-    QFuture<int> future = QtConcurrent::run(&LatencyMeasurer::measureOnce, m_Address, m_Port);
+    QFuture<int> future = QtConcurrent::run(&LatencyMeasurer::measureOnce, address, port);
     m_Watcher->setFuture(future);
 }
 
@@ -143,7 +191,20 @@ void LatencyMeasurer::handleSampleFinished()
     if (rttMs > 0) {
         m_LatencySamples.append(rttMs);
         qDebug() << "[LatencyMeasurer] Sample" << m_LatencySamples.size()
-                 << "RTT:" << rttMs << "ms";
+                 << "RTT:" << rttMs << "ms for" << (m_Computer ? m_Computer->name : "unknown");
+
+        // Update computer with running median for first batch
+        if (m_Computer && m_MeasurementBatch == 0 && m_LatencySamples.size() < SAMPLE_COUNT) {
+            QVector<int> sorted = m_LatencySamples;
+            std::sort(sorted.begin(), sorted.end());
+            int runningMedian = sorted[sorted.size() / 2];
+
+            {
+                QWriteLocker lock(&m_Computer->lock);
+                m_Computer->measuredLatencyMs = runningMedian;
+            }
+            emit latencyChanged(runningMedian);
+        }
     }
 
     // If we've collected enough samples, the next measureSample() call will process them

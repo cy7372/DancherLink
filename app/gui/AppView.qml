@@ -16,12 +16,6 @@ CenteredGridView {
     property bool showHiddenGames
     property bool showGames
 
-    // Property to track if signal connection is established
-    property bool networkModelReadyConnected: false
-
-    // Signal to notify main window when network model is ready
-    signal networkModelReady(var model)
-
     id: appGrid
     focus: true
     activeFocusOnTab: true
@@ -40,30 +34,22 @@ CenteredGridView {
         // We do this here instead of onActivated to avoid losing the user's
         // selection when backing out of a different page of the app.
         currentIndex = -1
-        console.log("[DEBUG] AppView.onCompleted - starting")
 
         // Create the app model
-        console.log("[DEBUG] AppView.onCompleted - about to create appModel")
         appModel = createModel()
-        console.log("[DEBUG] AppView.onCompleted - appModel created:", appModel)
-
-        // Emit signal after a short delay to ensure main.qml has connected
-        Qt.callLater(function() {
-            if (appModel) {
-                console.log("[DEBUG] AppView emitting networkModelReady via Qt.callLater")
-                networkModelReady(appModel)
-                console.log("[DEBUG] AppView networkModelReady signal emitted via Qt.callLater")
-            }
-        })
-    }
-
-    onAppModelChanged: {
-        console.log("[DEBUG] appModel changed:", appModel)
     }
 
     StackView.onActivated: {
+        if (!appModel) {
+            console.error("[AppView] StackView.onActivated called but appModel is null")
+            return
+        }
+
         appModel.computerLost.connect(computerLost)
         activated = true
+
+        // Start latency measurement when entering the app list
+        appModel.startLatencyMeasurement()
 
         // Highlight the first item if a gamepad is connected
         if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
@@ -85,10 +71,12 @@ CenteredGridView {
     }
 
     StackView.onDeactivating: {
-        appModel.computerLost.disconnect(computerLost)
+        if (appModel) {
+            appModel.computerLost.disconnect(computerLost)
+            // Stop latency measurement when leaving the app list
+            appModel.stopLatencyMeasurement()
+        }
         activated = false
-        // Stop latency measurement when leaving the app list
-        appModel.stopLatencyMeasurement()
     }
 
     function createModel()
@@ -265,7 +253,7 @@ CenteredGridView {
                                                    "appName": model.name,
                                                    "session": appModel.createSessionForApp(model.index),
                                                    "isResume": runningId === model.appid,
-                                                   "previousVisibility": window.visibility
+                                                   "previousVisibility": stackView.Window.visibility
                                                })
 
             if (!segue) {
