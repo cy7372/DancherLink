@@ -163,6 +163,8 @@ ApplicationWindow {
         anchors.fill: parent
         focus: true
 
+        initialView: PcView {}
+
         // This configures the maximum width of the singleton attached QML ToolTip.
         // Must be inside an Item-derived component (StackView), not ApplicationWindow.
         ToolTip.toolTip.contentWidth: Math.min(tooltipTextLayoutHelper.width, 400)
@@ -171,7 +173,6 @@ ApplicationWindow {
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
             doEarlyInit()
-            push(initialView)
         }
 
         onCurrentItemChanged: {
