@@ -163,7 +163,7 @@ ApplicationWindow {
         anchors.fill: parent
         focus: true
 
-        initialView: PcView {}
+        StackView.initialView: PcView {}
 
         // This configures the maximum width of the singleton attached QML ToolTip.
         // Must be inside an Item-derived component (StackView), not ApplicationWindow.
