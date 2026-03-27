@@ -440,7 +440,8 @@ function Update-Manifest {
         [string]$BuildType
     )
 
-    $manifestFile = if ($BuildType -eq "beta") { "updates-beta.json" } else { "updates.json" }
+    # Both Release and Beta use updates.json
+    $manifestFile = "updates.json"
 
     if ((Test-Path "$RootDir\server") -and (Test-Path "$RootDir\server\update_version.py")) {
         Write-Host "Updating server/$manifestFile..." -ForegroundColor Green
@@ -459,7 +460,8 @@ function Copy-ReleaseFiles {
         [string]$ReleaseFolder,
         [string]$MsiFile,
         [string]$Version,
-        [string]$RootDir
+        [string]$RootDir,
+        [string]$BuildType
     )
 
     Write-Host "  Preparing release files..." -ForegroundColor Green
@@ -480,7 +482,17 @@ function Copy-ReleaseFiles {
     # Copy server files
     if (Test-Path "$RootDir\server") {
         Write-Host "  Copying server files..." -ForegroundColor Green
-        Copy-Item "$RootDir\server\*" $ReleaseFolder -Recurse -Force
+
+        # Copy update_version.py (common to both)
+        if (Test-Path "$RootDir\server\update_version.py") {
+            Copy-Item "$RootDir\server\update_version.py" "$ReleaseFolder\" -Force
+        }
+
+        # Copy updates.json (used by both Release and Beta)
+        if (Test-Path "$RootDir\server\updates.json") {
+            Copy-Item "$RootDir\server\updates.json" "$ReleaseFolder\" -Force
+            Write-Host "  Copied updates.json" -ForegroundColor Green
+        }
     }
 }
 
