@@ -81,7 +81,10 @@ cd "$ROOT_DIR"
 VSWHERE="$SCRIPT_DIR/vswhere.exe"
 VS_INSTALL_PATH=$("$VSWHERE" -latest -property installationPath)
 VC_ARCH="AMD64"
-call "$VS_INSTALL_PATH/VC/Auxiliary/Build/vcvarsall.bat" "$VC_ARCH"
+
+# Source vcvarsall.bat to set up MSVC environment
+# Run vcvarsall.bat and capture the environment variables it sets
+eval $("$(cygpath -u "$VS_INSTALL_PATH/VC/Auxiliary/Build/vcvarsall.bat" | sed 's/\.bat$/\.cmd/')" "$VC_ARCH" 2>/dev/null | grep -E '^[A-Za-z_]' | sed 's/=/="/;s/$/"/' | sed 's/^/export /')
 
 # Find VC redistributable
 VC_REDIST_DLL_PATH=$("$VSWHERE" -latest -find "VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT")
