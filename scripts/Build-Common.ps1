@@ -1,45 +1,57 @@
 <#
 .SYNOPSIS
-    DancherLink Common Build Functions
+    DancherLink Common Build Functions (Python-backed)
 .DESCRIPTION
-    Shared functions for Release and Beta builds.
+    Shared functions for Release and Beta builds using Python helper.
+    More portable and maintainable than pure PowerShell.
 #>
 
-# Common build configuration
-$Script:CommonConfig = @{
-    QtPath = if ($env:QTDIR) { "$env:QTDIR\bin" } else { "C:\Qt\6.10.1\msvc2022_64\bin" }
-    QtCMakeDir = "C:\Qt\6.10.1\msvc2022_64\lib\cmake\Qt6"
-    OpenSslInc = "$PSScriptRoot\..\libs\windows\include\x64"
-    VcArch = "AMD64"
-    CMakeBuildType = "Release"
+# Python helper path
+$Script:PythonHelper = "$PSScriptRoot\build_helper.py"
+$Script:QtPath = $null
+
+function Get-PythonHelper {
+    if (-not (Test-Path $Script:PythonHelper)) {
+        Write-Error "Python helper not found: $Script:PythonHelper"
+        exit 1
+    }
+    return $Script:PythonHelper
+}
+
+function Invoke-PythonHelper {
+    param(
+        [string[]]$Args
+    )
+    $result = & python (Get-PythonHelper) @Args 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return $null
+    }
+    return $result
 }
 
 function Initialize-BuildEnvironment {
-    param(
-        [string]$BuildType
-    )
+    param([string]$BuildType)
 
     Write-Host "[$BuildType Build] Starting build process..." -ForegroundColor Green
 
-    # Setup Qt path
-    $env:PATH = "$($Script:CommonConfig.QtPath);$env:PATH"
+    # Get Qt path from Python helper
+    $qtPath = Invoke-PythonHelper -Args @('get-qt-path')
+    if (-not $qtPath) {
+        Write-Error "Qt not found. Please install Qt or set QTDIR."
+        exit 1
+    }
+    $Script:QtPath = $qtPath | Select-Object -First 1
+    $env:PATH = "$Script:QtPath;$env:PATH"
 
-    # Verify qmake is available
-    if (-not (Get-Command qmake -ErrorAction SilentlyContinue)) {
-        Write-Error "qmake not found in PATH. Please install Qt or set QTDIR."
+    # Verify qmake
+    $qmakeCheck = Invoke-PythonHelper -Args @('verify-qmake')
+    if (-not $qmakeCheck) {
+        Write-Error "qmake not found in PATH."
         exit 1
     }
 
     # Detect architecture
-    $QtPath = Split-Path (Get-Command qmake).Source -Parent
-    if ($QtPath -like "*_arm64*") {
-        $Arch = "arm64"
-    } elseif ($QtPath -like "*_64*") {
-        $Arch = "x64"
-    } else {
-        $Arch = "x86"
-    }
-
+    $Arch = Invoke-PythonHelper -Args @('detect-arch')
     Write-Host "[$BuildType Build] Architecture: $Arch" -ForegroundColor Green
 
     return $Arch
@@ -52,28 +64,21 @@ function Get-BuildPaths {
         [string]$BuildType
     )
 
-    $isBeta = $BuildType -eq "beta"
-    $betaSuffix = if ($isBeta) { "-beta" } else { "" }
-
-    return @{
-        BuildRoot = "$RootDir\build"
-        BuildFolder = "$RootDir\build\build-$Arch$betaSuffix-release"
-        DeployFolder = "$RootDir\build\deploy-$Arch$betaSuffix-release"
-        InstallerFolder = "$RootDir\build\installer-$Arch$betaSuffix-release"
-        SymbolsFolder = "$RootDir\symbols-$Arch$betaSuffix-release"
+    $output = Invoke-PythonHelper -Args @('get-paths', '--root', $RootDir, '--arch', $Arch, '--type', $BuildType)
+    $paths = @{}
+    foreach ($line in $output) {
+        if ($line -match '^(.+?)=(.+)$') {
+            $paths[$matches[1]] = $matches[2]
+        }
     }
+    return $paths
 }
 
 function Clean-BuildDirectories {
-    param(
-        [string[]]$Paths
-    )
+    param([string[]]$Paths)
 
     Write-Host "Cleaning output directories..." -ForegroundColor Green
-    foreach ($path in $Paths) {
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
-        New-Item -ItemType Directory -Path $path -Force | Out-Null
-    }
+    $null = Invoke-PythonHelper -Args @('clean') + $Paths
 }
 
 function Sync-RcVersion {
@@ -89,17 +94,11 @@ function Sync-RcVersion {
 }
 
 function Generate-Translations {
-    param(
-        [string]$LanguagesDir
-    )
+    param([string]$LanguagesDir)
 
     Write-Host "Generating translations..." -ForegroundColor Green
-    Push-Location $LanguagesDir
-    Get-ChildItem *.ts | ForEach-Object {
-        Write-Host "  Processing $($_.Name)..."
-        lrelease $_.Name
-    }
-    Pop-Location
+    $result = Invoke-PythonHelper -Args @('translations', '--dir', $LanguagesDir)
+    Write-Host $result
 }
 
 function Invoke-NativeBuild {
@@ -112,68 +111,35 @@ function Invoke-NativeBuild {
         [hashtable]$OpenSslPaths
     )
 
-    $isBeta = $BuildType -eq "beta"
-    $VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
-    $CleanTemp = "C:\build-temp-$(Get-Random)"
+    $qtPath = $Script:QtPath
 
-    # Build additional cmake args for beta
-    $BetaArgs = if ($isBeta) { " -DBUILD_TYPE=`"beta`"" } else { "" }
+    # Create batch file using Python helper
+    $batchArgs = @(
+        'create-batch',
+        '--build-folder', $BuildFolder,
+        '--root', $RootDir,
+        '--arch', $Arch,
+        '--type', $BuildType,
+        '--vs-path', $VsInstallPath,
+        '--openssl-inc', $OpenSslPaths.Inc,
+        '--openssl-crypto', $OpenSslPaths.Crypto,
+        '--openssl-ssl', $OpenSslPaths.Ssl,
+        '--qt-path', $qtPath
+    )
 
-    $BatchContent = @"
-@echo off
-echo ========================================
-echo DancherLink Build
-echo ========================================
-call "$VcVarsAll" $CommonConfig.VcArch
-
-echo Setting up clean temp directory...
-set CLEAN_TEMP=$CleanTemp
-if not exist "%CLEAN_TEMP%" mkdir "%CLEAN_TEMP%"
-set TMP=%CLEAN_TEMP%
-set TEMP=%CLEAN_TEMP%
-set TMPDIR=%CLEAN_TEMP%
-echo Using temp dir: %TMP%
-
-echo Setting up Qt path...
-set PATH=$($Script:CommonConfig.QtPath);%PATH%
-set Qt6_DIR=$($Script:CommonConfig.QtCMakeDir)
-
-cd /d "$BuildFolder"
-
-echo Running cmake configure...
-cmake -S "$RootDir" -G "Ninja" -DCMAKE_BUILD_TYPE="$($Script:CommonConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
-
-if %ERRORLEVEL% neq 0 (
-    echo CMake configuration FAILED
-    goto :cleanup
-)
-echo CMake configuration SUCCESS
-
-echo.
-echo Building...
-cmake --build . --config "$($Script:CommonConfig.CMakeBuildType)"
-
-echo.
-echo Build exit code: %ERRORLEVEL%
-
-:cleanup
-echo Cleaning up temp directory...
-if exist "%CLEAN_TEMP%" rmdir /s /q "%CLEAN_TEMP%"
-if %ERRORLEVEL% neq 0 (
-    echo Build FAILED
-    exit /b %ERRORLEVEL%
-)
-echo Build SUCCESS
-"@
-
-    $BuildBatch = "$BuildFolder\do-build.bat"
-    Set-Content -Path $BuildBatch -Value $BatchContent -Encoding ASCII
+    $batchFile = Invoke-PythonHelper -Args $batchArgs
+    if (-not $batchFile) {
+        return 1
+    }
 
     Write-Host "Running build in native cmd.exe with Ninja..." -ForegroundColor Green
-    cmd.exe /c "$BuildBatch" 2>&1
-
+    $null = Invoke-PythonHelper -Args @('run-build', $batchFile)
     $BuildResult = $LASTEXITCODE
-    Remove-Item $BuildBatch -ErrorAction SilentlyContinue
+
+    # Cleanup batch file
+    if (Test-Path $batchFile) {
+        Remove-Item $batchFile -ErrorAction SilentlyContinue
+    }
 
     return $BuildResult
 }
@@ -184,11 +150,8 @@ function Find-Executable {
         [string]$Filter
     )
 
-    foreach ($path in $SearchPaths) {
-        $exe = Get-ChildItem -Recurse -Filter $Filter -Path $path -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($exe) { return $exe }
-    }
-    return $null
+    $result = Invoke-PythonHelper -Args @('find-exe', '--paths') + $SearchPaths + @('--filter', $Filter)
+    return $result
 }
 
 function Copy-Symbols {
@@ -200,12 +163,13 @@ function Copy-Symbols {
     )
 
     Write-Host "Saving PDBs..." -ForegroundColor Green
-    Get-ChildItem -Recurse -Filter "*.pdb" -Path $BuildFolder | ForEach-Object {
-        Copy-Item $_.FullName "$SymbolsFolder\" -Force
-    }
-    Get-ChildItem "$RootDir\libs\windows\lib\$Arch\*.pdb" -ErrorAction SilentlyContinue | ForEach-Object {
-        Copy-Item $_.FullName "$SymbolsFolder\" -Force
-    }
+    $null = Invoke-PythonHelper -Args @(
+        'copy-symbols',
+        '--build-folder', $BuildFolder,
+        '--symbols-folder', $SymbolsFolder,
+        '--arch', $Arch,
+        '--root', $RootDir
+    )
 }
 
 function Copy-Dependencies {
@@ -217,14 +181,13 @@ function Copy-Dependencies {
     )
 
     Write-Host "Copying dependencies..." -ForegroundColor Green
-    Copy-Item "$RootDir\libs\windows\lib\$Arch\*.dll" "$DeployFolder\" -Force -ErrorAction SilentlyContinue
-
-    $MoonlightDll = Get-ChildItem -Recurse -Filter "moonlight-common-c.dll" -Path $BuildFolder | Select-Object -First 1
-    if ($MoonlightDll) {
-        Copy-Item $MoonlightDll.FullName "$DeployFolder\" -Force
-    }
-
-    Copy-Item "$RootDir\app\SDL_GameControllerDB\gamecontrollerdb.txt" "$DeployFolder\" -Force
+    $null = Invoke-PythonHelper -Args @(
+        'copy-deps',
+        '--deploy-folder', $DeployFolder,
+        '--arch', $Arch,
+        '--root', $RootDir,
+        '--build-folder', $BuildFolder
+    )
 }
 
 function Deploy-Qt {
@@ -235,74 +198,31 @@ function Deploy-Qt {
     )
 
     Write-Host "Deploying Qt dependencies..." -ForegroundColor Green
-
-    $WindeployqtArgs = @(
-        "--dir", $DeployFolder
-        "--release"
-        "--qmldir", "$RootDir\app\gui"
-        "--no-opengl-sw"
-        "--no-compiler-runtime"
-        "--no-sql"
-        "--no-system-d3d-compiler"
-        "--no-system-dxc-compiler"
-        "--skip-plugin-types", "qmltooling,generic"
-        "--no-ffmpeg"
-        "--no-quickcontrols2fusion"
-        "--no-quickcontrols2imagine"
-        "--no-quickcontrols2universal"
-        "--no-quickcontrols2fusionstyleimpl"
-        "--no-quickcontrols2imaginestyleimpl"
-        "--no-quickcontrols2universalstyleimpl"
-        "--no-quickcontrols2windowsstyleimpl"
-        "--no-translations"
+    $null = Invoke-PythonHelper -Args @(
+        'deploy-qt',
+        '--deploy-folder', $DeployFolder,
+        '--root', $RootDir,
+        '--exe', $ExePath
     )
-
-    # Copy exe to deploy folder for windeployqt
-    $DeployBinExe = "$DeployFolder\DancherLink.exe"
-    Copy-Item $ExePath $DeployBinExe -Force
-    Write-Host "Copied DancherLink.exe to deploy folder for windeployqt" -ForegroundColor Green
-
-    windeployqt @WindeployqtArgs $DeployBinExe
-
-    # Remove exe - WiX will add it separately
-    Remove-Item $DeployBinExe -Force
-    Write-Host "Removed DancherLink.exe from deploy folder (will be added by WiX)" -ForegroundColor Green
+    Write-Host "Qt deployment complete" -ForegroundColor Green
 }
 
 function Deploy-QtTranslations {
-    param(
-        [string]$DeployFolder
+    param([string]$DeployFolder)
+
+    $qtPath = $Script:QtPath
+    $null = Invoke-PythonHelper -Args @(
+        'deploy-qt-translations',
+        '--deploy-folder', $DeployFolder,
+        '--qt-path', $qtPath
     )
-
-    $TranslationsDir = "$DeployFolder\translations"
-    New-Item -ItemType Directory -Path $TranslationsDir -Force | Out-Null
-
-    $QtTranslations = @(
-        "$($Script:CommonConfig.QtPath)\..\translations\qt_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtbase_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtquick_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtmultimedia_zh_CN.qm"
-    )
-
-    $QtTranslations | Where-Object { Test-Path $_ } | ForEach-Object {
-        Copy-Item $_ "$TranslationsDir\" -Force
-    }
 }
 
 function Remove-UnusedQtStyles {
-    param(
-        [string]$DeployFolder
-    )
+    param([string]$DeployFolder)
 
     Write-Host "Removing unused Qt styles..." -ForegroundColor Green
-
-    $styles = @("Fusion", "Imagine", "Universal", "Windows", "NativeStyle")
-    foreach ($style in $styles) {
-        $path = "$DeployFolder\qml\QtQuick\Controls\$style"
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
-        $path = "$DeployFolder\qml\QtQuick\Controls\$($style)StyleImpl"
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
-    }
+    $null = Invoke-PythonHelper -Args @('remove-styles', '--deploy-folder', $DeployFolder)
 }
 
 function Build-Msi {
@@ -312,46 +232,27 @@ function Build-Msi {
         [string]$BuildFolder,
         [string]$Version,
         [string]$WxsFile,
-        [string[]]$Extensions
+        [string[]]$Extensions,
+        [string]$BuildType = 'release'
     )
 
     Write-Host "Building MSI installer..." -ForegroundColor Green
 
-    # Ensure app config dir exists and has the exe
-    $AppConfigDir = "$BuildFolder\app\release"
-    if (-not (Test-Path $AppConfigDir)) { New-Item -ItemType Directory -Path $AppConfigDir | Out-Null }
-    $BuiltExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-    if ($BuiltExe) { Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force }
-
-    $WixArgs = @("build",
-        "-arch", "x64",
-        "-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi",
-        "-b", "$DeployFolder",
-        "-d", "Version=$Version",
-        "-d", "BuildDir=$BuildFolder",
-        "-d", "DeployDir=$DeployFolder",
-        "-d", "Configuration=Release"
+    $msiPath = Invoke-PythonHelper -Args @(
+        'build-msi',
+        '--installer-folder', $InstallerFolder,
+        '--deploy-folder', $DeployFolder,
+        '--build-folder', $BuildFolder,
+        '--version', $Version,
+        '--wxs', $WxsFile,
+        '--type', $BuildType
     )
 
-    # Add extensions if provided
-    foreach ($ext in $Extensions) {
-        $WixArgs += @("-ext", $ext)
-    }
-
-    $WixArgs += $WxsFile
-
-    Write-Host "Running: wix build..." -ForegroundColor Green
-    $WixOutput = & wix $WixArgs 2>&1
-    Write-Host $WixOutput
-
-    # Copy MSI to build folder
-    $MsiFile = "$InstallerFolder\DancherLink-x86_64-$Version.msi"
-    if (Test-Path $MsiFile) {
-        Copy-Item $MsiFile "$BuildFolder\DancherLink.msi" -Force
-        Write-Host "MSI created: $MsiFile" -ForegroundColor Green
-        return $MsiFile
+    if ($msiPath) {
+        Write-Host "MSI created: $msiPath" -ForegroundColor Green
+        return $msiPath
     } else {
-        Write-Host "Warning: MSI file not found after build" -ForegroundColor Yellow
+        Write-Host "Warning: MSI build failed" -ForegroundColor Yellow
         return $null
     }
 }
@@ -364,11 +265,15 @@ function Update-Manifest {
         [string]$BuildType
     )
 
-    $manifestFile = if ($BuildType -eq "beta") { "updates-beta.json" } else { "updates.json" }
-
-    if ((Test-Path "$RootDir\server") -and (Test-Path "$RootDir\server\update_version.py")) {
-        Write-Host "Updating server/$manifestFile..." -ForegroundColor Green
-        python "$RootDir\server\update_version.py" "$Version" "$Arch" "release" "$RootDir" $BuildType
+    $result = Invoke-PythonHelper -Args @(
+        'update-manifest',
+        '--root', $RootDir,
+        '--version', $Version,
+        '--arch', $Arch,
+        '--type', $BuildType
+    )
+    if ($result) {
+        Write-Host "Manifest updated" -ForegroundColor Green
     }
 }
 
