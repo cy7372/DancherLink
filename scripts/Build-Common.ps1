@@ -5,24 +5,42 @@
     Shared functions for Release and Beta builds.
 #>
 
-# Common build configuration
-$Script:CommonConfig = @{
-    QtPath = if ($env:QTDIR) { "$env:QTDIR\bin" } else { "C:\Qt\6.10.1\msvc2022_64\bin" }
-    QtCMakeDir = "C:\Qt\6.10.1\msvc2022_64\lib\cmake\Qt6"
-    OpenSslInc = "$PSScriptRoot\..\libs\windows\include\x64"
-    VcArch = "AMD64"
-    CMakeBuildType = "Release"
+# Import configuration
+& "$PSScriptRoot\Build-Config.ps1"
+
+# Build log file
+$Script:BuildLogFile = $null
+
+function Start-BuildLogging {
+    param([string]$LogDir)
+
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $Script:BuildLogFile = "$LogDir\build-$timestamp.log"
+
+    # Redirect all output to log file
+    Start-Transcript -Path $Script:BuildLogFile -Append -Force | Out-Null
+
+    Write-Host "Build log: $Script:BuildLogFile" -ForegroundColor Cyan
+}
+
+function Stop-BuildLogging {
+    if ($Script:BuildLogFile) {
+        Stop-Transcript | Out-Null
+        Write-Host "Build log saved to: $Script:BuildLogFile" -ForegroundColor Cyan
+    }
 }
 
 function Initialize-BuildEnvironment {
-    param(
-        [string]$BuildType
-    )
+    param([string]$BuildType)
 
     Write-Host "[$BuildType Build] Starting build process..." -ForegroundColor Green
 
     # Setup Qt path
-    $env:PATH = "$($Script:CommonConfig.QtPath);$env:PATH"
+    $env:PATH = "$($BuildConfig.QtPath);$env:PATH"
 
     # Verify qmake is available
     if (-not (Get-Command qmake -ErrorAction SilentlyContinue)) {
@@ -49,31 +67,42 @@ function Get-BuildPaths {
     param(
         [string]$RootDir,
         [string]$Arch,
-        [string]$BuildType
+        [string]$BuildType,
+        [switch]$Incremental
     )
 
     $isBeta = $BuildType -eq "beta"
     $betaSuffix = if ($isBeta) { "-beta" } else { "" }
 
-    return @{
+    $paths = @{
         BuildRoot = "$RootDir\build"
         BuildFolder = "$RootDir\build\build-$Arch$betaSuffix-release"
         DeployFolder = "$RootDir\build\deploy-$Arch$betaSuffix-release"
         InstallerFolder = "$RootDir\build\installer-$Arch$betaSuffix-release"
         SymbolsFolder = "$RootDir\symbols-$Arch$betaSuffix-release"
+        LogDir = "$RootDir\build\logs"
     }
-}
 
-function Clean-BuildDirectories {
-    param(
-        [string[]]$Paths
-    )
-
-    Write-Host "Cleaning output directories..." -ForegroundColor Green
-    foreach ($path in $Paths) {
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
-        New-Item -ItemType Directory -Path $path -Force | Out-Null
+    # Clean only if not incremental build
+    if (-not $Incremental) {
+        foreach ($key in @('DeployFolder', 'BuildFolder', 'InstallerFolder', 'SymbolsFolder')) {
+            if (Test-Path $paths[$key]) {
+                Remove-Item -Recurse -Force $paths[$key]
+            }
+            New-Item -ItemType Directory -Path $paths[$key] -Force | Out-Null
+        }
+        Write-Host "Output directories cleaned (full build)" -ForegroundColor Green
+    } else {
+        Write-Host "Incremental build (preserving build directory)" -ForegroundColor Yellow
+        # Only ensure directories exist
+        foreach ($key in @('DeployFolder', 'InstallerFolder', 'SymbolsFolder')) {
+            if (-not (Test-Path $paths[$key])) {
+                New-Item -ItemType Directory -Path $paths[$key] -Force | Out-Null
+            }
+        }
     }
+
+    return $paths
 }
 
 function Sync-RcVersion {
@@ -89,15 +118,20 @@ function Sync-RcVersion {
 }
 
 function Generate-Translations {
-    param(
-        [string]$LanguagesDir
-    )
+    param([string]$LanguagesDir)
 
     Write-Host "Generating translations..." -ForegroundColor Green
     Push-Location $LanguagesDir
-    Get-ChildItem *.ts | ForEach-Object {
-        Write-Host "  Processing $($_.Name)..."
-        lrelease $_.Name
+    $tsFiles = Get-ChildItem *.ts
+    if ($tsFiles.Count -eq 0) {
+        Write-Host "  No .ts files found" -ForegroundColor Yellow
+        Pop-Location
+        return
+    }
+
+    foreach ($ts in $tsFiles) {
+        Write-Host "  Processing $($ts.Name)..."
+        lrelease $ts.Name | Out-Null
     }
     Pop-Location
 }
@@ -109,16 +143,17 @@ function Invoke-NativeBuild {
         [string]$Arch,
         [string]$BuildType,
         [string]$VsInstallPath,
-        [hashtable]$OpenSslPaths
+        [hashtable]$OpenSslPaths,
+        [switch]$SkipConfigure
     )
 
-    $isBeta = $BuildType -eq "beta"
     $VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
     $VcArch = "AMD64"
-    $CleanTemp = "C:\build-temp-$(Get-Random)"
+    $CleanTemp = "C:\build-temp-$PID-$(Get-Random)"
 
-    # Build additional cmake args for beta
+    $isBeta = $BuildType -eq "beta"
     $BetaArgs = if ($isBeta) { " -DBUILD_TYPE=`"beta`"" } else { "" }
+    $ConfigureFlag = if ($SkipConfigure) { "" } else { "-S `"$RootDir`"" }
 
     $BatchContent = @"
 @echo off
@@ -136,23 +171,37 @@ set TMPDIR=%CLEAN_TEMP%
 echo Using temp dir: %TMP%
 
 echo Setting up Qt path...
-set PATH=$($Script:CommonConfig.QtPath);%PATH%
-set Qt6_DIR=$($Script:CommonConfig.QtCMakeDir)
+set PATH=$($BuildConfig.QtPath);%PATH%
+set Qt6_DIR=$($BuildConfig.QtCMakeDir)
 
 cd /d "$BuildFolder"
 
-echo Running cmake configure...
-cmake -S "$RootDir" -G "Ninja" -DCMAKE_BUILD_TYPE="$($Script:CommonConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
-
-if %ERRORLEVEL% neq 0 (
-    echo CMake configuration FAILED
-    goto :cleanup
+if exist CMakeCache.txt (
+    echo Found existing CMake cache
+) else (
+    echo No CMake cache found
 )
-echo CMake configuration SUCCESS
+
+if not exist build.ninja (
+    echo No build.ninja found, will configure
+    set NEED_CONFIG=1
+) else (
+    echo Build system exists
+)
+
+@if not "%SkipConfigure%"=="" (
+    echo Running cmake configure...
+    cmake $ConfigureFlag -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
+    if %ERRORLEVEL% neq 0 (
+        echo CMake configuration FAILED
+        goto :cleanup
+    )
+    echo CMake configuration SUCCESS
+)
 
 echo.
 echo Building...
-cmake --build . --config "$($Script:CommonConfig.CMakeBuildType)"
+cmake --build . --config "$($BuildConfig.CMakeBuildType)"
 
 echo.
 echo Build exit code: %ERRORLEVEL%
@@ -171,9 +220,22 @@ echo Build SUCCESS
     Set-Content -Path $BuildBatch -Value $BatchContent -Encoding ASCII
 
     Write-Host "Running build in native cmd.exe with Ninja..." -ForegroundColor Green
-    cmd.exe /c "$BuildBatch" 2>&1
+    if ($SkipConfigure) {
+        Write-Host "Skipping CMake configure (incremental)" -ForegroundColor Yellow
+    }
 
+    # Temporarily disable Stop on error to allow vcvarsall.bat warnings
+    $PrevErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
+    # Run build and capture output
+    $output = cmd.exe /c "$BuildBatch" 2>&1
+    Write-Host $output
     $BuildResult = $LASTEXITCODE
+
+    # Restore error preference
+    $ErrorActionPreference = $PrevErrorAction
+
     Remove-Item $BuildBatch -ErrorAction SilentlyContinue
 
     return $BuildResult
@@ -186,6 +248,7 @@ function Find-Executable {
     )
 
     foreach ($path in $SearchPaths) {
+        if (-not (Test-Path $path)) { continue }
         $exe = Get-ChildItem -Recurse -Filter $Filter -Path $path -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($exe) { return $exe }
     }
@@ -201,12 +264,16 @@ function Copy-Symbols {
     )
 
     Write-Host "Saving PDBs..." -ForegroundColor Green
+    $count = 0
     Get-ChildItem -Recurse -Filter "*.pdb" -Path $BuildFolder | ForEach-Object {
         Copy-Item $_.FullName "$SymbolsFolder\" -Force
+        $count++
     }
     Get-ChildItem "$RootDir\libs\windows\lib\$Arch\*.pdb" -ErrorAction SilentlyContinue | ForEach-Object {
         Copy-Item $_.FullName "$SymbolsFolder\" -Force
+        $count++
     }
+    Write-Host "  Copied $count PDB files" -ForegroundColor Gray
 }
 
 function Copy-Dependencies {
@@ -218,11 +285,17 @@ function Copy-Dependencies {
     )
 
     Write-Host "Copying dependencies..." -ForegroundColor Green
-    Copy-Item "$RootDir\libs\windows\lib\$Arch\*.dll" "$DeployFolder\" -Force -ErrorAction SilentlyContinue
+    $dllCount = 0
+    Get-ChildItem "$RootDir\libs\windows\lib\$Arch\*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
+        Copy-Item $_.FullName "$DeployFolder\" -Force
+        $dllCount++
+    }
+    Write-Host "  Copied $dllCount DLL files" -ForegroundColor Gray
 
     $MoonlightDll = Get-ChildItem -Recurse -Filter "moonlight-common-c.dll" -Path $BuildFolder | Select-Object -First 1
     if ($MoonlightDll) {
         Copy-Item $MoonlightDll.FullName "$DeployFolder\" -Force
+        Write-Host "  Copied moonlight-common-c.dll" -ForegroundColor Gray
     }
 
     Copy-Item "$RootDir\app\SDL_GameControllerDB\gamecontrollerdb.txt" "$DeployFolder\" -Force
@@ -232,78 +305,68 @@ function Deploy-Qt {
     param(
         [string]$DeployFolder,
         [string]$RootDir,
-        [string]$ExePath
+        [string]$ExePath,
+        [string]$GuiDir
     )
 
     Write-Host "Deploying Qt dependencies..." -ForegroundColor Green
 
-    $WindeployqtArgs = @(
-        "--dir", $DeployFolder
-        "--release"
-        "--qmldir", "$RootDir\app\gui"
-        "--no-opengl-sw"
-        "--no-compiler-runtime"
-        "--no-sql"
-        "--no-system-d3d-compiler"
-        "--no-system-dxc-compiler"
-        "--skip-plugin-types", "qmltooling,generic"
-        "--no-ffmpeg"
-        "--no-quickcontrols2fusion"
-        "--no-quickcontrols2imagine"
-        "--no-quickcontrols2universal"
-        "--no-quickcontrols2fusionstyleimpl"
-        "--no-quickcontrols2imaginestyleimpl"
-        "--no-quickcontrols2universalstyleimpl"
-        "--no-quickcontrols2windowsstyleimpl"
-        "--no-translations"
-    )
-
-    # Copy exe to deploy folder for windeployqt
     $DeployBinExe = "$DeployFolder\DancherLink.exe"
     Copy-Item $ExePath $DeployBinExe -Force
-    Write-Host "Copied DancherLink.exe to deploy folder for windeployqt" -ForegroundColor Green
 
-    windeployqt @WindeployqtArgs $DeployBinExe
+    $WindeployqtArgs = @(
+        "--dir", $DeployFolder
+        $BuildConfig.WindeployqtOptions
+    )
+
+    if ($GuiDir) {
+        $WindeployqtArgs += @("--qmldir", "$RootDir\$GuiDir")
+    }
+
+    $result = windeployqt @WindeployqtArgs $DeployBinExe 2>&1
 
     # Remove exe - WiX will add it separately
     Remove-Item $DeployBinExe -Force
-    Write-Host "Removed DancherLink.exe from deploy folder (will be added by WiX)" -ForegroundColor Green
+
+    return $result
 }
 
 function Deploy-QtTranslations {
-    param(
-        [string]$DeployFolder
-    )
+    param([string]$DeployFolder)
 
     $TranslationsDir = "$DeployFolder\translations"
     New-Item -ItemType Directory -Path $TranslationsDir -Force | Out-Null
 
-    $QtTranslations = @(
-        "$($Script:CommonConfig.QtPath)\..\translations\qt_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtbase_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtquick_zh_CN.qm",
-        "$($Script:CommonConfig.QtPath)\..\translations\qtmultimedia_zh_CN.qm"
-    )
-
-    $QtTranslations | Where-Object { Test-Path $_ } | ForEach-Object {
-        Copy-Item $_ "$TranslationsDir\" -Force
+    $count = 0
+    foreach ($qmFile in $BuildConfig.QtTranslations) {
+        $src = "$($BuildConfig.QtPath)\..\translations\$qmFile"
+        if (Test-Path $src) {
+            Copy-Item $src "$TranslationsDir\" -Force
+            $count++
+        }
     }
+    Write-Host "  Deployed $count Qt translation files" -ForegroundColor Gray
 }
 
 function Remove-UnusedQtStyles {
-    param(
-        [string]$DeployFolder
-    )
+    param([string]$DeployFolder)
 
     Write-Host "Removing unused Qt styles..." -ForegroundColor Green
+    $removedCount = 0
 
-    $styles = @("Fusion", "Imagine", "Universal", "Windows", "NativeStyle")
-    foreach ($style in $styles) {
-        $path = "$DeployFolder\qml\QtQuick\Controls\$style"
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
-        $path = "$DeployFolder\qml\QtQuick\Controls\$($style)StyleImpl"
-        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
+    foreach ($style in $BuildConfig.UnusedQtStyles) {
+        $paths = @(
+            "$DeployFolder\qml\QtQuick\Controls\$style",
+            "$DeployFolder\qml\QtQuick\Controls\$($style)StyleImpl"
+        )
+        foreach ($path in $paths) {
+            if (Test-Path $path) {
+                Remove-Item -Recurse -Force $path
+                $removedCount++
+            }
+        }
     }
+    Write-Host "  Removed $removedCount style directories" -ForegroundColor Gray
 }
 
 function Build-Msi {
@@ -313,28 +376,32 @@ function Build-Msi {
         [string]$BuildFolder,
         [string]$Version,
         [string]$WxsFile,
-        [string[]]$Extensions
+        [string[]]$Extensions,
+        [switch]$VerboseOutput
     )
 
     Write-Host "Building MSI installer..." -ForegroundColor Green
 
-    # Ensure app config dir exists and has the exe
     $AppConfigDir = "$BuildFolder\app\release"
-    if (-not (Test-Path $AppConfigDir)) { New-Item -ItemType Directory -Path $AppConfigDir | Out-Null }
+    if (-not (Test-Path $AppConfigDir)) {
+        New-Item -ItemType Directory -Path $AppConfigDir | Out-Null
+    }
+
     $BuiltExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-    if ($BuiltExe) { Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force }
+    if ($BuiltExe) {
+        Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force
+    }
 
     $WixArgs = @("build",
         "-arch", "x64",
         "-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi",
-        "-b", "$DeployFolder",
+        "-b", $DeployFolder,
         "-d", "Version=$Version",
         "-d", "BuildDir=$BuildFolder",
         "-d", "DeployDir=$DeployFolder",
         "-d", "Configuration=Release"
     )
 
-    # Add extensions if provided
     foreach ($ext in $Extensions) {
         $WixArgs += @("-ext", $ext)
     }
@@ -342,14 +409,18 @@ function Build-Msi {
     $WixArgs += $WxsFile
 
     Write-Host "Running: wix build..." -ForegroundColor Green
-    $WixOutput = & wix $WixArgs 2>&1
-    Write-Host $WixOutput
+    if ($VerboseOutput) {
+        $WixOutput = & wix $WixArgs 2>&1
+        Write-Host $WixOutput
+    } else {
+        $WixOutput = & wix $WixArgs 2>&1 | Out-String
+    }
 
-    # Copy MSI to build folder
     $MsiFile = "$InstallerFolder\DancherLink-x86_64-$Version.msi"
     if (Test-Path $MsiFile) {
+        $msiSize = [math]::Round((Get-Item $MsiFile).Length / 1MB, 2)
         Copy-Item $MsiFile "$BuildFolder\DancherLink.msi" -Force
-        Write-Host "MSI created: $MsiFile" -ForegroundColor Green
+        Write-Host "MSI created: $MsiFile ($msiSize MB)" -ForegroundColor Green
         return $MsiFile
     } else {
         Write-Host "Warning: MSI file not found after build" -ForegroundColor Yellow
@@ -369,7 +440,12 @@ function Update-Manifest {
 
     if ((Test-Path "$RootDir\server") -and (Test-Path "$RootDir\server\update_version.py")) {
         Write-Host "Updating server/$manifestFile..." -ForegroundColor Green
-        python "$RootDir\server\update_version.py" "$Version" "$Arch" "release" "$RootDir" $BuildType
+        $result = python "$RootDir\server\update_version.py" "$Version" "$Arch" "release" "$RootDir" $BuildType 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Warning: update_version.py returned non-zero exit code" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "Skipping manifest update (server directory not found)" -ForegroundColor Yellow
     }
 }
 
@@ -377,7 +453,8 @@ function Write-BuildSuccess {
     param(
         [string]$BuildType,
         [string]$Version,
-        [string]$MsiPath
+        [string]$MsiPath,
+        [string]$BuildDuration
     )
 
     Write-Host ""
@@ -385,5 +462,8 @@ function Write-BuildSuccess {
     Write-Host "[$BuildType Build] Build successful!" -ForegroundColor Green
     Write-Host "  Version: $Version" -ForegroundColor Yellow
     Write-Host "  MSI: $MsiPath" -ForegroundColor Yellow
+    if ($BuildDuration) {
+        Write-Host "  Duration: $BuildDuration" -ForegroundColor Yellow
+    }
     Write-Host "========================================" -ForegroundColor Green
 }
