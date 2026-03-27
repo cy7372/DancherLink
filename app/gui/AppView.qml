@@ -62,7 +62,9 @@ CenteredGridView {
             if (directLaunchAppIndex >= 0) {
                 // Start the direct launch app if nothing else is running
                 currentIndex = directLaunchAppIndex
-                currentItem.launchOrResumeSelectedApp(false)
+                if (currentItem) {
+                    currentItem.launchOrResumeSelectedApp(false)
+                }
 
                 // Set showGames so we will not loop when the stream ends
                 showGames = true

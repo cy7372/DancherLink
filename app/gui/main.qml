@@ -341,7 +341,9 @@ ApplicationWindow {
                 onClicked: goBack()
 
                 Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    if (stackView.currentItem) {
+                        stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
 
@@ -363,7 +365,7 @@ ApplicationWindow {
 
             NavigableToolButton {
                 id: addPcButton
-                visible: stackView.currentItem instanceof PcView
+                visible: stackView.currentItem && stackView.currentItem instanceof PcView
 
                 iconSource:  "qrc:/res/ic_add_to_queue_white_48px.svg"
 
@@ -383,7 +385,9 @@ ApplicationWindow {
                 }
 
                 Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    if (stackView.currentItem) {
+                        stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
 
@@ -435,7 +439,9 @@ ApplicationWindow {
                 }
 
                 Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    if (stackView.currentItem) {
+                        stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
 
@@ -453,7 +459,9 @@ ApplicationWindow {
                 onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", GamepadMapper)
 
                 Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    if (stackView.currentItem) {
+                        stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
 
@@ -465,7 +473,9 @@ ApplicationWindow {
                 onClicked: navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
 
                 Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    if (stackView.currentItem) {
+                        stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
 
                 Shortcut {
@@ -483,7 +493,7 @@ ApplicationWindow {
             // Version label - only visible on Settings page, placed at far right
             Label {
                 id: versionLabel
-                visible: stackView.currentItem instanceof SettingsView
+                visible: stackView.currentItem && stackView.currentItem instanceof SettingsView
                 text: qsTr("Version %1").arg(SystemProperties.versionString)
                 font.pointSize: 12
                 horizontalAlignment: Qt.AlignRight
@@ -497,7 +507,7 @@ ApplicationWindow {
     // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
     footer: Item {
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
-        visible: currentNetworkModel !== null && !(stackView.currentItem instanceof PcView)
+        visible: currentNetworkModel !== null && stackView.currentItem && !(stackView.currentItem instanceof PcView)
         height: visible ? 32 : 0
 
         Rectangle {

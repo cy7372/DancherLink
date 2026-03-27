@@ -217,6 +217,7 @@ CenteredGridView {
             readonly property var computerModelRef: pcGrid.computerModel
             Connections {
                 target: computerModelRef
+                when: computerModelRef !== null
                 function onNetworkLatencyChanged() {
                     // This ensures the delegate is notified when latency changes
                     latencyBadge.opacity = latencyBadge.opacity
