@@ -104,8 +104,8 @@ CenteredGridView {
 
         background: Rectangle {
             color: parent.highlighted ? AppTheme.backgroundHighlighted : (parent.hovered ? AppTheme.backgroundHover : "transparent")
-            border.color: parent.highlighted ? AppTheme.accentPrimary : "transparent"
-            border.width: parent.highlighted ? AppTheme.borderWidth : 0
+            border.color: "transparent"
+            border.width: 0
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
