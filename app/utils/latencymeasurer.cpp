@@ -37,6 +37,8 @@ void LatencyMeasurer::start(NvComputer *computer)
 
     m_Computer = computer;
     m_MeasurementBatch = 0;
+    m_EmaLatency = -1.0;
+    m_LastDisplayedLatency = -1;
 
     // Initialize computer's latency state
     {
@@ -71,6 +73,8 @@ void LatencyMeasurer::stop()
     }
 
     m_LatencySamples.clear();
+    m_EmaLatency = -1.0;
+    m_LastDisplayedLatency = -1;
 
     // Mark measurement as stopped in computer
     if (m_Computer) {
@@ -115,6 +119,26 @@ int LatencyMeasurer::measureOnce(const QString &address, quint16 port)
     return rttMs;
 }
 
+int LatencyMeasurer::calculateMedian(const QVector<int> &sortedSamples)
+{
+    if (sortedSamples.isEmpty()) return -1;
+    return sortedSamples[sortedSamples.size() / 2];
+}
+
+int LatencyMeasurer::smoothLatency(int newValue)
+{
+    if (newValue < 0) return newValue;
+
+    if (m_EmaLatency < 0) {
+        m_EmaLatency = newValue;
+    } else {
+        // Exponential moving average: EMA = α * new + (1-α) * old
+        m_EmaLatency = EMA_ALPHA * newValue + (1.0 - EMA_ALPHA) * m_EmaLatency;
+    }
+
+    return static_cast<int>(m_EmaLatency + 0.5);  // Round to nearest int
+}
+
 void LatencyMeasurer::measureSample()
 {
     if (!m_Computer) {
@@ -122,32 +146,36 @@ void LatencyMeasurer::measureSample()
         return;
     }
 
-    // If we have enough samples for this batch, process them and wait
+    // If we have enough samples for this batch, process them
     if (m_LatencySamples.size() >= SAMPLE_COUNT) {
         // Calculate median of samples
         QVector<int> sorted = m_LatencySamples;
         std::sort(sorted.begin(), sorted.end());
-        int median = sorted[sorted.size() / 2];
+        int median = calculateMedian(sorted);
 
         qDebug() << "[LatencyMeasurer] Batch" << m_MeasurementBatch
                  << "completed for" << m_Computer->name
                  << ", median RTT:" << median << "ms";
 
+        // Smooth the latency value
+        int smoothedLatency = smoothLatency(median);
+
         // Store result in computer
         {
             QWriteLocker lock(&m_Computer->lock);
-            m_Computer->measuredLatencyMs = median;
+            m_Computer->measuredLatencyMs = smoothedLatency;
             m_Computer->latencyMeasurementBatch = m_MeasurementBatch;
             m_Computer->lastLatencyUpdate = QDateTime::currentDateTime();
         }
 
-        emit latencyChanged(median);
+        emit latencyChanged(smoothedLatency);
 
-        // Clear samples for next batch and restart timer with longer interval
+        // Clear samples for next batch
         m_LatencySamples.clear();
         m_MeasurementBatch++;
 
-        if (m_Timer) {
+        // Continue with next batch immediately (BATCH_INTERVAL_MS = 0)
+        if (m_Timer && BATCH_INTERVAL_MS > 0) {
             m_Timer->start(BATCH_INTERVAL_MS);
         }
         return;
@@ -193,20 +221,24 @@ void LatencyMeasurer::handleSampleFinished()
         qDebug() << "[LatencyMeasurer] Sample" << m_LatencySamples.size()
                  << "RTT:" << rttMs << "ms for" << (m_Computer ? m_Computer->name : "unknown");
 
-        // Update computer with running median for first batch
+        // Update computer with running median during first batch for fast initial display
         if (m_Computer && m_MeasurementBatch == 0 && m_LatencySamples.size() < SAMPLE_COUNT) {
             QVector<int> sorted = m_LatencySamples;
             std::sort(sorted.begin(), sorted.end());
-            int runningMedian = sorted[sorted.size() / 2];
+            int runningMedian = calculateMedian(sorted);
+
+            // Smooth the running median
+            int smoothedRunningMedian = smoothLatency(runningMedian);
 
             {
                 QWriteLocker lock(&m_Computer->lock);
-                m_Computer->measuredLatencyMs = runningMedian;
+                m_Computer->measuredLatencyMs = smoothedRunningMedian;
             }
-            emit latencyChanged(runningMedian);
+            emit latencyChanged(smoothedRunningMedian);
         }
+    } else {
+        qDebug() << "[LatencyMeasurer] Sample failed for" << (m_Computer ? m_Computer->name : "unknown");
     }
 
-    // If we've collected enough samples, the next measureSample() call will process them
-    // Otherwise, the timer will trigger another sample
+    // Continue collecting samples
 }
