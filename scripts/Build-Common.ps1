@@ -114,6 +114,7 @@ function Invoke-NativeBuild {
 
     $isBeta = $BuildType -eq "beta"
     $VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
+    $VcArch = "AMD64"
     $CleanTemp = "C:\build-temp-$(Get-Random)"
 
     # Build additional cmake args for beta
@@ -124,7 +125,7 @@ function Invoke-NativeBuild {
 echo ========================================
 echo DancherLink Build
 echo ========================================
-call "$VcVarsAll" $CommonConfig.VcArch
+call "$VcVarsAll" $VcArch
 
 echo Setting up clean temp directory...
 set CLEAN_TEMP=$CleanTemp

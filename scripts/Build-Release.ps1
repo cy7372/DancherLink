@@ -41,7 +41,19 @@ Generate-Translations -LanguagesDir "$RootDir\app\languages"
 # Find Visual Studio
 Write-Host "[$BuildType Build] Setting up Visual Studio environment..." -ForegroundColor Green
 $VsWhere = "$ScriptDir\vswhere.exe"
-$VsInstallPath = & $VsWhere -latest -property installationPath
+if (Test-Path $VsWhere) {
+    $VsInstallPath = & $VsWhere -latest -property installationPath
+} else {
+    # Fallback to system vswhere
+    $programFiles = ${env:ProgramFiles(x86)}
+    $VsWhere = "$programFiles\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $VsWhere) {
+        $VsInstallPath = & $VsWhere -latest -property installationPath
+    } else {
+        Write-Error "vswhere.exe not found. Please install Visual Studio."
+        exit 1
+    }
+}
 
 # Build with Ninja
 $OpenSslPaths = @{
