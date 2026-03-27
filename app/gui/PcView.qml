@@ -171,8 +171,9 @@ CenteredGridView {
             height: 24
             radius: 4
             color: {
-                if (!model.online || !computerModel) return "#555555"
-                var ms = computerModel.networkLatencyMs
+                if (!model.online) return "#555555"
+                if (!pcGrid.computerModel) return "#555555"
+                var ms = pcGrid.computerModel.networkLatencyMs
                 if (ms < 0) return "#555555"      // Unknown (gray)
                 if (ms < 20) return "#2E7D32"      // Good (green)
                 if (ms < 50) return "#F9A825"      // Fair (yellow)
@@ -185,8 +186,8 @@ CenteredGridView {
                 id: latencyLabel
                 anchors.centerIn: parent
                 text: {
-                    if (!computerModel) return "--"
-                    var ms = computerModel.networkLatencyMs
+                    if (!pcGrid.computerModel) return "--"
+                    var ms = pcGrid.computerModel.networkLatencyMs
                     if (ms < 0) return "--"
                     return ms + " ms"
                 }
@@ -195,14 +196,26 @@ CenteredGridView {
                 font.bold: true
             }
 
-            ToolTip.visible: latencyMouseArea.containsMouse && computerModel
-            ToolTip.text: computerModel ? computerModel.networkQualityString : ""
+            ToolTip.visible: latencyMouseArea.containsMouse && pcGrid.computerModel
+            ToolTip.text: pcGrid.computerModel ? pcGrid.computerModel.networkQualityString : ""
             ToolTip.delay: 500
 
             MouseArea {
                 id: latencyMouseArea
                 anchors.fill: parent
                 hoverEnabled: true
+            }
+        }
+
+        // Connect to computerModel's networkLatencyChanged signal to ensure UI updates
+        Item {
+            readonly property var computerModelRef: pcGrid.computerModel
+            Connections {
+                target: computerModelRef
+                function onNetworkLatencyChanged() {
+                    // This ensures the delegate is notified when latency changes
+                    latencyBadge.opacity = latencyBadge.opacity
+                }
             }
         }
 
