@@ -39,9 +39,14 @@ CenteredGridView {
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
 
+        // If no selection and we have computers, select the first one
+        if (currentIndex === -1 && computerModel && computerModel.rowCount() > 0) {
+            currentIndex = 0
+        }
+
         // Start latency measurement for selected computer
-        if (pcGrid.currentIndex >= 0 && computerModel) {
-            computerModel.startLatencyMeasurement(pcGrid.currentIndex)
+        if (currentIndex >= 0 && computerModel) {
+            computerModel.startLatencyMeasurement(currentIndex)
         }
 
         // Highlight the first item if a gamepad is connected
