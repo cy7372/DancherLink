@@ -28,8 +28,8 @@ set TEMP=%CLEAN_TEMP%
 set TMPDIR=%CLEAN_TEMP%
 
 cd /d "$BuildFolder"
-cmake -S "$RootDir" -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ...
-cmake --build . --config Release --parallel 1
+cmake -S "$RootDir" -G "Ninja" -DCMAKE_BUILD_TYPE=Release ...
+cmake --build . --config Release
 
 if exist "%CLEAN_TEMP%" rmdir /s /q "%CLEAN_TEMP%"
 "@
@@ -41,8 +41,35 @@ cmd.exe /c "$BuildFolder\do-build.bat"
 **关键点**：
 - 在 `vcvarsall.bat` **之后** 设置 `TMP`/`TEMP`
 - 先创建临时目录，再设置环境变量
-- 使用 `--parallel 1` 避免并行编译时的临时文件冲突
+- 使用 Ninja 生成器支持并行构建
 - 每个构建使用唯一的临时目录名
+
+---
+
+## 1b. Ninja 生成器优势
+
+### 与 NMake 的对比
+
+| 特性 | NMake Makefiles | Ninja |
+|------|-----------------|-------|
+| 并行构建 | 不支持 | 自动多进程 |
+| 增量构建 | 慢 | 极快 |
+| 依赖追踪 | 基础 | 精确 |
+| 错误信息 | 冗长 | 简洁 |
+| 构建语法 | 复杂 | 简单 |
+
+### 为什么选择 Ninja
+
+1. **并行构建**：Ninja 默认使用所有可用 CPU 核心，无需 `--parallel` 参数
+2. **增量构建极快**：只编译真正变更的文件，跳过未变更部分
+3. **更智能的依赖分析**：避免漏编译或重复编译
+4. **更清晰的输出**：构建进度和错误信息更易读
+
+### 迁移到 Ninja 的注意事项
+
+- 确保已安装 Ninja：`ninja --version`（Windows 可通过 `choco install ninja` 安装）
+- CMake 命令从 `-G "NMake Makefiles"` 改为 `-G "Ninja"`
+- 构建命令从 `cmake --build . --parallel 1` 改为 `cmake --build .`
 
 ---
 
@@ -139,23 +166,7 @@ cmake -S "%RootDir%" ...
 
 ---
 
-## 5. NMake Makefiles 并行构建问题
-
-### 错误信息
-```
-Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
-```
-
-### 说明
-这不是错误，是 NMake 的正常行为。NMake 不支持并行构建，`--parallel` 参数会被忽略。
-
-如果需要并行构建，可以考虑：
-- 使用 Visual Studio 生成器（如果 CMake 支持 VS 2026）
-- 接受串行构建
-
----
-
-## 6. 批处理文件中 PowerShell 反引号无效
+## 5. 批处理文件中 PowerShell 反引号无效
 
 ### 错误信息
 ```
@@ -170,19 +181,19 @@ Warning: NMake does not support parallel builds. Ignoring parallel build command
 
 ```powershell
 # 错误 - PowerShell 语法
-cmake -S "$RootDir" -G "NMake Makefiles" `
+cmake -S "$RootDir" -G "Ninja" `
     -DCMAKE_BUILD_TYPE="Release" `
     ...
 
 # 正确 - 单行或批处理语法
 $BatchContent = @"
-cmake -S "$RootDir" -G "NMake Makefiles" -DCMAKE_BUILD_TYPE="Release" -DARCH_DIR="$Arch" ...
+cmake -S "$RootDir" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DARCH_DIR="$Arch" ...
 "@
 ```
 
 ---
 
-## 7. vswhere.exe 在批处理文件中找不到
+## 6. vswhere.exe 在批处理文件中找不到
 
 ### 错误信息
 ```
@@ -219,8 +230,8 @@ PowerShell 脚本 (Build-Release.ps1)
     │
     ├── 调用 vcvarsall.bat 设置 MSVC 环境
     ├── 设置干净的临时目录
-    ├── 运行 CMake 配置
-    └── 运行 CMake 构建 (--parallel 1)
+    ├── 运行 CMake 配置 (Ninja)
+    └── 运行 CMake 构建 (Ninja 并行)
     │
     ▼
 PowerShell 脚本继续
@@ -233,12 +244,12 @@ PowerShell 脚本继续
 ### 关键文件修改
 - `scripts/Build-Release.ps1` - 使用 cmd.exe 包装器运行构建
 - `scripts/Build-Beta.ps1` - 同上
-- `scripts/Build-Native.bat` - 独立的原生构建脚本（可选）
+- `scripts/Build-Common.ps1` - 公共构建函数库（新增）
+- `scripts/Build-Native.bat` - 独立的原生构建脚本（可选，使用 NMake）
 
 ### 依赖项
 - Qt 6.10+ (MSVC 2022 x64)
 - Visual Studio 2026 (或 2022)
 - CMake 3.16+
+- Ninja 1.10+（默认支持并行构建）
 - WiX Toolset 6.0+ (CLI)
-- 7-Zip（如果不需要便携版可移除）
-- Ninja（可选，当前使用 NMake）
