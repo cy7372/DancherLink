@@ -6,15 +6,33 @@
 .PARAMETER Type
     Build type: 'release' or 'beta'
 .EXAMPLE
-    .\Build.ps1 -Type release
-    .\Build.ps1 -Type beta
+    .\Build.ps1 -Type release    # Build stable release
+    .\Build.ps1 -Type beta       # Build beta version
 #>
 
+[CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [ValidateSet('release', 'beta')]
-    [string]$Type
+    [string]$Type,
+
+    [switch]$Help
 )
+
+if ($Help -or -not $Type) {
+    Write-Host "DancherLink Build System" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Builds DancherLink Release or Beta version." -ForegroundColor White
+    Write-Host ""
+    Write-Host "Build Types:" -ForegroundColor Cyan
+    Write-Host "  release    Build stable release version (MSI)" -ForegroundColor White
+    Write-Host "  beta       Build beta/test version (MSI)" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Examples:" -ForegroundColor Cyan
+    Write-Host "  .\Build.ps1 -Type release" -ForegroundColor White
+    Write-Host "  .\Build.ps1 -Type beta" -ForegroundColor White
+    exit 0
+}
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir

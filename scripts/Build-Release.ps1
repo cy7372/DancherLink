@@ -60,7 +60,7 @@ if (Test-Path $DeployFolder) { Remove-Item -Recurse -Force $DeployFolder }
 if (Test-Path $BuildFolder) { Remove-Item -Recurse -Force $BuildFolder }
 if (Test-Path $InstallerFolder) { Remove-Item -Recurse -Force $InstallerFolder }
 if (Test-Path $SymbolsFolder) { Remove-Item -Recurse -Force $SymbolsFolder }
-New-Item -ItemType Directory -Path $BuildRoot, $DeployFolder, $BuildFolder, $InstallerFolder, $SymbolsFolder | Out-Null
+New-Item -ItemType Directory -Path $DeployFolder, $BuildFolder, $InstallerFolder, $SymbolsFolder -Force | Out-Null
 
 # Sync version to RC file
 Write-Host "[Release Build] Syncing version to RC file..." -ForegroundColor Green
@@ -83,13 +83,27 @@ $VsWhere = "$ScriptDir\vswhere.exe"
 $VsInstallPath = & $VsWhere -latest -property installationPath
 $VcArch = "AMD64"
 
-# Run vcvarsall.bat and capture environment
-$VcVarsCmd = "& `"$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat`" $VcArch"
-$EnvVars = cmd /c "$VcVarsCmd && set" | ForEach-Object {
-    if ($_ -match '^(\w+)=(.*)$') {
-        Set-Item -Force -Path "ENV:\$($matches[1])" -Value $matches[2]
+# Run vcvarsall.bat using ProcessStartInfo to capture environment variables
+$VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = "cmd.exe"
+$psi.Arguments = "/c `"$VcVarsAll`" $VcArch && set"
+$psi.RedirectStandardOutput = $true
+$psi.UseShellExecute = $false
+$psi.CreateNoWindow = $true
+
+$process = [System.Diagnostics.Process]::Start($psi)
+$output = $process.StandardOutput.ReadToEnd()
+$process.WaitForExit()
+
+# Parse and apply environment variables
+foreach ($line in $output -split "`n") {
+    if ($line -match '^(\w+)=(.*)$') {
+        [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
     }
 }
+
+Write-Host "[Release Build] VC Tools: $env:VCToolsInstallDir" -ForegroundColor Green
 
 # Find VC redistributable
 $VcRedistPath = & $VsWhere -latest -find "VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT"
