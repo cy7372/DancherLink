@@ -165,7 +165,6 @@ function Invoke-NativeBuild {
 
     $isBeta = $BuildType -eq "beta"
     $BetaArgs = if ($isBeta) { " -DBUILD_TYPE=`"beta`"" } else { "" }
-    $ConfigureFlag = if ($SkipConfigure) { "" } else { "-S `"$RootDir`"" }
 
     $BatchContent = @"
 @echo off
@@ -187,29 +186,22 @@ set PATH=$($BuildConfig.QtPath);%PATH%
 set Qt6_DIR=$($BuildConfig.QtCMakeDir)
 
 cd /d "$BuildFolder"
+"@
 
-if exist CMakeCache.txt (
-    echo Found existing CMake cache
-) else (
-    echo No CMake cache found
-)
+    if (-not $SkipConfigure) {
+        $BatchContent += @"
 
-if not exist build.ninja (
-    echo No build.ninja found, will configure
-    set NEED_CONFIG=1
-) else (
-    echo Build system exists
+echo Running cmake configure...
+cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
+if %ERRORLEVEL% neq 0 (
+    echo CMake configuration FAILED
+    goto :cleanup
 )
+echo CMake configuration SUCCESS
+"@
+    }
 
-@if not "%SkipConfigure%"=="" (
-    echo Running cmake configure...
-    cmake $ConfigureFlag -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
-    if %ERRORLEVEL% neq 0 (
-        echo CMake configuration FAILED
-        goto :cleanup
-    )
-    echo CMake configuration SUCCESS
-)
+    $BatchContent += @"
 
 echo.
 echo Building...
@@ -478,10 +470,6 @@ function Copy-ReleaseFiles {
     }
     New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
 
-    # Copy deployed files (app + dependencies + Qt)
-    Write-Host "  Copying application files..." -ForegroundColor Green
-    Copy-Item "$DeployFolder\*" $ReleaseFolder -Recurse -Force
-
     # Copy MSI if available
     if ($MsiFile -and (Test-Path $MsiFile)) {
         $MsiName = "DancherLink-x86_64-$Version.msi"
@@ -492,11 +480,7 @@ function Copy-ReleaseFiles {
     # Copy server files
     if (Test-Path "$RootDir\server") {
         Write-Host "  Copying server files..." -ForegroundColor Green
-        $ServerDest = "$ReleaseFolder\server"
-        if (-not (Test-Path $ServerDest)) {
-            New-Item -ItemType Directory -Path $ServerDest -Force | Out-Null
-        }
-        Copy-Item "$RootDir\server\*" $ServerDest -Recurse -Force -Include *.py
+        Copy-Item "$RootDir\server\*" $ReleaseFolder -Recurse -Force
     }
 }
 
