@@ -92,30 +92,15 @@
                      KeyPath="yes" />
     </Component>
 
-    <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="Moonlight">
-        <File Id="DancherLinkExe"
-              KeyPath="yes"
-              Checksum="yes"
-              Source="$(var.BuildDir)\app\$(var.Configuration)\DancherLink.exe">
-          <fire:FirewallException Id="MoonlightFirewallException"
-                                  Scope="any"
-                                  IgnoreFailure="yes"
-                                  Name="$(var.FullName)" />
-        </File>
-      </Component>
-    </DirectoryRef>
-
     <ComponentGroup Id="MoonlightDependencies" Directory="INSTALLFOLDER">
       <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
     <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
-      <ComponentRef Id="Moonlight" />
+      <ComponentGroupRef Id="MoonlightDependencies" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />
       <ComponentRef Id="MoonlightDesktopShortcut" />
-      <ComponentGroupRef Id="MoonlightDependencies" />
     </Feature>
 
     <StandardDirectory Id="DesktopFolder" />

@@ -32,21 +32,25 @@ $startTime = Get-Date
 # Initialize
 $Arch = Initialize-BuildEnvironment -BuildType $BuildType
 
-# Read Beta version
-if (Test-Path "$RootDir\app\version_beta.txt") {
-    $Version = (Get-Content "$RootDir\app\version_beta.txt" | ForEach-Object { $_.Trim() })
+# Read version from version.txt (4-digit for Beta, e.g., 1.0.5.37)
+$FullVersion = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
+
+# Extract 4-digit version for Beta (pure numbers for MSI compatibility)
+# If version is 3-digit (e.g., 1.0.5), append .0
+# If version is 4-digit (e.g., 1.0.5.37), use as-is
+$versionParts = $FullVersion.Split('.')
+if ($versionParts.Count -eq 3) {
+    $Version = "${FullVersion}.0"
+} elseif ($versionParts.Count -ge 4) {
+    $Version = $versionParts[0..3] -join '.'
 } else {
-    $BaseVersion = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
-    $Version = "${BaseVersion}-beta"
-    Write-Host "[$BuildType Build] Warning: version_beta.txt not found, using $Version" -ForegroundColor Yellow
+    $Version = $FullVersion
 }
 
-# Ensure version has -beta suffix
-if ($Version -notlike "*-beta*") {
-    $Version = "${Version}-beta"
-}
+# Add -beta suffix for display only
+$DisplayVersion = "$Version-beta"
 
-Write-Host "[$BuildType Build] Version: $Version" -ForegroundColor Green
+Write-Host "[$BuildType Build] Version: $DisplayVersion (MSI: $Version)" -ForegroundColor Green
 
 # Get paths
 $Paths = Get-BuildPaths -RootDir $RootDir -Arch $Arch -BuildType "beta" -Incremental:$Incremental
@@ -123,7 +127,7 @@ try {
             -BuildFolder $BuildFolder `
             -Version $Version `
             -WxsFile "$RootDir\wix\DancherLink\Product-beta.wxs" `
-            -Extensions @()
+            -Extensions @("WixToolset.Util.wixext", "WixToolset.Firewall.wixext")
 
         # Copy final binary
         $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"

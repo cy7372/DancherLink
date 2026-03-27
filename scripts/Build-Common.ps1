@@ -386,15 +386,8 @@ function Build-Msi {
 
     Write-Host "Building MSI installer..." -ForegroundColor Green
 
-    $AppConfigDir = "$BuildFolder\app\release"
-    if (-not (Test-Path $AppConfigDir)) {
-        New-Item -ItemType Directory -Path $AppConfigDir | Out-Null
-    }
-
-    $BuiltExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-    if ($BuiltExe) {
-        Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force
-    }
+    # Note: We don't copy exe to app/release anymore to avoid GUID conflicts
+    # WiX project should reference exe from DeployFolder only
 
     $WixArgs = @("build",
         "-arch", "x64",
