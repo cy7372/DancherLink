@@ -66,7 +66,7 @@ private:
     QFutureWatcher<int> *m_Watcher = nullptr;
     QTimer *m_Timer = nullptr;
 
-    static constexpr int SAMPLE_COUNT = 5;
-    static constexpr int SAMPLE_INTERVAL_MS = 100;
-    static constexpr int BATCH_INTERVAL_MS = 3000;
+    static constexpr int SAMPLE_COUNT = 3;
+    static constexpr int SAMPLE_INTERVAL_MS = 50;
+    static constexpr int BATCH_INTERVAL_MS = 1000;
 };
