@@ -303,12 +303,6 @@ if ($FinalExe -and -not (Test-Path "$DeployFolder\DancherLink.exe")) {
     Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
 }
 
-# Create portable package
-Write-Host "[Release Build] Creating portable package..." -ForegroundColor Green
-Copy-Item "$VcRedistPath\*.dll" "$DeployFolder\" -Force
-New-Item "$DeployFolder\portable.dat" -ItemType File -Force | Out-Null
-& 7z a "$InstallerFolder\DancherLinkPortable-$Arch-$Version.zip" "$DeployFolder\*"
-
 # Copy MSI to installer folder
 $MsiFile = Get-ChildItem -Recurse -Filter "DancherLink.msi" -Path "$BuildFolder" | Select-Object -First 1
 if ($MsiFile) {
