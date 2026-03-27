@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # DancherLink Build System - Main Entry Point
-# Usage: ./build.sh [release|beta] [debug|release]
+# Usage: ./build.sh [release|beta]
 #
 
 set -e
@@ -13,7 +13,6 @@ cd "$ROOT_DIR"
 
 # Default values
 BUILD_TYPE="release"      # release or beta
-CONFIG="release"          # debug or release
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -26,31 +25,18 @@ while [[ $# -gt 0 ]]; do
             BUILD_TYPE="beta"
             shift
             ;;
-        debug)
-            CONFIG="debug"
-            shift
-            ;;
-        release)
-            CONFIG="release"
-            shift
-            ;;
         -h|--help)
             echo "DancherLink Build System"
             echo ""
             echo "Usage: ./build.sh [OPTIONS]"
             echo ""
             echo "Build Types (choose one):"
-            echo "  release    Build stable release version"
-            echo "  beta       Build beta/test version"
-            echo ""
-            echo "Configurations (choose one):"
-            echo "  debug      Build with debug symbols"
-            echo "  release    Build with optimizations (default)"
+            echo "  release    Build stable release version (MSI)"
+            echo "  beta       Build beta/test version (MSI)"
             echo ""
             echo "Examples:"
-            echo "  ./build.sh release release   # Build stable release"
-            echo "  ./build.sh beta release      # Build beta version"
-            echo "  ./build.sh beta debug        # Build beta with debug symbols"
+            echo "  ./build.sh release           # Build stable release"
+            echo "  ./build.sh beta              # Build beta version"
             exit 0
             ;;
         *)
@@ -65,13 +51,13 @@ echo "========================================"
 echo "DancherLink Build System"
 echo "========================================"
 echo "Build Type: $BUILD_TYPE"
-echo "Configuration: $CONFIG"
+echo "Configuration: Release (optimized)"
 echo "========================================"
 echo ""
 
 # Execute the appropriate build script
 if [[ "$BUILD_TYPE" == "release" ]]; then
-    bash "$SCRIPT_DIR/build-release.sh" "$CONFIG"
+    bash "$SCRIPT_DIR/build-release.sh"
 else
-    bash "$SCRIPT_DIR/build-beta.sh" "$CONFIG"
+    bash "$SCRIPT_DIR/build-beta.sh"
 fi

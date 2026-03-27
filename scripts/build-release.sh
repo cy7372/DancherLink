@@ -1,7 +1,10 @@
 #!/bin/bash
 #
 # DancherLink Release Build Script
-# Usage: ./build-release.sh [debug|release]
+# Usage: ./build-release.sh
+#
+# Note: Only Release (optimized) builds are supported.
+# Debug builds are not intended for distribution.
 #
 
 set -e
@@ -11,14 +14,9 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$ROOT_DIR"
 
-# Configuration
-CONFIG="${1:-release}"
-if [[ "$CONFIG" != "debug" && "$CONFIG" != "release" ]]; then
-    echo "Error: Invalid configuration '$CONFIG'. Use 'debug' or 'release'."
-    exit 1
-fi
-
-CMAKE_BUILD_TYPE="$(echo "$CONFIG" | head -c 1 | tr '[:lower:]' '[:upper:]')$(echo "$CONFIG" | tail -c +2)"
+# Fixed configuration - Release only
+CONFIG="release"
+CMAKE_BUILD_TYPE="Release"
 
 # Setup environment
 export PATH="$LOCALAPPDATA/Microsoft/WinGet/Links:$PATH"
@@ -36,13 +34,11 @@ if ! command -v qmake &> /dev/null; then
 fi
 
 echo "[Release Build] Starting build process..."
-echo "[Release Build] Configuration: $CMAKE_BUILD_TYPE"
 
 # Detect architecture
 QT_PATH="$(dirname "$(which qmake)")"
 if [[ "$QT_PATH" == *"_arm64"* ]]; then
     ARCH="arm64"
-    HOSTBIN_PATH="${QT_PATH/_arm64/_64}"
 elif [[ "$QT_PATH" == *"_64"* ]]; then
     ARCH="x64"
 else
@@ -57,10 +53,10 @@ echo "[Release Build] Version: $VERSION"
 
 # Build directories
 BUILD_ROOT="$ROOT_DIR/build"
-BUILD_FOLDER="$BUILD_ROOT/build-$ARCH-$CONFIG"
-DEPLOY_FOLDER="$BUILD_ROOT/deploy-$ARCH-$CONFIG"
-INSTALLER_FOLDER="$BUILD_ROOT/installer-$ARCH-$CONFIG"
-SYMBOLS_FOLDER="$BUILD_ROOT/symbols-$ARCH-$CONFIG"
+BUILD_FOLDER="$BUILD_ROOT/build-$ARCH-release"
+DEPLOY_FOLDER="$BUILD_ROOT/deploy-$ARCH-release"
+INSTALLER_FOLDER="$BUILD_ROOT/installer-$ARCH-release"
+SYMBOLS_FOLDER="$BUILD_ROOT/symbols-$ARCH-release"
 
 # Clean output directories
 echo "[Release Build] Cleaning output directories..."
@@ -118,8 +114,8 @@ cp "$ROOT_DIR/libs/windows/lib/$ARCH/"*.dll "$DEPLOY_FOLDER/"
 # Copy moonlight-common-c.dll
 if [[ -f "$BUILD_FOLDER/bin/moonlight-common-c.dll" ]]; then
     cp "$BUILD_FOLDER/bin/moonlight-common-c.dll" "$DEPLOY_FOLDER/"
-elif [[ -f "$BUILD_FOLDER/moonlight-common-c/moonlight-common-c/$CONFIG/moonlight-common-c.dll" ]]; then
-    cp "$BUILD_FOLDER/moonlight-common-c/moonlight-common-c/$CONFIG/moonlight-common-c.dll" "$DEPLOY_FOLDER/"
+elif [[ -f "$BUILD_FOLDER/moonlight-common-c/moonlight-common-c/release/moonlight-common-c.dll" ]]; then
+    cp "$BUILD_FOLDER/moonlight-common-c/moonlight-common-c/release/moonlight-common-c.dll" "$DEPLOY_FOLDER/"
 fi
 
 # Copy GC mapping
@@ -131,13 +127,13 @@ WINDEPLOYQT_ARGS="$WINDEPLOYQT_ARGS --no-quickcontrols2fusion --no-quickcontrols
 WINDEPLOYQT_ARGS="$WINDEPLOYQT_ARGS --no-quickcontrols2fusionstyleimpl --no-quickcontrols2imaginestyleimpl --no-quickcontrols2universalstyleimpl --no-quickcontrols2windowsstyleimpl"
 WINDEPLOYQT_ARGS="$WINDEPLOYQT_ARGS --no-translations"
 
-EXE_PATH="$BUILD_FOLDER/bin/$CMAKE_BUILD_TYPE/DancherLink.exe"
+EXE_PATH="$BUILD_FOLDER/bin/Release/DancherLink.exe"
 if [[ ! -f "$EXE_PATH" ]]; then
-    EXE_PATH="$BUILD_FOLDER/app/$CMAKE_BUILD_TYPE/DancherLink.exe"
+    EXE_PATH="$BUILD_FOLDER/app/Release/DancherLink.exe"
 fi
 
 echo "[Release Build] Deploying Qt dependencies..."
-windeployqt --dir "$DEPLOY_FOLDER" --"$CONFIG" --qmldir "$ROOT_DIR/app/gui" \
+windeployqt --dir "$DEPLOY_FOLDER" --release --qmldir "$ROOT_DIR/app/gui" \
     --no-opengl-sw --no-compiler-runtime --no-sql $WINDEPLOYQT_ARGS "$EXE_PATH"
 
 # Deploy translations
@@ -156,12 +152,12 @@ rm -rf "$DEPLOY_FOLDER/qml/QtQuick/NativeStyle"
 
 # Build MSI
 echo "[Release Build] Building MSI installer..."
-mkdir -p "$BUILD_FOLDER/app/$CONFIG"
-cp "$BUILD_FOLDER/bin/DancherLink.exe" "$BUILD_FOLDER/app/$CONFIG/DancherLink.exe" 2>/dev/null || \
-cp "$BUILD_FOLDER/app/$CONFIG/DancherLink.exe" "$BUILD_FOLDER/app/$CONFIG/DancherLink.exe" 2>/dev/null || true
+mkdir -p "$BUILD_FOLDER/app/release"
+cp "$BUILD_FOLDER/bin/DancherLink.exe" "$BUILD_FOLDER/app/release/DancherLink.exe" 2>/dev/null || \
+cp "$BUILD_FOLDER/app/Release/DancherLink.exe" "$BUILD_FOLDER/app/release/DancherLink.exe" 2>/dev/null || true
 
 msbuild -Restore "$ROOT_DIR/wix/DancherLink/DancherLink.wixproj" \
-    /p:Configuration="$CONFIG" \
+    /p:Configuration="Release" \
     /p:Platform="$ARCH" \
     /p:MSBuildProjectExtensionsPath="$BUILD_FOLDER/" \
     /p:Version="$VERSION"
@@ -177,19 +173,20 @@ touch "$DEPLOY_FOLDER/portable.dat"
 7z a "$INSTALLER_FOLDER/DancherLinkPortable-$ARCH-$VERSION.zip" "$DEPLOY_FOLDER/"*
 
 # Copy MSI to installer folder
-cp "$BUILD_FOLDER/DancherLink.msi" "$INSTALLER_FOLDER/" 2>/dev/null || \
-find "$BUILD_FOLDER" -name "DancherLink.msi" -exec cp {} "$INSTALLER_FOLDER/" \;
+MSI_FILE=$(find "$BUILD_FOLDER" -name "DancherLink.msi" 2>/dev/null | head -1)
+if [[ -n "$MSI_FILE" ]]; then
+    cp "$MSI_FILE" "$INSTALLER_FOLDER/DancherLink-x86_64-$VERSION.msi"
+fi
 
 # Update manifest
 if [[ -d "$ROOT_DIR/server" ]] && [[ -f "$ROOT_DIR/server/update_version.py" ]]; then
     echo "[Release Build] Updating server/updates.json..."
-    python "$ROOT_DIR/server/update_version.py" "$VERSION" "$ARCH" "$CONFIG" "$ROOT_DIR"
+    python "$ROOT_DIR/server/update_version.py" "$VERSION" "$ARCH" "release" "$ROOT_DIR" "release"
 fi
 
 echo ""
 echo "========================================"
 echo "[Release Build] Build successful!"
 echo "  Version: $VERSION"
-echo "  MSI: $INSTALLER_FOLDER/DancherLink.msi"
-echo "  Portable: $INSTALLER_FOLDER/DancherLinkPortable-$ARCH-$VERSION.zip"
+echo "  MSI: $INSTALLER_FOLDER/DancherLink-x86_64-$VERSION.msi"
 echo "========================================"
