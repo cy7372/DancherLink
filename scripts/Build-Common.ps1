@@ -74,6 +74,10 @@ function Get-BuildPaths {
     $isBeta = $BuildType -eq "beta"
     $betaSuffix = if ($isBeta) { "-beta" } else { "" }
 
+    # Final release output directory
+    $ReleaseBase = "C:\Users\CyYu\Release\DancherLink"
+    $ReleaseFolder = if ($isBeta) { "$ReleaseBase\beta" } else { "$ReleaseBase" }
+
     $paths = @{
         BuildRoot = "$RootDir\build"
         BuildFolder = "$RootDir\build\build-$Arch$betaSuffix-release"
@@ -81,6 +85,7 @@ function Get-BuildPaths {
         InstallerFolder = "$RootDir\build\installer-$Arch$betaSuffix-release"
         SymbolsFolder = "$RootDir\symbols-$Arch$betaSuffix-release"
         LogDir = "$RootDir\build\logs"
+        ReleaseFolder = $ReleaseFolder
     }
 
     # Clean only if not incremental build
@@ -91,6 +96,10 @@ function Get-BuildPaths {
             }
             New-Item -ItemType Directory -Path $paths[$key] -Force | Out-Null
         }
+        # Ensure release folder exists
+        if (-not (Test-Path $ReleaseFolder)) {
+            New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
+        }
         Write-Host "Output directories cleaned (full build)" -ForegroundColor Green
     } else {
         Write-Host "Incremental build (preserving build directory)" -ForegroundColor Yellow
@@ -99,6 +108,9 @@ function Get-BuildPaths {
             if (-not (Test-Path $paths[$key])) {
                 New-Item -ItemType Directory -Path $paths[$key] -Force | Out-Null
             }
+        }
+        if (-not (Test-Path $ReleaseFolder)) {
+            New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
         }
     }
 
@@ -446,6 +458,45 @@ function Update-Manifest {
         }
     } else {
         Write-Host "Skipping manifest update (server directory not found)" -ForegroundColor Yellow
+    }
+}
+
+function Copy-ReleaseFiles {
+    param(
+        [string]$DeployFolder,
+        [string]$ReleaseFolder,
+        [string]$MsiFile,
+        [string]$Version,
+        [string]$RootDir
+    )
+
+    Write-Host "  Preparing release files..." -ForegroundColor Green
+
+    # Clean release folder
+    if (Test-Path $ReleaseFolder) {
+        Remove-Item -Recurse -Force $ReleaseFolder\* -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
+
+    # Copy deployed files (app + dependencies + Qt)
+    Write-Host "  Copying application files..." -ForegroundColor Green
+    Copy-Item "$DeployFolder\*" $ReleaseFolder -Recurse -Force
+
+    # Copy MSI if available
+    if ($MsiFile -and (Test-Path $MsiFile)) {
+        $MsiName = "DancherLink-x86_64-$Version.msi"
+        Copy-Item $MsiFile "$ReleaseFolder\$MsiName" -Force
+        Write-Host "  Copied MSI: $MsiName" -ForegroundColor Green
+    }
+
+    # Copy server files
+    if (Test-Path "$RootDir\server") {
+        Write-Host "  Copying server files..." -ForegroundColor Green
+        $ServerDest = "$ReleaseFolder\server"
+        if (-not (Test-Path $ServerDest)) {
+            New-Item -ItemType Directory -Path $ServerDest -Force | Out-Null
+        }
+        Copy-Item "$RootDir\server\*" $ServerDest -Recurse -Force -Include *.py
     }
 }
 

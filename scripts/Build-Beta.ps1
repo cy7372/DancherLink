@@ -55,6 +55,7 @@ $DeployFolder = $Paths.DeployFolder
 $InstallerFolder = $Paths.InstallerFolder
 $SymbolsFolder = $Paths.SymbolsFolder
 $LogDir = $Paths.LogDir
+$ReleaseFolder = $Paths.ReleaseFolder
 
 # Start build logging
 Start-BuildLogging -LogDir $LogDir
@@ -134,6 +135,10 @@ try {
         Write-Host "[$BuildType Build] Skipping MSI packaging (--NoMsi)" -ForegroundColor Yellow
         $MsiFile = $null
     }
+
+    # Copy to release folder
+    Write-Host "[$BuildType Build] Copying to release folder: $ReleaseFolder" -ForegroundColor Green
+    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir
 
     # Calculate duration
     $endTime = Get-Date

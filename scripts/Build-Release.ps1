@@ -43,6 +43,7 @@ $DeployFolder = $Paths.DeployFolder
 $InstallerFolder = $Paths.InstallerFolder
 $SymbolsFolder = $Paths.SymbolsFolder
 $LogDir = $Paths.LogDir
+$ReleaseFolder = $Paths.ReleaseFolder
 
 # Start build logging
 Start-BuildLogging -LogDir $LogDir
@@ -123,7 +124,18 @@ try {
     } else {
         Write-Host "[$BuildType Build] Skipping MSI packaging (--NoMsi)" -ForegroundColor Yellow
         $MsiFile = $null
+
+        # Copy exe to deploy folder for release
+        $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
+        if ($FinalExe -and -not (Test-Path "$DeployFolder\DancherLink.exe")) {
+            Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
+            Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
+        }
     }
+
+    # Copy to release folder
+    Write-Host "[$BuildType Build] Copying to release folder: $ReleaseFolder" -ForegroundColor Green
+    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir
 
     # Calculate duration
     $endTime = Get-Date
