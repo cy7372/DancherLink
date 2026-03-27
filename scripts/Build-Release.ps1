@@ -222,12 +222,16 @@ if (-not $ExePath) {
 }
 Write-Host "[Release Build] Found DancherLink.exe: $($ExePath.FullName)" -ForegroundColor Green
 
-# Copy executable to deploy folder
+# Copy executable to deploy folder temporarily for windeployqt
 $DeployBinExe = "$DeployFolder\DancherLink.exe"
 Copy-Item $ExePath.FullName $DeployBinExe -Force
-Write-Host "[Release Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
+Write-Host "[Release Build] Copied DancherLink.exe to deploy folder for windeployqt" -ForegroundColor Green
 
 windeployqt @WindeployqtArgs $DeployBinExe
+
+# Remove the exe from deploy folder - WiX will add it separately
+Remove-Item $DeployBinExe -Force
+Write-Host "[Release Build] Removed DancherLink.exe from deploy folder (will be added by WiX)" -ForegroundColor Green
 
 # Deploy translations
 $TranslationsDir = "$DeployFolder\translations"
@@ -262,21 +266,36 @@ if (-not (Test-Path $AppConfigDir)) { New-Item -ItemType Directory -Path $AppCon
 $BuiltExe = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin","$BuildFolder\app" | Select-Object -First 1
 if ($BuiltExe) { Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force }
 
-# Find MSBuild path
-$MsBuild = "$VsInstallPath\MSBuild\Current\Bin\MSBuild.exe"
-if (-not (Test-Path $MsBuild)) {
-    $MsBuild = & $VsWhere -latest -find "MSBuild\**\Bin\MSBuild.exe"
-}
-Write-Host "[Release Build] Using MSBuild: $MsBuild" -ForegroundColor Green
+# Use WiX CLI instead of MSBuild to avoid Aspire compatibility issues
+$WixExe = "wix"
+Write-Host "[Release Build] Using WiX CLI: $WixExe" -ForegroundColor Green
+$Configuration = "Release"
 
-# Build WiX project without Restore to avoid Aspire compatibility issues
-& $MsBuild "$RootDir\wix\DancherLink\DancherLink.wixproj" `
-    /p:Configuration="Release" `
-    /p:Platform="$Arch" `
-    /p:MSBuildProjectExtensionsPath="$BuildFolder/" `
-    /p:Version="$Version" `
-    /p:SkipAspire=true `
-    /t:Build
+# Build MSI using wix build command with extensions
+$WixArgs = @("build",
+    "-arch", "x64",
+    "-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi",
+    "-b", "$DeployFolder",
+    "-d", "Version=$Version",
+    "-d", "BuildDir=$BuildFolder",
+    "-d", "DeployDir=$DeployFolder",
+    "-d", "Configuration=$Configuration",
+    "-ext", "WixToolset.Util.wixext",
+    "-ext", "WixToolset.Firewall.wixext",
+    "$RootDir\wix\DancherLink\Product.wxs")
+
+Write-Host "[Release Build] Running: wix build..." -ForegroundColor Green
+$WixOutput = & $WixExe $WixArgs 2>&1
+Write-Host $WixOutput
+
+# Copy MSI to build folder for update_version.py
+$MsiFile = "$InstallerFolder\DancherLink-x86_64-$Version.msi"
+if (Test-Path $MsiFile) {
+    Copy-Item $MsiFile "$BuildFolder\DancherLink.msi" -Force
+    Write-Host "[Release Build] MSI created: $MsiFile" -ForegroundColor Green
+} else {
+    Write-Host "[Release Build] Warning: MSI file not found after build" -ForegroundColor Yellow
+}
 
 # Copy final binary (already copied above, just verify)
 $FinalExe = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin","$BuildFolder\app" | Select-Object -First 1

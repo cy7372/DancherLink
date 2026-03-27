@@ -265,15 +265,37 @@ if (Test-Path "$DeployFolder\qml\QtQuick\NativeStyle") {
 Write-Host "[Beta Build] Building Beta MSI installer..." -ForegroundColor Green
 $AppConfigDir = "$BuildFolder\app\release"
 if (-not (Test-Path $AppConfigDir)) { New-Item -ItemType Directory -Path $AppConfigDir | Out-Null }
-$BuiltExe = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin\Release","$BuildFolder\app\Release" | Select-Object -First 1
+$BuiltExe = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin","$BuildFolder\app" | Select-Object -First 1
 if ($BuiltExe) { Copy-Item $BuiltExe.FullName "$AppConfigDir\" -Force }
 
-msbuild -Restore "$RootDir\wix\DancherLink\DancherLink.wixproj" `
-    /p:Configuration="Release" `
-    /p:Platform="$Arch" `
-    /p:MSBuildProjectExtensionsPath="$BuildFolder/" `
-    /p:Version="$Version" `
-    /p:ProductWxs="Product-beta.wxs"
+# Use WiX CLI instead of MSBuild to avoid Aspire compatibility issues
+$WixExe = "wix"
+Write-Host "[Beta Build] Using WiX CLI: $WixExe" -ForegroundColor Green
+$Configuration = "Release"
+
+# Build MSI using wix build command (WiX v4 has extensions built-in)
+$WixArgs = @("build",
+    "-arch", "x64",
+    "-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi",
+    "-b", "$DeployFolder",
+    "-d", "Version=$Version",
+    "-d", "BuildDir=$BuildFolder",
+    "-d", "DeployDir=$DeployFolder",
+    "-d", "Configuration=$Configuration",
+    "$RootDir\wix\DancherLink\Product-beta.wxs")
+
+Write-Host "[Beta Build] Running: wix build..." -ForegroundColor Green
+$WixOutput = & $WixExe $WixArgs 2>&1
+Write-Host $WixOutput
+
+# Copy MSI to build folder for update_version.py
+$MsiFile = "$InstallerFolder\DancherLink-x86_64-$Version.msi"
+if (Test-Path $MsiFile) {
+    Copy-Item $MsiFile "$BuildFolder\DancherLink.msi" -Force
+    Write-Host "[Beta Build] MSI created: $MsiFile" -ForegroundColor Green
+} else {
+    Write-Host "[Beta Build] Warning: MSI file not found after build" -ForegroundColor Yellow
+}
 
 # Copy final binary
 $FinalExe = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin","$BuildFolder\app" | Select-Object -First 1
