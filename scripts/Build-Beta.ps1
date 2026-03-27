@@ -96,47 +96,92 @@ $VsWhere = "$ScriptDir\vswhere.exe"
 $VsInstallPath = & $VsWhere -latest -property installationPath
 $VcArch = "AMD64"
 
-# Run vcvarsall.bat using ProcessStartInfo to capture environment variables
+Write-Host "[Beta Build] Using native cmd.exe for build to avoid MSVC temp file issues..." -ForegroundColor Green
+
+# Create a temporary batch file that runs the entire build in a clean cmd.exe environment
+$BuildBatch = "$BuildFolder\do-build.bat"
 $VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = "cmd.exe"
-$psi.Arguments = "/c `"$VcVarsAll`" $VcArch && set"
-$psi.RedirectStandardOutput = $true
-$psi.UseShellExecute = $false
-$psi.CreateNoWindow = $true
 
-$process = [System.Diagnostics.Process]::Start($psi)
-$output = $process.StandardOutput.ReadToEnd()
-$process.WaitForExit()
+# Generate unique temp directory for this build
+$CleanTemp = "C:\build-temp-$(Get-Random)"
 
-# Parse and apply environment variables
-foreach ($line in $output -split "`n") {
-    if ($line -match '^(\w+)=(.*)$') {
-        [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
-    }
+# Define OpenSSL paths
+$OpenSslInc = "$RootDir\libs\windows\include\x64"
+
+# Create the build batch file
+$BatchContent = @"
+@echo off
+echo ========================================
+echo DancherLink Beta Build
+echo ========================================
+call "$VcVarsAll" $VcArch
+
+echo Setting up clean temp directory...
+set CLEAN_TEMP=$CleanTemp
+if not exist "%CLEAN_TEMP%" mkdir "%CLEAN_TEMP%"
+set TMP=%CLEAN_TEMP%
+set TEMP=%CLEAN_TEMP%
+set TMPDIR=%CLEAN_TEMP%
+echo Using temp dir: %TMP%
+
+echo Setting up Qt path...
+set PATH=C:\Qt\6.10.1\msvc2022_64\bin;%PATH%
+set Qt6_DIR=C:\Qt\6.10.1\msvc2022_64\lib\cmake\Qt6
+
+cd /d "$BuildFolder"
+
+echo Running cmake configure...
+cmake -S "$RootDir" -G "NMake Makefiles" -DCMAKE_BUILD_TYPE="$CMakeBuildType" -DCMAKE_VERBOSE_MAKEFILE=ON -DARCH_DIR="$Arch" -DBUILD_TYPE="beta" -DOPENSSL_INCLUDE_DIR="$OpenSslInc" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$RootDir/libs/windows/lib/$Arch/libcrypto.lib" -DOPENSSL_SSL_LIBRARY:FILEPATH="$RootDir/libs/windows/lib/$Arch/libssl.lib"
+
+if %ERRORLEVEL% neq 0 (
+    echo CMake configuration FAILED
+    goto :cleanup
+)
+echo CMake configuration SUCCESS
+
+echo.
+echo Building...
+cmake --build . --config "$CMakeBuildType" --parallel 1
+
+echo.
+echo Build exit code: %ERRORLEVEL%
+
+:cleanup
+echo Cleaning up temp directory...
+if exist "%CLEAN_TEMP%" rmdir /s /q "%CLEAN_TEMP%"
+if %ERRORLEVEL% neq 0 (
+    echo Build FAILED
+    exit /b %ERRORLEVEL%
+)
+echo Build SUCCESS
+"@
+
+Set-Content -Path $BuildBatch -Value $BatchContent -Encoding ASCII
+
+# Run the build in native cmd.exe
+Write-Host "[Beta Build] Running build in native cmd.exe environment..." -ForegroundColor Green
+cmd.exe /c "$BuildBatch" 2>&1
+
+$BuildResult = $LASTEXITCODE
+
+# Cleanup batch file
+Remove-Item $BuildBatch -ErrorAction SilentlyContinue
+
+if ($BuildResult -ne 0) {
+    Write-Error "[Beta Build] Build failed with exit code $BuildResult"
+    exit $BuildResult
 }
 
-Write-Host "[Beta Build] VC Tools: $env:VCToolsInstallDir" -ForegroundColor Green
+Write-Host "[Beta Build] Verifying build output..." -ForegroundColor Green
+$ExePath = Get-ChildItem -Recurse -Filter "DancherLink.exe" -Path "$BuildFolder\bin","$BuildFolder\app" | Select-Object -First 1
+if (-not $ExePath) {
+    Write-Error "[Beta Build] DancherLink.exe not found in build output!"
+    exit 1
+}
+Write-Host "[Beta Build] Build output verified: $($ExePath.FullName)" -ForegroundColor Green
 
 # Find VC redistributable
 $VcRedistPath = & $VsWhere -latest -find "VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT"
-
-# Configure CMake with Beta identifier
-Write-Host "[Beta Build] Configuring CMake..." -ForegroundColor Green
-$OpenSslInc = "$RootDir\libs\windows\include\x64"
-
-cmake -S "$RootDir" -B "$BuildFolder" -G "Ninja" `
-    -DCMAKE_BUILD_TYPE="$CMakeBuildType" `
-    -DCMAKE_VERBOSE_MAKEFILE=ON `
-    -DARCH_DIR="$Arch" `
-    -DBUILD_TYPE="beta" `
-    -DOPENSSL_INCLUDE_DIR="$OpenSslInc" `
-    -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$RootDir/libs/windows/lib/$Arch/libcrypto.lib" `
-    -DOPENSSL_SSL_LIBRARY:FILEPATH="$RootDir/libs/windows/lib/$Arch/libssl.lib"
-
-# Build
-Write-Host "[Beta Build] Compiling..." -ForegroundColor Green
-cmake --build "$BuildFolder" --config "$CMakeBuildType" --parallel
 
 # Save PDBs
 Write-Host "[Beta Build] Saving PDBs..." -ForegroundColor Green
