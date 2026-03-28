@@ -55,6 +55,16 @@ ApplicationWindow {
         }
         return null
     }
+
+    // Global connection to network latency changes for UI updates
+    // This ensures the footer UI updates when latency changes
+    Connections {
+        target: currentNetworkModel
+        function onNetworkLatencyChanged() {
+            // Trigger re-evaluation of footer bindings by updating a timestamp
+            footer.networkLatencyUpdate = Date.now()
+        }
+    }
     // Set minimum window size to prevent UI elements from overlapping or being cut off
     minimumWidth: 1024
     minimumHeight: 576
@@ -506,21 +516,11 @@ ApplicationWindow {
     // Network latency indicator - fixed position at bottom center
     // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
     footer: Item {
+        property int networkLatencyUpdate: 0  // Updated on networkLatencyChanged signal
+
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
         visible: currentNetworkModel !== null && stackView.currentItem && !(stackView.currentItem instanceof PcView)
         height: visible ? 32 : 0
-
-        // Connect to appModel's networkLatencyChanged signal to ensure UI updates
-        Item {
-            readonly property var modelRef: currentNetworkModel
-            Connections {
-                target: modelRef !== null ? modelRef : null
-                function onNetworkLatencyChanged() {
-                    // Force UI update by triggering property change
-                    networkIndicator.opacity = networkIndicator.opacity
-                }
-            }
-        }
 
         Rectangle {
             id: networkIndicator
@@ -545,6 +545,8 @@ ApplicationWindow {
                 Label {
                     id: latencyLabel
                     text: {
+                        // Force re-evaluation when footer.networkLatencyUpdate changes
+                        var _ = footer.networkLatencyUpdate;
                         if (!currentNetworkModel) return ""
                         var ms = currentNetworkModel.networkLatencyMs
                         if (ms === -2) return qsTr("Measuring...")  // Initial measurement in progress
