@@ -34,60 +34,38 @@ ApplicationWindow {
     // a retranslate() because AppView breaks for some reason.
     property bool clearOnBack: false
 
-    // Cached reference to current model for network indicator
-    // Works with both AppModel (app list) and ComputerModel (PC list)
-    // Uses property binding for automatic updates - no signals needed
-    property var currentNetworkModel: {
-        // Force re-evaluation when networkModelRefreshTrigger changes
-        var _ = networkModelRefreshTrigger;
+    // Current network model for latency indicator
+    // Updated via setCurrentNetworkModel() when stack changes or AppView initializes
+    property var currentNetworkModel: null
 
+    function updateCurrentNetworkModel() {
         var item = stackView.currentItem
-        if (!item) return null
-        // Check if item is still valid (not being destroyed)
-        if (item.appModel !== undefined && item.appModel !== null) {
-            // Verify the model's computer is still valid
-            if (item.appModel.networkLatencyMs !== undefined) {
-                return item.appModel
-            }
+        if (!item) {
+            currentNetworkModel = null
+            return
         }
+        // Check AppView's networkModel property first
+        if (item.networkModel !== undefined && item.networkModel !== null) {
+            currentNetworkModel = item.networkModel
+            return
+        }
+        // Check for ComputerModel (PcView)
         if (item.computerModel !== undefined && item.computerModel !== null) {
-            // Verify the model is still valid
-            if (item.computerModel.networkLatencyMs !== undefined) {
-                return item.computerModel
-            }
+            currentNetworkModel = item.computerModel
+            return
         }
-        return null
+        currentNetworkModel = null
     }
 
-    // Force re-evaluation trigger for currentNetworkModel
-    // Updated when AppView emits appModelReady signal
-    property int networkModelRefreshTrigger: 0
-
-    // Global connection to network latency changes for UI updates
-    // This ensures the footer UI updates when latency changes
-    Connections {
-        target: currentNetworkModel
-        function onNetworkLatencyChanged() {
-            // Trigger re-evaluation of footer bindings by updating a timestamp
-            footer.networkLatencyUpdate = Date.now()
-        }
+    // Update currentNetworkModel when stack changes
+    // Use Qt.callLater to ensure AppView has time to initialize appModel
+    StackView.onCurrentItemChanged: {
+        Qt.callLater(updateCurrentNetworkModel)
     }
 
-    // Listen for stack item changes and connect to appModelReady signal
+    // Also update on component completed (for initial load)
     Component.onCompleted: {
-        stackView.currentItemChanged.connect(function() {
-            if (stackView.currentItem && stackView.currentItem.appModelReady !== undefined) {
-                stackView.currentItem.appModelReady.connect(function() {
-                    networkModelRefreshTrigger++
-                })
-            }
-        })
-        // Also check initial currentItem
-        if (stackView.currentItem && stackView.currentItem.appModelReady !== undefined) {
-            stackView.currentItem.appModelReady.connect(function() {
-                networkModelRefreshTrigger++
-            })
-        }
+        Qt.callLater(updateCurrentNetworkModel)
     }
     // Set minimum window size to prevent UI elements from overlapping or being cut off
     minimumWidth: 1024

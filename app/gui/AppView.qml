@@ -16,15 +16,17 @@ CenteredGridView {
     property bool showHiddenGames
     property bool showGames
 
+    // Expose appModel as networkModel for direct binding in main.qml
+    // This allows the network indicator to bind directly without relying on
+    // QML's property change detection for dynamically assigned properties
+    property var networkModel: appModel
+
     id: appGrid
     focus: true
     activeFocusOnTab: true
     topMargin: 20
     bottomMargin: 5
     cellWidth: 230; cellHeight: 297;
-
-    // Signal emitted when appModel is ready - used to trigger UI updates
-    signal appModelReady()
 
     function computerLost()
     {
@@ -40,10 +42,8 @@ CenteredGridView {
 
         // Create the app model
         appModel = createModel()
-
-        // Emit signal to notify that appModel is ready
-        // This triggers re-evaluation of currentNetworkModel in main.qml
-        appModelReady()
+        // Explicitly update networkModel to trigger bindings
+        networkModel = appModel
     }
 
     StackView.onActivated: {
