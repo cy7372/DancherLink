@@ -23,6 +23,9 @@ CenteredGridView {
     bottomMargin: 5
     cellWidth: 230; cellHeight: 297;
 
+    // Signal emitted when appModel is ready - used to trigger UI updates
+    signal appModelReady()
+
     function computerLost()
     {
         // Go back to the PC view on PC loss
@@ -37,6 +40,10 @@ CenteredGridView {
 
         // Create the app model
         appModel = createModel()
+
+        // Emit signal to notify that appModel is ready
+        // This triggers re-evaluation of currentNetworkModel in main.qml
+        appModelReady()
     }
 
     StackView.onActivated: {

@@ -38,6 +38,9 @@ ApplicationWindow {
     // Works with both AppModel (app list) and ComputerModel (PC list)
     // Uses property binding for automatic updates - no signals needed
     property var currentNetworkModel: {
+        // Force re-evaluation when networkModelRefreshTrigger changes
+        var _ = networkModelRefreshTrigger;
+
         var item = stackView.currentItem
         if (!item) return null
         // Check if item is still valid (not being destroyed)
@@ -56,6 +59,10 @@ ApplicationWindow {
         return null
     }
 
+    // Force re-evaluation trigger for currentNetworkModel
+    // Updated when AppView emits appModelReady signal
+    property int networkModelRefreshTrigger: 0
+
     // Global connection to network latency changes for UI updates
     // This ensures the footer UI updates when latency changes
     Connections {
@@ -63,6 +70,23 @@ ApplicationWindow {
         function onNetworkLatencyChanged() {
             // Trigger re-evaluation of footer bindings by updating a timestamp
             footer.networkLatencyUpdate = Date.now()
+        }
+    }
+
+    // Listen for stack item changes and connect to appModelReady signal
+    Component.onCompleted: {
+        stackView.currentItemChanged.connect(function() {
+            if (stackView.currentItem && stackView.currentItem.appModelReady !== undefined) {
+                stackView.currentItem.appModelReady.connect(function() {
+                    networkModelRefreshTrigger++
+                })
+            }
+        })
+        // Also check initial currentItem
+        if (stackView.currentItem && stackView.currentItem.appModelReady !== undefined) {
+            stackView.currentItem.appModelReady.connect(function() {
+                networkModelRefreshTrigger++
+            })
         }
     }
     // Set minimum window size to prevent UI elements from overlapping or being cut off
