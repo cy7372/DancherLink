@@ -74,9 +74,9 @@ function Get-BuildPaths {
     $isBeta = $BuildType -eq "beta"
     $betaSuffix = if ($isBeta) { "-beta" } else { "" }
 
-    # Final release output directory
+    # Final release output directory (both Release and Beta use the same folder)
     $ReleaseBase = "C:\Users\CyYu\Release\DancherLink"
-    $ReleaseFolder = if ($isBeta) { "$ReleaseBase\beta" } else { "$ReleaseBase" }
+    $ReleaseFolder = $ReleaseBase
 
     $paths = @{
         BuildRoot = "$RootDir\build"
@@ -459,15 +459,16 @@ function Copy-ReleaseFiles {
 
     Write-Host "  Preparing release files..." -ForegroundColor Green
 
-    # Clean release folder
-    if (Test-Path $ReleaseFolder) {
-        Remove-Item -Recurse -Force $ReleaseFolder\* -ErrorAction SilentlyContinue
+    # Ensure release folder exists (don't clean - Release and Beta share this folder)
+    if (-not (Test-Path $ReleaseFolder)) {
+        New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
     }
-    New-Item -ItemType Directory -Path $ReleaseFolder -Force | Out-Null
 
     # Copy MSI if available
     if ($MsiFile -and (Test-Path $MsiFile)) {
-        $MsiName = "DancherLink-x86_64-$Version.msi"
+        # Beta versions get -beta suffix in filename
+        $MsiSuffix = if ($BuildType -eq "beta") { "-beta" } else { "" }
+        $MsiName = "DancherLink-x86_64-$Version$MsiSuffix.msi"
         Copy-Item $MsiFile "$ReleaseFolder\$MsiName" -Force
         Write-Host "  Copied MSI: $MsiName" -ForegroundColor Green
     }

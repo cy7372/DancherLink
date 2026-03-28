@@ -61,12 +61,14 @@ def main():
     print(f"Found MSI: {msi_file}")
 
     # Copy MSI to server directory
-    dest_msi = server_dir / f"DancherLink-{arch}-{version}.msi"
+    # Beta versions get -beta suffix in filename
+    msi_suffix = "-beta" if build_type == "beta" else ""
+    dest_msi = server_dir / f"DancherLink-{arch}-{version}{msi_suffix}.msi"
     shutil.copy2(msi_file, dest_msi)
     print(f"Copied: {dest_msi}")
 
     # browser_url - relative path (no server/ prefix since updates.json is already in server dir)
-    browser_url = f"DancherLink-{arch}-{version}.msi"
+    browser_url = f"DancherLink-{arch}-{version}{msi_suffix}.msi"
 
     # Determine build type from version format
     # Beta versions have 4+ segments (e.g., 1.0.5.45), Release have 3 (e.g., 1.0.5)
