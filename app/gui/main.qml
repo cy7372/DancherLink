@@ -57,16 +57,6 @@ ApplicationWindow {
         currentNetworkModel = null
     }
 
-    // Update currentNetworkModel when stack changes
-    // Use Qt.callLater to ensure AppView has time to initialize appModel
-    StackView.onCurrentItemChanged: {
-        Qt.callLater(updateCurrentNetworkModel)
-    }
-
-    // Also update on component completed (for initial load)
-    Component.onCompleted: {
-        Qt.callLater(updateCurrentNetworkModel)
-    }
     // Set minimum window size to prevent UI elements from overlapping or being cut off
     minimumWidth: 1024
     minimumHeight: 576
@@ -89,6 +79,9 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        // Update network model for latency indicator
+        updateCurrentNetworkModel()
+
         // Delay the update check slightly to allow UI to render first
         checkUpdateTimer.start()
 
@@ -191,6 +184,8 @@ ApplicationWindow {
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
+            // Update network model for latency indicator
+            Qt.callLater(updateCurrentNetworkModel)
         }
 
         // It would be better to use TextMetrics here, but it always lays out
