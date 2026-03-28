@@ -213,14 +213,12 @@ CenteredGridView {
         }
 
         // Connect to computerModel's networkLatencyChanged signal to ensure UI updates
-        Item {
-            readonly property var computerModelRef: pcGrid.computerModel
-            Connections {
-                target: computerModelRef !== null ? computerModelRef : null
-                function onNetworkLatencyChanged() {
-                    // This ensures the delegate is notified when latency changes
-                    latencyBadge.opacity = latencyBadge.opacity
-                }
+        // Use pcGrid.computerModel directly with proper null checking
+        Connections {
+            target: pcGrid.computerModel
+            function onNetworkLatencyChanged() {
+                // This ensures the delegate is notified when latency changes
+                latencyBadge.opacity = latencyBadge.opacity
             }
         }
 
