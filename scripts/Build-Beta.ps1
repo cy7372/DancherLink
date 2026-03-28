@@ -155,6 +155,13 @@ try {
     # Success
     Write-BuildSuccess -BuildType $BuildType -Version $Version -MsiPath $MsiFile -BuildDuration $durationStr
 
+    # Increment version number for next build
+    Write-Host "[$BuildType Build] Incrementing version number for next build..." -ForegroundColor Green
+    $newBuildNumber = [int]$versionParts[3] + 1
+    $newVersion = "$($versionParts[0]).$($versionParts[1]).$($versionParts[2]).$newBuildNumber"
+    Set-Content "$RootDir\app\version.txt" -Value $newVersion
+    Write-Host "  Version updated: $FullVersion -> $newVersion" -ForegroundColor Green
+
 } catch {
     Write-Error "[$BuildType Build] $($_.Exception.Message)"
     Stop-BuildLogging

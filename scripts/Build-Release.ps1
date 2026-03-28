@@ -145,6 +145,19 @@ try {
     # Success
     Write-BuildSuccess -BuildType $BuildType -Version $Version -MsiPath $MsiFile -BuildDuration $durationStr
 
+    # Increment version number for next build (patch version)
+    Write-Host "[$BuildType Build] Incrementing version number for next build..." -ForegroundColor Green
+    $versionParts = $Version.Split('.')
+    if ($versionParts.Count -ge 3) {
+        $newPatchNumber = [int]$versionParts[2] + 1
+        $newVersion = "$($versionParts[0]).$($versionParts[1]).$newPatchNumber"
+        if ($versionParts.Count -eq 4) {
+            $newVersion += ".$($versionParts[3])"
+        }
+        Set-Content "$RootDir\app\version.txt" -Value $newVersion
+        Write-Host "  Version updated: $Version -> $newVersion" -ForegroundColor Green
+    }
+
 } catch {
     Write-Error "[$BuildType Build] $($_.Exception.Message)"
     Stop-BuildLogging
