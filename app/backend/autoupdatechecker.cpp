@@ -434,6 +434,18 @@ void AutoUpdateChecker::onUpdateManifestReceived(const QByteArray& data, bool is
                 continue;
             }
 
+            // Check if this entry is for Beta channel
+            bool isBetaEntry = updateObj.contains("isBeta") && updateObj["isBeta"].toBool();
+
+            // Determine if current build is Beta (4+ version segments) or Release (3 segments)
+            bool isCurrentBeta = m_CurrentVersionQuad.count() >= 4;
+
+            // Only match Beta entries to Beta builds, and Release entries to Release builds
+            if (isBetaEntry != isCurrentBeta) {
+                qDebug() << "Skipping manifest entry (Beta mismatch): current=" << isCurrentBeta << " entry=" << isBetaEntry;
+                continue;
+            }
+
             if (updateObj["arch"] == QSysInfo::buildCpuArchitecture() &&
                     updateObj["platform"] == getPlatform()) {
 
