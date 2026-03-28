@@ -74,7 +74,7 @@ try {
         -BuildType $BuildType `
         -VsInstallPath $VsInstallPath `
         -OpenSslPaths $OpenSslPaths `
-        -SkipConfigure:$Incremental
+        -SkipConfigure:$false
 
     if ($BuildResult -ne 0) {
         throw "Build failed with exit code $BuildResult"

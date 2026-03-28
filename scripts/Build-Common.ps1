@@ -192,12 +192,22 @@ cd /d "$BuildFolder"
         $BatchContent += @"
 
 echo Running cmake configure...
+del /q CMakeCache.txt
+del /q "%~dp0..\..\app\CMakeFiles\DancherLink.dir\flags.make"
 cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
 if %ERRORLEVEL% neq 0 (
     echo CMake configuration FAILED
     goto :cleanup
 )
 echo CMake configuration SUCCESS
+"@
+    } else {
+        # Always delete CMakeCache.txt to force version.txt re-read
+        $BatchContent += @"
+
+echo Forcing version update (deleting CMakeCache.txt)...
+del /q CMakeCache.txt
+del /q "%~dp0..\..\app\CMakeFiles\DancherLink.dir\flags.make"
 "@
     }
 
