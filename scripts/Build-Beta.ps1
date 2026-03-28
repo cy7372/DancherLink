@@ -2,7 +2,7 @@
 .SYNOPSIS
     DancherLink Beta Build Script
 .DESCRIPTION
-    Builds the beta version of DancherLink with separate installation directory.
+    Builds the beta version of DancherLink. Beta shares the same release folder as stable but with -beta suffix in filename.
 .PARAMETER Incremental
     Skip CMake configure and clean build for faster iteration.
 .PARAMETER NoMsi
@@ -119,6 +119,13 @@ try {
         Write-Host "[$BuildType Build] Skipping Qt deployment (--NoDeploy)" -ForegroundColor Yellow
     }
 
+    # Copy final binary before building MSI
+    $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
+    if ($FinalExe) {
+        Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
+        Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
+    }
+
     # Build MSI (unless skipped)
     if (-not $NoMsi) {
         $MsiFile = Build-Msi `
@@ -129,10 +136,6 @@ try {
             -WxsFile "$RootDir\wix\DancherLink\Product-beta.wxs" `
             -Extensions @("WixToolset.Util.wixext", "WixToolset.Firewall.wixext")
 
-        # Copy final binary
-        $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-        if ($FinalExe) { Copy-Item $FinalExe.FullName "$DeployFolder\" -Force }
-
         # Update manifest
         Update-Manifest -RootDir $RootDir -Version $Version -Arch $Arch -BuildType "beta"
     } else {
@@ -142,7 +145,7 @@ try {
 
     # Copy to release folder
     Write-Host "[$BuildType Build] Copying to release folder: $ReleaseFolder" -ForegroundColor Green
-    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir
+    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir -BuildType "beta"
 
     # Calculate duration
     $endTime = Get-Date

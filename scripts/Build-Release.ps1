@@ -135,7 +135,7 @@ try {
 
     # Copy to release folder
     Write-Host "[$BuildType Build] Copying to release folder: $ReleaseFolder" -ForegroundColor Green
-    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir
+    Copy-ReleaseFiles -DeployFolder $DeployFolder -ReleaseFolder $ReleaseFolder -MsiFile $MsiFile -Version $Version -RootDir $RootDir -BuildType "release"
 
     # Calculate duration
     $endTime = Get-Date

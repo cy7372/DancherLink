@@ -510,6 +510,18 @@ ApplicationWindow {
         visible: currentNetworkModel !== null && stackView.currentItem && !(stackView.currentItem instanceof PcView)
         height: visible ? 32 : 0
 
+        // Connect to appModel's networkLatencyChanged signal to ensure UI updates
+        Item {
+            readonly property var modelRef: currentNetworkModel
+            Connections {
+                target: modelRef !== null ? modelRef : null
+                function onNetworkLatencyChanged() {
+                    // Force UI update by triggering property change
+                    networkIndicator.opacity = networkIndicator.opacity
+                }
+            }
+        }
+
         Rectangle {
             id: networkIndicator
             anchors.horizontalCenter: parent.horizontalCenter
@@ -535,7 +547,8 @@ ApplicationWindow {
                     text: {
                         if (!currentNetworkModel) return ""
                         var ms = currentNetworkModel.networkLatencyMs
-                        if (ms === -1) return qsTr("Measuring...")
+                        if (ms === -2) return qsTr("Measuring...")  // Initial measurement in progress
+                        if (ms === -1) return qsTr("Measuring...")  // Unknown/stopped
                         if (ms < 0)   return qsTr("N/A")
                         return ms + " ms"
                     }
