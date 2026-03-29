@@ -236,9 +236,7 @@ void ComputerModel::handleComputerStateChanged(NvComputer* computer)
         int index = m_Computers.indexOf(computer);
         emit dataChanged(createIndex(index, 0), createIndex(index, 0));
 
-        // If this computer just came online and we want to measure it, start measurement
-        // Note: We need to check the state without holding the lock to avoid deadlock
-        // when calling m_LatencyMeasurer->start() which also acquires the lock.
+        // If this computer just came online, retry latency measurement
         if (index == m_MeasuringComputerIndex && !m_MeasuringComputer) {
             bool isOnline = false;
             {
@@ -246,8 +244,6 @@ void ComputerModel::handleComputerStateChanged(NvComputer* computer)
                 isOnline = (computer->state == NvComputer::CS_ONLINE);
             }
             if (isOnline) {
-                // Computer is now online - start measurement (outside of lock)
-                qInfo() << "[ComputerModel] Retrying latency measurement for" << computer->name;
                 m_MeasuringComputer = computer;
                 m_LatencyMeasurer->start(computer);
             }

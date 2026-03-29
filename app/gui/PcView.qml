@@ -13,8 +13,7 @@ import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
     property ComputerModel computerModel : null
-    property bool modelReady : false  // Set to true when model is ready
-
+    property bool modelReady : false
     id: pcGrid
     focus: true
     activeFocusOnTab: true
@@ -386,38 +385,26 @@ CenteredGridView {
                 errorDialog.helpText = ""
                 errorDialog.open()
             }
-                else if (model.paired) {
-                    // go to game view
-                    var component = Qt.createComponent("AppView.qml")
-                    if (component.status !== Component.Ready) {
-                        console.error("Failed to create AppView component:", component.errorString())
-                        return
-                    }
-                    var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name})
-                    if (!appView) {
-                        console.error("Failed to create AppView object")
-                        return
-                    }
-                    stackView.push(appView)
-                }
-                else {
-                    if (!computerModel) {
-                        console.error("[PcView] Cannot pair: computerModel is null")
-                        return
-                    }
-                    var pin = computerModel.generatePinString()
-
-                    // Kick off pairing in the background
-                    computerModel.pairComputer(index, pin)
-
-                    // Display the pairing dialog
-                    pairDialog.pin = pin
-                    pairDialog.open()
-                }
-            } else if (!model.online) {
-                // Using open() here because it may be activated by keyboard
-                pcContextMenu.open()
+            else if (model.paired) {
+                var component = Qt.createComponent("AppView.qml")
+                var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name})
+                stackView.push(appView)
             }
+            else {
+                if (!computerModel) {
+                    console.error("[PcView] Cannot pair: computerModel is null")
+                    return
+                }
+                var pin = computerModel.generatePinString()
+
+                computerModel.pairComputer(index, pin)
+
+                pairDialog.pin = pin
+                pairDialog.open()
+            }
+        } else if (!model.online) {
+            pcContextMenu.open()
+        }
         }
 
         onPressAndHold: {

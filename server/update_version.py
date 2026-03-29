@@ -33,7 +33,6 @@ def main():
     # Paths
     server_dir = source_root / "server"
     build_dir = source_root / "build"
-
     # Build folder path depends on build type
     if build_type == "beta":
         build_folder = build_dir / f"build-{build_arch}-beta-{config}"
