@@ -47,17 +47,13 @@ CenteredGridView {
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
 
-        // Force refresh the latency badge by toggling modelReady
-        // This ensures the Loader recreates the component with fresh bindings
-        if (modelReady && computerModel && computerModel.rowCount() > 0) {
-            modelReady = false
-            Qt.callLater(function() {
-                modelReady = true
-            })
-        }
-
         // If no selection and we have computers, select the first one
         if (currentIndex === -1 && computerModel && computerModel.rowCount() > 0) {
+            currentIndex = 0
+        }
+
+        // Highlight the first item if a gamepad is connected
+        if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
             currentIndex = 0
         }
 
@@ -66,9 +62,13 @@ CenteredGridView {
             computerModel.startLatencyMeasurement(currentIndex)
         }
 
-        // Highlight the first item if a gamepad is connected
-        if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
-            currentIndex = 0
+        // Force refresh the latency badge by toggling modelReady
+        // This ensures the Loader recreates the component with fresh bindings
+        if (modelReady && computerModel && computerModel.rowCount() > 0) {
+            modelReady = false
+            Qt.callLater(function() {
+                modelReady = true
+            })
         }
     }
 
