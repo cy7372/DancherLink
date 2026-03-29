@@ -409,28 +409,41 @@ function Build-Msi {
     # Note: We don't copy exe to app/release anymore to avoid GUID conflicts
     # WiX project should reference exe from DeployFolder only
 
-    $WixArgs = @("build",
-        "-arch", "x64",
-        "-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi",
-        "-b", $DeployFolder,
-        "-d", "Version=$Version",
-        "-d", "BuildDir=$BuildFolder",
-        "-d", "DeployDir=$DeployFolder",
-        "-d", "Configuration=Release"
-    )
+    # Find wix executable
+    $wixPath = (Get-Command wix -ErrorAction SilentlyContinue).Source
+    if (-not $wixPath) {
+        $wixPath = "$env:USERPROFILE\.dotnet\tools\wix.exe"
+    }
 
+    # Build wix command
+    $WixArgs = @("build", "-arch", "x64")
+    $WixArgs += @("-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi")
+    $WixArgs += @("-d", "Version=$Version")
+    $WixArgs += @("-d", "BuildDir=$BuildFolder")
+    $WixArgs += @("-d", "DeployDir=$DeployFolder")
+    $WixArgs += @("-d", "Configuration=Release")
     foreach ($ext in $Extensions) {
         $WixArgs += @("-ext", $ext)
     }
-
     $WixArgs += $WxsFile
 
     Write-Host "Running: wix build..." -ForegroundColor Green
-    if ($VerboseOutput) {
-        $WixOutput = & wix $WixArgs 2>&1
-        Write-Host $WixOutput
-    } else {
-        $WixOutput = & wix $WixArgs 2>&1 | Out-String
+
+    # Start process
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $wixPath
+    $psi.Arguments = $WixArgs
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $result = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
+    $proc.WaitForExit()
+
+    if ($VerboseOutput -or $true) {
+        Write-Host $result
     }
 
     $MsiFile = "$InstallerFolder\DancherLink-x86_64-$Version.msi"
@@ -440,7 +453,7 @@ function Build-Msi {
         Write-Host "MSI created: $MsiFile ($msiSize MB)" -ForegroundColor Green
         return $MsiFile
     } else {
-        Write-Host "Warning: MSI file not found after build" -ForegroundColor Yellow
+        Write-Host "Warning: MSI file not found after build. Exit code: $($proc.ExitCode)" -ForegroundColor Yellow
         return $null
     }
 }
