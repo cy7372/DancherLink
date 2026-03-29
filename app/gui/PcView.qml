@@ -250,7 +250,12 @@ CenteredGridView {
             target: pcGrid.computerModel
             function onNetworkLatencyChanged() {
                 // This ensures the delegate is notified when latency changes
-                latencyBadge.opacity = latencyBadge.opacity
+                // Use Qt.callLater to update UI after binding re-evaluation
+                Qt.callLater(function() {
+                    if (latencyBadge) {
+                        latencyBadge.opacity = latencyBadge.opacity
+                    }
+                })
             }
         }
 

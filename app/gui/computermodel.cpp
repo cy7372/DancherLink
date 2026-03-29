@@ -235,6 +235,23 @@ void ComputerModel::handleComputerStateChanged(NvComputer* computer)
         // Let the view know that this specific computer changed
         int index = m_Computers.indexOf(computer);
         emit dataChanged(createIndex(index, 0), createIndex(index, 0));
+
+        // If this computer just came online and we want to measure it, start measurement
+        // Note: We need to check the state without holding the lock to avoid deadlock
+        // when calling m_LatencyMeasurer->start() which also acquires the lock.
+        if (index == m_MeasuringComputerIndex && !m_MeasuringComputer) {
+            bool isOnline = false;
+            {
+                QReadLocker lock(&computer->lock);
+                isOnline = (computer->state == NvComputer::CS_ONLINE);
+            }
+            if (isOnline) {
+                // Computer is now online - start measurement (outside of lock)
+                qInfo() << "[ComputerModel] Retrying latency measurement for" << computer->name;
+                m_MeasuringComputer = computer;
+                m_LatencyMeasurer->start(computer);
+            }
+        }
     }
 }
 
@@ -252,10 +269,15 @@ void ComputerModel::startLatencyMeasurement(int computerIndex)
         return;
     }
 
+    // Save the index for retry if computer is not yet online
+    m_MeasuringComputerIndex = computerIndex;
+
     // Check if computer is online
     {
         QReadLocker lock(&computer->lock);
         if (computer->state != NvComputer::CS_ONLINE) {
+            // Computer not online yet - stop measurement but keep the index
+            // so we can retry when it comes online
             stopLatencyMeasurement();
             return;
         }
@@ -269,6 +291,7 @@ void ComputerModel::stopLatencyMeasurement()
 {
     m_MeasuringComputer = nullptr;
     m_LatencyMeasurer->stop();
+    // Don't clear m_MeasuringComputerIndex - keep it for retry when computer comes online
 }
 
 int ComputerModel::networkLatencyMs() const

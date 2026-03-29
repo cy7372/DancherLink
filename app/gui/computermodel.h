@@ -67,9 +67,7 @@ signals:
 
 private slots:
     void handleComputerStateChanged(NvComputer* computer);
-
     void handlePairingCompleted(NvComputer* computer, QString error);
-
     void handleLatencyChanged(int rttMs);
 
 private:
@@ -77,6 +75,7 @@ private:
     ComputerManager* m_ComputerManager;
     LatencyMeasurer* m_LatencyMeasurer;
     NvComputer* m_MeasuringComputer = nullptr;  // Currently selected computer for latency display
+    int m_MeasuringComputerIndex = -1;  // Index of computer we want to measure (-1 means none)
 
     // Helper to safely check if a computer pointer is still valid
     bool isComputerValid(NvComputer* computer) const;
