@@ -99,7 +99,7 @@
 
     <!-- Auto-include all deployment files (exe is included separately above) -->
     <ComponentGroup Id="MoonlightDependencies" Directory="INSTALLFOLDER">
-      <Files Include="$(var.DeployDir)\**" Exclude="$(var.DeployDir)\DancherLink.exe" />
+      <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
     <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
