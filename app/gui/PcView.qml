@@ -195,7 +195,7 @@ CenteredGridView {
                 height: 24
                 radius: 4
                 color: {
-                    var ms = model.networkLatencyMs
+                    var ms = pcGrid.model ? pcGrid.model.networkLatencyMs : -1
                     if (ms < 0) return "#555555"
                     if (ms < 20) return "#2E7D32"
                     if (ms < 50) return "#F9A825"
@@ -207,7 +207,7 @@ CenteredGridView {
                     id: latencyLabel
                     anchors.centerIn: parent
                     text: {
-                        var ms = model.networkLatencyMs
+                        var ms = pcGrid.model ? pcGrid.model.networkLatencyMs : -1
                         if (ms < 0) return "--"
                         return ms + " ms"
                     }
@@ -217,7 +217,7 @@ CenteredGridView {
                 }
 
                 ToolTip.visible: latencyMouseArea.containsMouse
-                ToolTip.text: model.networkQualityString
+                ToolTip.text: pcGrid.model ? pcGrid.model.networkQualityString : ""
                 ToolTip.delay: 500
 
                 MouseArea {
