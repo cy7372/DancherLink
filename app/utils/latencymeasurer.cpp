@@ -76,12 +76,9 @@ void LatencyMeasurer::stop()
     m_EmaLatency = -1.0;
     m_LastDisplayedLatency = -1;
 
-    // Mark measurement as stopped in computer
+    // Don't clear computer's measuredLatencyMs - keep the last known value
+    // so the UI can show it when switching back to PC View
     if (m_Computer) {
-        QWriteLocker lock(&m_Computer->lock);
-        if (m_Computer->measuredLatencyMs == -2) {
-            m_Computer->measuredLatencyMs = -1;  // Unknown
-        }
         m_Computer = nullptr;
     }
 
