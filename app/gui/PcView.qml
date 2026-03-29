@@ -60,23 +60,11 @@ CenteredGridView {
         if (currentIndex >= 0 && computerModel) {
             computerModel.startLatencyMeasurement(currentIndex)
         }
-
-        // Force refresh the latency badge by toggling modelReady
-        // This ensures the Loader recreates the component with fresh bindings
-        if (modelReady && computerModel && computerModel.rowCount() > 0) {
-            modelReady = false
-            Qt.callLater(function() {
-                modelReady = true
-            })
-        }
     }
 
     StackView.onDeactivating: {
         ComputerManager.computerAddCompleted.disconnect(addComplete)
-        // Stop latency measurement when leaving the page
-        if (computerModel) {
-            computerModel.stopLatencyMeasurement()
-        }
+        // Don't stop latency measurement - keep cached value for when we return
     }
 
     onCurrentIndexChanged: {

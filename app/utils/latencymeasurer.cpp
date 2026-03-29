@@ -40,12 +40,17 @@ void LatencyMeasurer::start(NvComputer *computer)
     m_EmaLatency = -1.0;
     m_LastDisplayedLatency = -1;
 
-    // Initialize computer's latency state
+    // Initialize computer's latency state only if not already measured
+    // This preserves cached latency values when resuming measurement after streaming
     {
         QWriteLocker lock(&m_Computer->lock);
-        m_Computer->measuredLatencyMs = -2;  // Measuring
-        m_Computer->latencyMeasurementBatch = 0;
-        m_Computer->latencySamples.clear();
+        // Only initialize if this is a fresh start (measuredLatencyMs is -1 or -2)
+        // Preserve cached values (>= 0) when resuming measurement
+        if (m_Computer->measuredLatencyMs <= -1) {
+            m_Computer->measuredLatencyMs = -2;  // Measuring
+            m_Computer->latencyMeasurementBatch = 0;
+            m_Computer->latencySamples.clear();
+        }
     }
 
     m_LatencySamples.clear();

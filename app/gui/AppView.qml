@@ -270,6 +270,9 @@ CenteredGridView {
                 return
             }
 
+            // Stop latency measurement during streaming to save resources
+            appModel.stopLatencyMeasurement()
+
             // When a restart is requested (e.g. resolution change), we destroy the old session
             // and create a brand new one. This avoids complex state reset logic in C++ and
             // ensures we start with a clean slate.
