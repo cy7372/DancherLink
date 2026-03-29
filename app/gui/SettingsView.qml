@@ -46,17 +46,17 @@ Page {
         Label {
             text: parent.title
             color: groupTitleColor
-            font.pointSize: 12
+            font.pointSize: AppTheme.fontSmall
             font.bold: true
             elide: Text.ElideRight
             padding: 0
-            bottomPadding: 5
+            bottomPadding: AppTheme.spacingXs
         }
     }
 
     property bool isWideLayout: settingsPage.width > 850
-    readonly property int bottomSafeMargin: 60
-    readonly property int columnSpacing: 15
+    readonly property int bottomSafeMargin: 64
+    readonly property int columnSpacing: AppTheme.spacingMd
 
     // Properties shared with AdvancedSettings component
     property var resolutionListModel: null
@@ -110,10 +110,10 @@ Page {
         }
 
         Column {
-            padding: 10
+            padding: AppTheme.spacingMd
             id: settingsColumn1
             width: isWideLayout ? (flickable.width - 20) / 2 : flickable.width - 20
-            spacing: 15
+            spacing: AppTheme.spacingMd
 
             // =========================================================================
             // SECTION: Basic Settings
@@ -123,32 +123,32 @@ Page {
             GroupBox {
                 id: basicSettingsGroupBox
                 width: (parent.width - (parent.leftPadding + parent.rightPadding))
-                padding: 12
+                padding: AppTheme.spacingMd
                 title: qsTr("Basic Settings")
                 label: groupBoxLabel.createObject(basicSettingsGroupBox)
-                font.pointSize: 12
+                font.pointSize: AppTheme.fontCaption
 
                 Column {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    spacing: 5
+                    spacing: AppTheme.spacingSm
 
                     Label {
                         id: resFPStitle
                         text: qsTr("Resolution and FPS")
-                        font.pointSize: 12
+                        font.pointSize: AppTheme.fontCaption
                         wrapMode: Text.Wrap
                     }
 
                     Label {
                         id: resFPSdesc
                         text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
-                        font.pointSize: 9
+                        font.pointSize: AppTheme.fontSmall
                         wrapMode: Text.Wrap
                     }
 
                     Row {
-                        spacing: 5
+                        spacing: AppTheme.spacingSm
                         width: parent.width
 
                         AutoResizingComboBox {
@@ -581,14 +581,14 @@ Page {
         // =========================================================================
 
         Column {
-            padding: 10
-            rightPadding: isWideLayout ? 20 : 10
+            padding: AppTheme.spacingMd
+            rightPadding: isWideLayout ? AppTheme.spacingMd : AppTheme.spacingMd
             anchors.left: isWideLayout ? settingsColumn1.right : parent.left
             anchors.top: isWideLayout ? parent.top : settingsColumn1.bottom
             anchors.topMargin: isWideLayout ? 0 : columnSpacing
             id: settingsColumn2
             width: isWideLayout ? (flickable.width - 20) / 2 : flickable.width - 20
-            spacing: 15
+            spacing: AppTheme.spacingMd
 
             // ========== Update Settings (external component) ==========
             UpdateSettings { }

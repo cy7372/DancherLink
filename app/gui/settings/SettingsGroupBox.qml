@@ -11,8 +11,8 @@ GroupBox {
     width: parent ? (parent.width - (parent.leftPadding + parent.rightPadding)) : implicitWidth
 
     // Default padding matching original SettingsView style
-    padding: 12
-    font.pointSize: 12
+    padding: AppTheme.spacingMd
+    font.pointSize: AppTheme.fontCaption
 
     // Use the theme's group title color
     property color titleColor: AppTheme.groupTitle
@@ -20,10 +20,10 @@ GroupBox {
     label: Label {
         text: groupBox.title
         color: groupBox.titleColor
-        font.pointSize: 12
+        font.pointSize: AppTheme.fontCaption
         font.bold: true
         elide: Text.ElideRight
         padding: 0
-        bottomPadding: 5
+        bottomPadding: AppTheme.spacingXs
     }
 }

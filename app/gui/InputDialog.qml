@@ -26,9 +26,12 @@ NavigableDialog {
     }
 
     ColumnLayout {
+        spacing: AppTheme.spacingSm
+
         Label {
             text: dialog.label
             font.bold: true
+            font.pointSize: AppTheme.fontBody
         }
 
         TextField {
@@ -39,6 +42,7 @@ NavigableDialog {
             maximumLength: dialog.maxLength
             validator: dialog.validator
             inputMethodHints: dialog.inputMethodHints
+            font.pointSize: AppTheme.fontBody
 
             Keys.onReturnPressed: dialog.accept()
             Keys.onEnterPressed: dialog.accept()

@@ -19,7 +19,7 @@ NavigableDialog {
     }
 
     RowLayout {
-        spacing: 10
+        spacing: AppTheme.spacingMd
 
         BusyIndicator {
             id: dialogSpinner
@@ -34,8 +34,8 @@ NavigableDialog {
                         "qrc:/res/baseline-error_outline-24px.svg"
             sourceSize {
                 // The icon should be square so use the height as the width too
-                width: 50
-                height: 50
+                width: 48
+                height: 48
             }
             visible: !showSpinner
         }
@@ -52,6 +52,7 @@ NavigableDialog {
             // will cause word wrap to kick in.
             Layout.maximumWidth: 400
             Layout.maximumHeight: 400
+            font.pointSize: AppTheme.fontBody
 
             Keys.onReturnPressed: {
                 accept()

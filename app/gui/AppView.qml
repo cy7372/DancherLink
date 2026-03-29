@@ -24,9 +24,9 @@ CenteredGridView {
     id: appGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
-    bottomMargin: 5
-    cellWidth: 230; cellHeight: 297;
+    topMargin: AppTheme.spacingLg
+    bottomMargin: AppTheme.spacingSm
+    cellWidth: AppTheme.appCardWidth; cellHeight: AppTheme.appCardHeight;
 
     function computerLost()
     {
@@ -102,7 +102,7 @@ CenteredGridView {
     model: appModel
 
     delegate: NavigableItemDelegate {
-        width: 220; height: 287;
+        width: AppTheme.appCardWidth - 8; height: AppTheme.appCardHeight - 8;
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
@@ -125,7 +125,8 @@ CenteredGridView {
 
             id: appIcon
             anchors.horizontalCenter: parent.horizontalCenter
-            y: 10
+            anchors.top: parent.top
+            anchors.topMargin: AppTheme.spacingSm
             source: model.boxart
 
             onSourceSizeChanged: {
@@ -145,8 +146,8 @@ CenteredGridView {
                     isPlaceholder = false
                 }
 
-                width = 200
-                height = 267
+                width = AppTheme.appIconWidth
+                height = AppTheme.appIconHeight
             }
 
             // Display a tooltip with the full name if it's truncated
@@ -163,15 +164,15 @@ CenteredGridView {
 
             sourceComponent: Item {
                 RoundButton {
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
+                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -40 : 0
+                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -64 : -48
                     anchors.centerIn: parent
-                    implicitWidth: 85
-                    implicitHeight: 85
+                    implicitWidth: 72
+                    implicitHeight: 72
 
                     icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 75
-                    icon.height: 75
+                    icon.width: 56
+                    icon.height: 56
 
                     onClicked: {
                         launchOrResumeSelectedApp(true)
@@ -186,15 +187,15 @@ CenteredGridView {
                 }
 
                 RoundButton {
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
+                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 40 : 0
+                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? 48 : 48
                     anchors.centerIn: parent
-                    implicitWidth: 85
-                    implicitHeight: 85
+                    implicitWidth: 72
+                    implicitHeight: 72
 
                     icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 75
-                    icon.height: 75
+                    icon.width: 56
+                    icon.height: 56
 
                     onClicked: {
                         doQuitGame()
@@ -217,8 +218,8 @@ CenteredGridView {
             // This loader is not asynchronous to avoid noticeable differences
             // in the time in which the text loads for each game.
 
-            width: appIcon.width
-            height: model.running ? 175 : appIcon.height
+            width: appIcon.width - AppTheme.spacingMd
+            height: model.running ? 144 : appIcon.height
 
             anchors.left: appIcon.left
             anchors.right: appIcon.right
@@ -227,9 +228,9 @@ CenteredGridView {
             sourceComponent: Label {
                 id: appNameText
                 text: model.name
-                font.pointSize: 22
-                leftPadding: 20
-                rightPadding: 20
+                font.pointSize: AppTheme.fontBody
+                leftPadding: AppTheme.spacingSm
+                rightPadding: AppTheme.spacingSm
                 verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
@@ -399,14 +400,16 @@ CenteredGridView {
 
     Row {
         anchors.centerIn: parent
-        spacing: 5
+        spacing: AppTheme.spacingSm
         visible: appGrid.count === 0
 
         Label {
             text: qsTr("This computer doesn't seem to have any applications or some applications are hidden")
-            font.pointSize: 20
+            font.pointSize: AppTheme.fontSubtitle
+            horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
+            maximumLineCount: 2
         }
     }
 
@@ -454,15 +457,16 @@ CenteredGridView {
     // Network latency indicator footer - similar to PC list page
     footer: Item {
         visible: networkLatencyBadge.visible
-        height: 32
+        height: 40
 
         Rectangle {
             id: networkLatencyBadge
             visible: appModel.networkLatencyMs >= 0 && activated
             anchors.horizontalCenter: parent.horizontalCenter
-            width: latencyRow.implicitWidth + 20
-            height: 24
-            radius: 4
+            anchors.verticalCenter: parent.verticalCenter
+            width: latencyRow.implicitWidth + AppTheme.spacingMd
+            height: 32
+            radius: AppTheme.borderRadius
             color: {
                 var ms = appModel.networkLatencyMs
                 if (ms < 0)   return "#555555"      // Unknown (gray)
@@ -475,31 +479,31 @@ CenteredGridView {
             Row {
                 id: latencyRow
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: AppTheme.spacingSm
 
                 Label {
                     text: qsTr("Network:")
                     color: "white"
-                    font.pointSize: 9
+                    font.pointSize: AppTheme.fontCaption
                     font.bold: true
                 }
 
                 Label {
                     text: appModel.networkLatencyMs + " ms"
                     color: "white"
-                    font.pointSize: 9
+                    font.pointSize: AppTheme.fontCaption
                 }
 
                 Label {
                     text: "|"
                     color: "white"
-                    font.pointSize: 9
+                    font.pointSize: AppTheme.fontCaption
                 }
 
                 Label {
                     text: appModel.networkQualityString
                     color: "white"
-                    font.pointSize: 9
+                    font.pointSize: AppTheme.fontCaption
                 }
             }
 

@@ -17,9 +17,9 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
-    bottomMargin: 5
-    cellWidth: 310; cellHeight: 330;
+    topMargin: AppTheme.spacingLg
+    bottomMargin: AppTheme.spacingSm
+    cellWidth: AppTheme.pcCardWidth; cellHeight: AppTheme.pcCardHeight;
     objectName: qsTr("Computers")
 
     Component.onCompleted: {
@@ -121,7 +121,7 @@ CenteredGridView {
 
     Row {
         anchors.centerIn: parent
-        spacing: 5
+        spacing: AppTheme.spacingSm
         visible: pcGrid.count === 0
 
         BusyIndicator {
@@ -135,9 +135,11 @@ CenteredGridView {
             elide: Label.ElideRight
             text: StreamingPreferences.enableMdns ? qsTr("Searching for compatible hosts on your local network...")
                                                   : qsTr("Automatic PC discovery is disabled. Add your PC manually.")
-            font.pointSize: 20
+            font.pointSize: AppTheme.fontSubtitle
+            horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
+            maximumLineCount: 2
         }
     }
 
@@ -145,7 +147,7 @@ CenteredGridView {
     // This ensures delegates see a valid computerModel from the start
 
     delegate: NavigableItemDelegate {
-        width: 300; height: 320;
+        width: AppTheme.pcCardWidth - 8; height: AppTheme.pcCardHeight - 8;
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item
@@ -162,10 +164,12 @@ CenteredGridView {
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: AppTheme.spacingMd
             source: "qrc:/res/desktop_windows-48px.svg"
             sourceSize {
-                width: 200
-                height: 200
+                width: 160
+                height: 160
             }
         }
 
@@ -174,7 +178,7 @@ CenteredGridView {
         Loader {
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.margins: 8
+            anchors.margins: AppTheme.spacingSm
             active: pcGrid.modelReady && model.online && index === pcGrid.currentIndex
             visible: active
             sourceComponent: Rectangle {
@@ -200,7 +204,7 @@ CenteredGridView {
                         return ms + " ms"
                     }
                     color: "white"
-                    font.pointSize: 10
+                    font.pointSize: AppTheme.fontSmall
                     font.bold: true
                 }
 
@@ -220,12 +224,12 @@ CenteredGridView {
             id: stateIcon
             anchors.horizontalCenter: pcIcon.horizontalCenter
             anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: !model.online ? -18 : -16
+            anchors.verticalCenterOffset: !model.online ? -16 : -14
             visible: !model.statusUnknown && (!model.online || !model.paired)
             source: !model.online ? "qrc:/res/warning_FILL1_wght300_GRAD200_opsz24.svg" : "qrc:/res/baseline-lock-24px.svg"
             sourceSize {
-                width: !model.online ? 75 : 70
-                height: !model.online ? 75 : 70
+                width: 64
+                height: 64
             }
 
             ToolTip.visible: stateIconMouseArea.containsMouse && stateIcon.visible
@@ -244,9 +248,9 @@ CenteredGridView {
             id: statusUnknownSpinner
             anchors.horizontalCenter: pcIcon.horizontalCenter
             anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: -15
-            width: 75
-            height: 75
+            anchors.verticalCenterOffset: -14
+            width: 64
+            height: 64
             visible: model.statusUnknown
             running: visible
         }
@@ -255,10 +259,11 @@ CenteredGridView {
             id: pcNameText
             text: model.name
 
-            width: parent.width
+            width: parent.width - AppTheme.spacingMd * 2
             anchors.top: pcIcon.bottom
             anchors.bottom: parent.bottom
-            font.pointSize: 36
+            anchors.topMargin: AppTheme.spacingSm
+            font.pointSize: AppTheme.fontTitle
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             elide: Text.ElideRight
