@@ -37,6 +37,7 @@ ApplicationWindow {
     // Current network model for latency indicator
     // Updated via setCurrentNetworkModel() when stack changes or AppView initializes
     property var currentNetworkModel: null
+    property var currentStackItem: null
 
     function updateCurrentNetworkModel() {
         var item = stackView.currentItem
@@ -55,6 +56,18 @@ ApplicationWindow {
             return
         }
         currentNetworkModel = null
+    }
+
+    // Update currentStackItem when stack changes, and schedule network model update
+    // Use double Qt.callLater to ensure PcView/AppView Component.onCompleted runs first
+    function updateCurrentStackItem() {
+        currentStackItem = stackView.currentItem
+        // Double Qt.callLater ensures we run after the current item's Component.onCompleted
+        Qt.callLater(function() {
+            Qt.callLater(function() {
+                updateCurrentNetworkModel()
+            })
+        })
     }
 
     // Set minimum window size to prevent UI elements from overlapping or being cut off
@@ -125,7 +138,6 @@ ApplicationWindow {
     }
 
     // Use Connections to handle singleton signals globally
-  
     // Use Connections to handle singleton signals globally
     Connections {
         target: AutoUpdateChecker
@@ -184,7 +196,9 @@ ApplicationWindow {
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
-            // Update network model for latency indicator
+            // Update currentStackItem for Connections target
+            updateCurrentStackItem()
+            // Also update network model (in case signal was already emitted)
             Qt.callLater(updateCurrentNetworkModel)
         }
 

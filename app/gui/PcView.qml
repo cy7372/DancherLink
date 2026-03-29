@@ -13,6 +13,7 @@ import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
     property ComputerModel computerModel : null
+    property bool modelReady : false  // Set to true when model is ready
 
     id: pcGrid
     focus: true
@@ -28,8 +29,15 @@ CenteredGridView {
         // selection when backing out of a different page of the app.
         currentIndex = -1
 
-        // Create the computer model
+        // Create the computer model FIRST
         computerModel = createModel()
+
+        // Set modelReady AFTER computerModel is created
+        // This triggers delegate rebuild with valid model reference
+        Qt.callLater(function() {
+            modelReady = true
+            pcGrid.model = computerModel
+        })
     }
 
     // Note: Any initialization done here that is critical for streaming must
@@ -38,6 +46,15 @@ CenteredGridView {
     StackView.onActivated: {
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
+
+        // Force refresh the latency badge by toggling modelReady
+        // This ensures the Loader recreates the component with fresh bindings
+        if (modelReady && computerModel && computerModel.rowCount() > 0) {
+            modelReady = false
+            Qt.callLater(function() {
+                modelReady = true
+            })
+        }
 
         // If no selection and we have computers, select the first one
         if (currentIndex === -1 && computerModel && computerModel.rowCount() > 0) {
@@ -101,21 +118,19 @@ CenteredGridView {
 
     function createModel()
     {
-        console.log("[DEBUG] createModel() called")
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', parent, '')
         if (!model) {
-            console.error("[DEBUG] Failed to create ComputerModel")
+            console.error("Failed to create ComputerModel")
             return null
         }
-        console.log("[DEBUG] ComputerModel object created, initializing...")
         model.initialize(ComputerManager)
         model.pairingCompleted.connect(pairingComplete)
         model.connectionTestCompleted.connect(testConnectionDialog.connectionTestComplete)
-        console.log("[DEBUG] ComputerModel initialized successfully:", model)
-        // Signal will be emitted via Qt.callLater in Component.onCompleted
-        // to ensure main.qml has time to connect to the signal
         return model
     }
+
+    // Don't set model here - we'll set it in Component.onCompleted after computerModel is created
+    // This ensures delegates see a valid computerModel from the start
 
     Row {
         anchors.centerIn: parent
@@ -139,7 +154,8 @@ CenteredGridView {
         }
     }
 
-    model: computerModel
+    // model property removed - set dynamically in Component.onCompleted
+    // This ensures delegates see a valid computerModel from the start
 
     delegate: NavigableItemDelegate {
         width: 300; height: 320;
@@ -167,49 +183,65 @@ CenteredGridView {
         }
 
         // Network latency indicator - shows for currently selected PC
-        Rectangle {
-            id: latencyBadge
+        // Created in a Loader to ensure fresh bindings when model is ready
+        Loader {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 8
+            // Reload component when currentIndex changes or modelReady changes
+            active: pcGrid.modelReady && model.online
+            visible: index === pcGrid.currentIndex
+            sourceComponent: Rectangle {
+                id: latencyBadge
+                width: latencyLabel.implicitWidth + 12
+                height: 24
+                radius: 4
+                color: {
+                    var modelRef = pcGrid.model
+                    if (!modelRef) return "#555555"
+                    var ms = modelRef.networkLatencyMs
+                    if (ms < 0) return "#555555"
+                    if (ms < 20) return "#2E7D32"
+                    if (ms < 50) return "#F9A825"
+                    return "#C62828"
+                }
+                opacity: 0.9
+
+                Label {
+                    id: latencyLabel
+                    anchors.centerIn: parent
+                    text: {
+                        var modelRef = pcGrid.model
+                        if (!modelRef) return "--"
+                        var ms = modelRef.networkLatencyMs
+                        if (ms < 0) return "--"
+                        return ms + " ms"
+                    }
+                    color: "white"
+                    font.pointSize: 10
+                    font.bold: true
+                }
+
+                ToolTip.visible: latencyMouseArea.containsMouse && pcGrid.model
+                ToolTip.text: pcGrid.model ? pcGrid.model.networkQualityString : ""
+                ToolTip.delay: 500
+
+                MouseArea {
+                    id: latencyMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+            }
+        }
+
+        // Invisible placeholder to maintain layout when Loader is inactive
+        Item {
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: 8
             width: latencyLabel.implicitWidth + 12
             height: 24
-            radius: 4
-            color: {
-                if (!model.online) return "#555555"
-                if (!pcGrid.computerModel) return "#555555"
-                var ms = pcGrid.computerModel.networkLatencyMs
-                if (ms < 0) return "#555555"      // Unknown (gray)
-                if (ms < 20) return "#2E7D32"      // Good (green)
-                if (ms < 50) return "#F9A825"      // Fair (yellow)
-                return "#C62828"                    // Poor (red)
-            }
-            opacity: 0.9
-            visible: index === pcGrid.currentIndex && model.online
-
-            Label {
-                id: latencyLabel
-                anchors.centerIn: parent
-                text: {
-                    if (!pcGrid.computerModel) return "--"
-                    var ms = pcGrid.computerModel.networkLatencyMs
-                    if (ms < 0) return "--"
-                    return ms + " ms"
-                }
-                color: "white"
-                font.pointSize: 10
-                font.bold: true
-            }
-
-            ToolTip.visible: latencyMouseArea.containsMouse && pcGrid.computerModel
-            ToolTip.text: pcGrid.computerModel ? pcGrid.computerModel.networkQualityString : ""
-            ToolTip.delay: 500
-
-            MouseArea {
-                id: latencyMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-            }
+            visible: false
         }
 
         // Connect to computerModel's networkLatencyChanged signal to ensure UI updates
