@@ -89,6 +89,7 @@ try {
         -BuildType "beta" `
         -VsInstallPath $VsInstallPath `
         -OpenSslPaths $OpenSslPaths `
+        -Version $DisplayVersion `
         -SkipConfigure:$false
 
     if ($BuildResult -ne 0) {

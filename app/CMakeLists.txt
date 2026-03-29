@@ -77,10 +77,17 @@ file(GLOB TS_FILES "languages/*.ts")
 qt6_add_lrelease(DancherLink TS_FILES ${TS_FILES})
 
 # Version
-# Force reconfiguration when version.txt changes by using CMAKE_CONFIGURE_DEPENDS
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" VERSION_STR)
-message(STATUS "=== VERSION_STR from version.txt: '${VERSION_STR}' ===")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
+# Allow version override via BUILD_VERSION parameter (for Beta builds)
+# If BUILD_VERSION is not provided, use version.txt
+if(DEFINED BUILD_VERSION)
+    set(VERSION_STR "${BUILD_VERSION}")
+    message(STATUS "=== VERSION_STR from BUILD_VERSION: '${VERSION_STR}' ===")
+else()
+    # Force reconfiguration when version.txt changes by using CMAKE_CONFIGURE_DEPENDS
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" VERSION_STR)
+    message(STATUS "=== VERSION_STR from version.txt: '${VERSION_STR}' ===")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
+endif()
 add_compile_definitions(VERSION_STR="${VERSION_STR}")
 
 # Add UPDATE_SUBSCRIPTION_URL definition if provided
