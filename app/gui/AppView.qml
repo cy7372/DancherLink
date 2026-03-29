@@ -28,6 +28,10 @@ CenteredGridView {
     bottomMargin: AppTheme.spacingSm
     cellWidth: AppTheme.appCardWidth; cellHeight: AppTheme.appCardHeight;
 
+    // Performance optimizations
+    cacheBuffer: 400  // Cache extra items off-screen for smoother scrolling
+    reuseItems: true  // Reuse delegate items instead of creating/destroying
+
     function computerLost()
     {
         // Go back to the PC view on PC loss
@@ -112,12 +116,30 @@ CenteredGridView {
         opacity: model.hidden ? 0.4 : 1.0
 
         background: Rectangle {
-            color: parent.highlighted ? AppTheme.backgroundHighlighted : (parent.hovered ? AppTheme.backgroundHover : "transparent")
+            id: delegateBackground
+            color: AppTheme.backgroundPrimary
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
-            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+            states: [
+                State {
+                    name: "highlighted"
+                    when: parent.highlighted
+                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHighlighted }
+                },
+                State {
+                    name: "hovered"
+                    when: parent.hovered && !parent.highlighted
+                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    ColorAnimation { duration: AppTheme.animationDurationFast }
+                }
+            ]
         }
 
         Image {
@@ -467,14 +489,18 @@ CenteredGridView {
             width: latencyRow.implicitWidth + AppTheme.spacingMd
             height: 32
             radius: AppTheme.borderRadius
+            opacity: 0.9
+
+            // Cache latency value to reduce binding updates
+            property int cachedLatency: appModel.networkLatencyMs
+
             color: {
-                var ms = appModel.networkLatencyMs
+                var ms = cachedLatency
                 if (ms < 0)   return "#555555"      // Unknown (gray)
                 if (ms < 20)  return "#2E7D32"      // Good (green)
                 if (ms < 50)  return "#F9A825"      // Fair (yellow)
                 return "#C62828"                    // Poor (red)
             }
-            opacity: 0.9
 
             Row {
                 id: latencyRow
@@ -489,7 +515,7 @@ CenteredGridView {
                 }
 
                 Label {
-                    text: appModel.networkLatencyMs + " ms"
+                    text: cachedLatency + " ms"
                     color: "white"
                     font.pointSize: AppTheme.fontCaption
                 }

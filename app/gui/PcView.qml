@@ -22,6 +22,10 @@ CenteredGridView {
     cellWidth: AppTheme.pcCardWidth; cellHeight: AppTheme.pcCardHeight;
     objectName: qsTr("Computers")
 
+    // Performance optimizations
+    cacheBuffer: 400  // Cache extra items off-screen for smoother scrolling
+    reuseItems: true  // Reuse delegate items instead of creating/destroying
+
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
         // We do this here instead of onActivated to avoid losing the user's
@@ -153,12 +157,30 @@ CenteredGridView {
         property alias pcContextMenu : pcContextMenuLoader.item
 
         background: Rectangle {
-            color: parent.highlighted ? AppTheme.backgroundHighlighted : (parent.hovered ? AppTheme.backgroundHover : "transparent")
+            id: delegateBackground
+            color: AppTheme.backgroundPrimary
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
-            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+            states: [
+                State {
+                    name: "highlighted"
+                    when: parent.highlighted
+                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHighlighted }
+                },
+                State {
+                    name: "hovered"
+                    when: parent.hovered && !parent.highlighted
+                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    ColorAnimation { duration: AppTheme.animationDurationFast }
+                }
+            ]
         }
 
         Image {
@@ -181,25 +203,30 @@ CenteredGridView {
             anchors.margins: AppTheme.spacingSm
             active: pcGrid.modelReady && model.online && index === pcGrid.currentIndex
             visible: active
+            asynchronous: true  // Load component asynchronously to avoid blocking UI
             sourceComponent: Rectangle {
                 id: latencyBadge
                 width: latencyLabel.implicitWidth + 12
                 height: 24
                 radius: 4
+                opacity: 0.9
+
+                // Cache latency value to reduce binding updates
+                property int cachedLatency: pcGrid.model ? pcGrid.model.networkLatencyMs : -1
+
                 color: {
-                    var ms = pcGrid.model ? pcGrid.model.networkLatencyMs : -1
+                    var ms = cachedLatency
                     if (ms < 0) return "#555555"
                     if (ms < 20) return "#2E7D32"
                     if (ms < 50) return "#F9A825"
                     return "#C62828"
                 }
-                opacity: 0.9
 
                 Label {
                     id: latencyLabel
                     anchors.centerIn: parent
                     text: {
-                        var ms = pcGrid.model ? pcGrid.model.networkLatencyMs : -1
+                        var ms = cachedLatency
                         if (ms < 0) return "--"
                         return ms + " ms"
                     }

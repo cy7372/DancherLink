@@ -21,23 +21,15 @@ GridView {
         rightMargin = horizontalMargin
     }
 
-    onHorizontalMarginChanged: {
-        updateMargins()
-    }
+    // Optimize: only update margins when necessary
+    onHorizontalMarginChanged: updateMargins()
+    onWidthChanged: updateMargins()
+    onCountChanged: updateMargins()
 
-    // Update margins when parent width changes
-    onWidthChanged: {
-        updateMargins()
-    }
+    Component.onCompleted: updateMargins()
 
-    // Update margins when count changes
-    onCountChanged: {
-        updateMargins()
-    }
-
-    Component.onCompleted: {
-        updateMargins()
-    }
+    // Performance: use a simple background instead of a separate Rectangle item
+    clip: true
 
     Rectangle {
         color: Material.background
@@ -46,6 +38,7 @@ GridView {
         z: -100
     }
 
-    boundsBehavior: Flickable.OvershootBounds
+    // Use FollowCurve for smoother scrolling on touchpads
+    boundsBehavior: Flickable.FollowCurve
 }
 

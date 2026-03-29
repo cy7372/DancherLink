@@ -119,6 +119,15 @@ try {
         Write-Host "[$BuildType Build] Skipping Qt deployment (--NoDeploy)" -ForegroundColor Yellow
     }
 
+    # Copy final binary to deploy folder BEFORE building MSI (Deploy-Qt removes it after deployment)
+    $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
+    if ($FinalExe) {
+        Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
+        Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
+    } else {
+        throw "DancherLink.exe not found in build output!"
+    }
+
     # Build MSI (unless skipped)
     if (-not $NoMsi) {
         $MsiFile = Build-Msi `
@@ -129,24 +138,11 @@ try {
             -WxsFile "$RootDir\wix\DancherLink\Product.wxs" `
             -Extensions $BuildConfig.WixExtensions
 
-        # Copy final binary
-        $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-        if ($FinalExe -and -not (Test-Path "$DeployFolder\DancherLink.exe")) {
-            Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
-        }
-
         # Update manifest
         Update-Manifest -RootDir $RootDir -Version $Version -Arch $Arch -BuildType "release"
     } else {
         Write-Host "[$BuildType Build] Skipping MSI packaging (--NoMsi)" -ForegroundColor Yellow
         $MsiFile = $null
-
-        # Copy exe to deploy folder for release
-        $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
-        if ($FinalExe -and -not (Test-Path "$DeployFolder\DancherLink.exe")) {
-            Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
-            Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
-        }
     }
 
     # Copy to release folder

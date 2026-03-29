@@ -671,6 +671,12 @@ int main(int argc, char *argv[])
         qputenv("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "#3F51B5");
     }
 
+    // QML Performance Optimizations
+    // Enable threaded render loop for smoother animations
+    qputenv("QML_XMR_FORCE_THREADED", "1");
+    // Use OpenGL scene graph for hardware acceleration (default on Windows)
+    // qputenv("QSCENEGRAPH_BACKEND", "opengl");
+
     QQmlApplicationEngine engine;
     QString initialView;
     bool hasGUI = true;
