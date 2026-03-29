@@ -70,10 +70,9 @@ def main():
     # browser_url - relative path (no server/ prefix since updates.json is already in server dir)
     browser_url = f"DancherLink-{arch}-{version}{msi_suffix}.msi"
 
-    # Determine build type from version format
-    # Beta versions have 4+ segments (e.g., 1.0.5.45), Release have 3 (e.g., 1.0.5)
-    version_parts = version.split('-')[0].split('.')  # Remove -beta suffix if present
-    is_beta = len(version_parts) >= 4
+    # Determine build type from the build_type parameter
+    # build_type is passed as 5th argument: "release" or "beta"
+    is_beta = (build_type.lower() == "beta")
 
     # Update manifest entry
     manifest_entry = {

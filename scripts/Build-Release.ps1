@@ -32,9 +32,25 @@ $startTime = Get-Date
 # Initialize
 $Arch = Initialize-BuildEnvironment -BuildType $BuildType
 
-# Read version
-$Version = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
-Write-Host "[$BuildType Build] Version: $Version" -ForegroundColor Green
+# Read base version from version.txt (3-digit for Release, e.g., 1.0.11)
+$BaseVersion = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
+
+# Get git commit count for build number (used for RC file, not for Release MSI name)
+Set-Location $RootDir
+$BuildNumber = git rev-list --count HEAD 2>$null
+if (-not $BuildNumber) {
+    $BuildNumber = 0
+}
+Set-Location $ScriptDir
+
+# Release version uses 3-digit format (e.g., 1.0.11)
+$Version = $BaseVersion
+# RC file needs 4-digit version (Windows requirement): major.minor.build.revision
+$RcVersion = "${BaseVersion}.${BuildNumber}"
+
+Write-Host "[$BuildType Build] Base version: $BaseVersion" -ForegroundColor Green
+Write-Host "[$BuildType Build] Git commit count: $BuildNumber" -ForegroundColor Green
+Write-Host "[$BuildType Build] Release version: $Version" -ForegroundColor Green
 
 # Get paths (this also cleans directories if not incremental)
 $Paths = Get-BuildPaths -RootDir $RootDir -Arch $Arch -BuildType $BuildType -Incremental:$Incremental
@@ -49,8 +65,8 @@ $ReleaseFolder = $Paths.ReleaseFolder
 Start-BuildLogging -LogDir $LogDir
 
 try {
-    # Sync version to RC file
-    Sync-RcVersion -VersionFile "$RootDir\app\version.txt" -RcFile "$RootDir\app\DancherLink_resource.rc"
+    # Sync version to RC file (4-digit format for Windows)
+    Sync-RcVersion -Version $RcVersion -RcFile "$RootDir\app\DancherLink_resource.rc"
 
     # Generate translations
     Generate-Translations -LanguagesDir "$RootDir\app\languages"
@@ -145,17 +161,8 @@ try {
     # Success
     Write-BuildSuccess -BuildType $BuildType -Version $Version -MsiPath $MsiFile -BuildDuration $durationStr
 
-    # Increment version number for next build (patch version)
-    Write-Host "[$BuildType Build] Incrementing version number for next build..." -ForegroundColor Green
-    $versionParts = $Version.Split('.')
-    if ($versionParts.Count -ge 3) {
-        $newPatchNumber = [int]$versionParts[2] + 1
-        $newVersion = "$($versionParts[0]).$($versionParts[1]).$newPatchNumber"
-        if ($versionParts.Count -eq 4) {
-            $newVersion += ".$($versionParts[3])"
-        }
-        Set-Content "$RootDir\app\version.txt" -Value $newVersion
-        Write-Host "  Version updated: $Version -> $newVersion" -ForegroundColor Green
+    # Note: Patch version should be manually incremented in version.txt for Release builds
+    # Build number is automatically calculated from git commit count
     }
 
 } catch {

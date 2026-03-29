@@ -1,13 +1,23 @@
 param (
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [string]$VersionFile,
-    [Parameter(Mandatory=$true)]
-    [string]$RcFile
+    [Parameter(Mandatory=$false)]
+    [string]$RcFile,
+    [Parameter(Mandatory=$false)]
+    [string]$Version
 )
 
-if (-not (Test-Path $VersionFile)) {
-    Write-Error "Version file not found: $VersionFile"
-    exit 1
+# Support direct version parameter or read from file
+if ($Version) {
+    # Use provided version directly
+    $version = $Version
+} else {
+    # Read from version file
+    if (-not (Test-Path $VersionFile)) {
+        Write-Error "Version file not found: $VersionFile"
+        exit 1
+    }
+    $version = (Get-Content $VersionFile).Trim()
 }
 
 if (-not (Test-Path $RcFile)) {
@@ -15,8 +25,7 @@ if (-not (Test-Path $RcFile)) {
     exit 1
 }
 
-$version = (Get-Content $VersionFile).Trim()
-# Ensure we have a valid version string, though we trust version.txt usually
+# Ensure we have a valid version string
 # Format expected: Major.Minor.Patch.Build
 
 $versionComma = $version -replace '\.', ','

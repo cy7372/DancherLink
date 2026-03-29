@@ -120,13 +120,23 @@ function Get-BuildPaths {
 function Sync-RcVersion {
     param(
         [string]$VersionFile,
-        [string]$RcFile
+        [string]$RcFile,
+        [string]$Version
     )
 
     Write-Host "Syncing version to RC file..." -ForegroundColor Green
-    & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\update_rc_version.ps1" `
-        -VersionFile $VersionFile `
-        -RcFile $RcFile
+
+    if ($Version) {
+        # Use provided version directly
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\update_rc_version.ps1" `
+            -Version $Version `
+            -RcFile $RcFile
+    } else {
+        # Read version from file
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\update_rc_version.ps1" `
+            -VersionFile $VersionFile `
+            -RcFile $RcFile
+    }
 }
 
 function Generate-Translations {

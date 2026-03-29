@@ -32,25 +32,24 @@ $startTime = Get-Date
 # Initialize
 $Arch = Initialize-BuildEnvironment -BuildType $BuildType
 
-# Read version from version.txt (4-digit for Beta, e.g., 1.0.5.37)
-$FullVersion = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
+# Read base version from version.txt (3-digit for Release, e.g., 1.0.11)
+$BaseVersion = Get-Content "$RootDir\app\version.txt" | ForEach-Object { $_.Trim() }
 
-# Extract 4-digit version for Beta (pure numbers for MSI compatibility)
-# If version is 3-digit (e.g., 1.0.5), append .0
-# If version is 4-digit (e.g., 1.0.5.37), use as-is
-$versionParts = $FullVersion.Split('.')
-if ($versionParts.Count -eq 3) {
-    $Version = "${FullVersion}.0"
-} elseif ($versionParts.Count -ge 4) {
-    $Version = $versionParts[0..3] -join '.'
-} else {
-    $Version = $FullVersion
+# Get git commit count for build number
+Set-Location $RootDir
+$BuildNumber = git rev-list --count HEAD 2>$null
+if (-not $BuildNumber) {
+    $BuildNumber = 0
 }
+Set-Location $ScriptDir
 
-# Add -beta suffix for display only
+# Beta version = base version + build number (e.g., 1.0.11.1070)
+$Version = "${BaseVersion}.${BuildNumber}"
 $DisplayVersion = "$Version-beta"
 
-Write-Host "[$BuildType Build] Version: $DisplayVersion (MSI: $Version)" -ForegroundColor Green
+Write-Host "[$BuildType Build] Base version: $BaseVersion" -ForegroundColor Green
+Write-Host "[$BuildType Build] Git commit count: $BuildNumber" -ForegroundColor Green
+Write-Host "[$BuildType Build] Beta version: $DisplayVersion" -ForegroundColor Green
 
 # Get paths
 $Paths = Get-BuildPaths -RootDir $RootDir -Arch $Arch -BuildType "beta" -Incremental:$Incremental
@@ -155,12 +154,8 @@ try {
     # Success
     Write-BuildSuccess -BuildType $BuildType -Version $Version -MsiPath $MsiFile -BuildDuration $durationStr
 
-    # Increment version number for next build
-    Write-Host "[$BuildType Build] Incrementing version number for next build..." -ForegroundColor Green
-    $newBuildNumber = [int]$versionParts[3] + 1
-    $newVersion = "$($versionParts[0]).$($versionParts[1]).$($versionParts[2]).$newBuildNumber"
-    Set-Content "$RootDir\app\version.txt" -Value $newVersion
-    Write-Host "  Version updated: $FullVersion -> $newVersion" -ForegroundColor Green
+    # Note: Build number is now automatically calculated from git commit count
+    # No need to manually increment version.txt for Beta builds
 
 } catch {
     Write-Error "[$BuildType Build] $($_.Exception.Message)"
