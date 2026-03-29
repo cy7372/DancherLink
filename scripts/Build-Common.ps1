@@ -347,7 +347,9 @@ function Deploy-Qt {
         $WindeployqtArgs += @("--qmldir", "$RootDir\$GuiDir")
     }
 
+    # Run windeployqt and ignore errors (qmlimportscanner may return invalid JSON but deployment still works)
     $result = windeployqt @WindeployqtArgs $DeployBinExe 2>&1
+    Write-Host $result
 
     # Remove exe - WiX will add it separately
     Remove-Item $DeployBinExe -Force
@@ -437,6 +439,8 @@ function Build-Msi {
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
+
+    Write-Host "Command: $wixPath $($WixArgs -join ' ')" -ForegroundColor Gray
 
     $proc = [System.Diagnostics.Process]::Start($psi)
     $result = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()

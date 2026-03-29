@@ -32,13 +32,13 @@ def main():
 
     # Paths
     server_dir = source_root / "server"
-    build_root = source_root / "build"
+    build_dir = source_root / "build"
 
     # Build folder path depends on build type
     if build_type == "beta":
-        build_folder = build_root / f"build-{build_arch}-beta-{config}"
+        build_folder = build_dir / f"build-{build_arch}-beta-{config}"
     else:
-        build_folder = build_root / f"build-{build_arch}-{config}"
+        build_folder = build_dir / f"build-{build_arch}-{config}"
 
     # Both release and beta use updates.json
     updates_json = server_dir / "updates.json"
@@ -47,18 +47,29 @@ def main():
     print(f"Arch: {arch} (from build arch: {build_arch})")
     print(f"Config: {config}")
     print(f"Server dir: {server_dir}")
+    print(f"Build dir: {build_dir}")
 
     # Ensure server directory exists
     server_dir.mkdir(parents=True, exist_ok=True)
 
-    # Find the MSI file (WiX outputs to build folder, not installer folder)
-    msi_file = build_folder / "DancherLink.msi"
+    # Find the MSI file from installer folder
+    # Path format matches Get-BuildPaths in Build-Common.ps1:
+    #   build/installer-{arch}{-beta}-release
+    # Note: The path always ends with '-release' (lowercase), not the config parameter
+    # MSI file in installer folder does NOT have -beta suffix (added later when copying to server)
+    beta_suffix_path = "-beta" if build_type == "beta" else ""
+    installer_folder = build_dir / f"installer-{build_arch}{beta_suffix_path}-release"
+
+    # MSI file name in installer folder does NOT have -beta suffix
+    # e.g., DancherLink-x86_64-1.0.11.176.msi (both release and beta)
+    msi_file = installer_folder / f"DancherLink-{arch}-{version}.msi"
 
     if not msi_file.exists():
         print(f"Error: MSI not found: {msi_file}")
         sys.exit(1)
 
     print(f"Found MSI: {msi_file}")
+    print(f"MSI size: {msi_file.stat().st_size / 1024 / 1024:.2f} MB")
 
     # Copy MSI to server directory
     # Beta versions get -beta suffix in filename
