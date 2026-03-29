@@ -341,11 +341,11 @@ function Deploy-Qt {
     $DeployBinExe = "$DeployFolder\DancherLink.exe"
     Copy-Item $ExePath $DeployBinExe -Force
 
-    # Use simple deployment without --qmldir (which causes qmlimportscanner errors)
-    # Qt QML files will be deployed by including all QML files from the Qt installation
+    # Build windeployqt arguments
     $WindeployqtArgs = @(
         "--dir", $DeployFolder
         "--release"
+        "--qmldir", "$RootDir\$GuiDir"
         "--no-compiler-runtime"
         "--no-sql"
         "--no-system-d3d-compiler"
@@ -353,14 +353,34 @@ function Deploy-Qt {
         "--no-translations"
     )
 
-    # Run windeployqt
-    $result = windeployqt @WindeployqtArgs $DeployBinExe 2>&1
-    Write-Host $result
+    # Run windeployqt - qmlimportscanner may fail but deployment still works
+    # We need to capture output and check for actual deployment success
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "windeployqt"
+    $psi.Arguments = $WindeployqtArgs + $DeployBinExe
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $output = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
+    $proc.WaitForExit()
+
+    Write-Host $output
+
+    # Check if Qt QML modules were deployed (look for Qt6Quick.dll or similar)
+    $qmlFiles = Get-ChildItem "$DeployFolder\*.dll" -Filter "Qt6*.dll" -ErrorAction SilentlyContinue
+    if ($qmlFiles.Count -lt 5) {
+        Write-Host "  [Error] Qt deployment may be incomplete - only $($qmlFiles.Count) Qt DLLs found" -ForegroundColor Red
+    } else {
+        Write-Host "  Deployed $($qmlFiles.Count) Qt DLL files" -ForegroundColor Green
+    }
 
     # Remove exe - WiX will add it separately
     Remove-Item $DeployBinExe -Force
 
-    return $result
+    return $output
 }
 
 function Deploy-QtTranslations {
