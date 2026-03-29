@@ -25,16 +25,16 @@ if (-not (Test-Path $RcFile)) {
     exit 1
 }
 
-# Ensure we have a valid version string
-# Format expected: Major.Minor.Patch.Build
-
-$versionComma = $version -replace '\.', ','
+# Extract numeric version for FILEVERSION/PRODUCTVERSION (remove -beta suffix)
+# e.g., "1.0.11.180-beta" -> "1.0.11.180"
+$numericVersion = $version -replace '-[a-zA-Z]+$', ''
+$versionComma = $numericVersion -replace '\.', ','
 
 $content = Get-Content $RcFile -Raw
 
-# Replace numeric FILEVERSION/PRODUCTVERSION (e.g., FILEVERSION 1,0,3,0)
-$content = $content -replace '(FILEVERSION\s+)\d+,\d+,\d+,\d+', "`$1$versionComma"
-$content = $content -replace '(PRODUCTVERSION\s+)\d+,\d+,\d+,\d+', "`$1$versionComma"
+# Replace numeric FILEVERSION/PRODUCTVERSION (supports 3 or 4 segment versions)
+$content = $content -replace '(FILEVERSION\s+)\d+,\d+,\d+(,\d+)?', "`$1$versionComma"
+$content = $content -replace '(PRODUCTVERSION\s+)\d+,\d+,\d+(,\d+)?', "`$1$versionComma"
 
 # Replace string table values (e.g., VALUE "FileVersion", "1.0.3.0\0")
 # Fix: The previous regex was capturing $1 inside the replacement string which caused issues in PowerShell string interpolation

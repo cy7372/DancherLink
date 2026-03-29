@@ -64,8 +64,8 @@ $ReleaseFolder = $Paths.ReleaseFolder
 Start-BuildLogging -LogDir $LogDir
 
 try {
-    # Sync version to RC file
-    Sync-RcVersion -VersionFile "$RootDir\app\version.txt" -RcFile "$RootDir\app\DancherLink_resource.rc"
+    # Sync version to RC file - use full Beta version (e.g., 1.0.11.180)
+    Sync-RcVersion -Version $DisplayVersion -RcFile "$RootDir\app\DancherLink_resource.rc"
 
     # Generate translations
     Generate-Translations -LanguagesDir "$RootDir\app\languages"
