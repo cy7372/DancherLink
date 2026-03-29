@@ -292,11 +292,19 @@ void ComputerModel::stopLatencyMeasurement()
 
 int ComputerModel::networkLatencyMs() const
 {
-    if (!isComputerValid(m_MeasuringComputer)) {
+    // Return latency for the computer at m_MeasuringComputerIndex
+    // This ensures we show cached latency value even when not actively measuring
+    if (m_MeasuringComputerIndex < 0 || m_MeasuringComputerIndex >= m_Computers.count()) {
         return -1;
     }
-    QReadLocker lock(&m_MeasuringComputer->lock);
-    return m_MeasuringComputer->measuredLatencyMs;
+
+    NvComputer* computer = m_Computers[m_MeasuringComputerIndex];
+    if (!computer) {
+        return -1;
+    }
+
+    QReadLocker lock(&computer->lock);
+    return computer->measuredLatencyMs;
 }
 
 QString ComputerModel::networkQualityString() const
@@ -307,17 +315,6 @@ QString ComputerModel::networkQualityString() const
 void ComputerModel::handleLatencyChanged(int rttMs)
 {
     Q_UNUSED(rttMs)
-    // Verify the measuring computer is still valid before emitting
-    if (isComputerValid(m_MeasuringComputer)) {
-        emit networkLatencyChanged(networkLatencyMs());
-    }
-}
-
-bool ComputerModel::isComputerValid(NvComputer* computer) const
-{
-    if (!computer) {
-        return false;
-    }
-    // Check if the computer is still in our list
-    return m_Computers.contains(computer);
+    // Emit signal to notify UI of latency change
+    emit networkLatencyChanged(networkLatencyMs());
 }

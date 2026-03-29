@@ -182,23 +182,20 @@ CenteredGridView {
         }
 
         // Network latency indicator - shows for currently selected PC
-        // Created in a Loader to ensure fresh bindings when model is ready
+        // Only visible when this item is selected and model is online
         Loader {
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: 8
-            // Reload component when currentIndex changes or modelReady changes
-            active: pcGrid.modelReady && model.online
-            visible: index === pcGrid.currentIndex
+            active: pcGrid.modelReady && model.online && index === pcGrid.currentIndex
+            visible: active
             sourceComponent: Rectangle {
                 id: latencyBadge
                 width: latencyLabel.implicitWidth + 12
                 height: 24
                 radius: 4
                 color: {
-                    var modelRef = pcGrid.model
-                    if (!modelRef) return "#555555"
-                    var ms = modelRef.networkLatencyMs
+                    var ms = model.networkLatencyMs
                     if (ms < 0) return "#555555"
                     if (ms < 20) return "#2E7D32"
                     if (ms < 50) return "#F9A825"
@@ -210,9 +207,7 @@ CenteredGridView {
                     id: latencyLabel
                     anchors.centerIn: parent
                     text: {
-                        var modelRef = pcGrid.model
-                        if (!modelRef) return "--"
-                        var ms = modelRef.networkLatencyMs
+                        var ms = model.networkLatencyMs
                         if (ms < 0) return "--"
                         return ms + " ms"
                     }
@@ -221,8 +216,8 @@ CenteredGridView {
                     font.bold: true
                 }
 
-                ToolTip.visible: latencyMouseArea.containsMouse && pcGrid.model
-                ToolTip.text: pcGrid.model ? pcGrid.model.networkQualityString : ""
+                ToolTip.visible: latencyMouseArea.containsMouse
+                ToolTip.text: model.networkQualityString
                 ToolTip.delay: 500
 
                 MouseArea {
@@ -230,31 +225,6 @@ CenteredGridView {
                     anchors.fill: parent
                     hoverEnabled: true
                 }
-            }
-        }
-
-        // Invisible placeholder to maintain layout when Loader is inactive
-        Item {
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: 8
-            width: latencyLabel.implicitWidth + 12
-            height: 24
-            visible: false
-        }
-
-        // Connect to computerModel's networkLatencyChanged signal to ensure UI updates
-        // Use pcGrid.computerModel directly with proper null checking
-        Connections {
-            target: pcGrid.computerModel
-            function onNetworkLatencyChanged() {
-                // This ensures the delegate is notified when latency changes
-                // Use Qt.callLater to update UI after binding re-evaluation
-                Qt.callLater(function() {
-                    if (latencyBadge) {
-                        latencyBadge.opacity = latencyBadge.opacity
-                    }
-                })
             }
         }
 

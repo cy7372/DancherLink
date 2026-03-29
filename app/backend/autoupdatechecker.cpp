@@ -306,9 +306,24 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
 
 void AutoUpdateChecker::parseStringToVersionQuad(const QString& string, QVector<int>& version)
 {
-    QStringList list = string.split('.');
+    // Remove any suffix after the last numeric component (e.g., "-beta" from "1.0.11.181-beta")
+    // Find the position where we have only digits and dots
+    QString cleanString = string;
+    int i = 0;
+    for (; i < cleanString.length(); i++) {
+        QChar c = cleanString[i];
+        if (!c.isDigit() && c != QLatin1Char('.')) {
+            // Found non-numeric, non-dot character, truncate here
+            cleanString = cleanString.left(i);
+            break;
+        }
+    }
+
+    QStringList list = cleanString.split('.');
     for (const QString& component : list) {
-        version.append(component.toInt());
+        if (!component.isEmpty()) {
+            version.append(component.toInt());
+        }
     }
 }
 

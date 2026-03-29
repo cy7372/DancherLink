@@ -2707,10 +2707,18 @@ void Session::exec()
                      DWORD monitorStatus = *(DWORD*)pbs->Data;
                      if (monitorStatus == 0) { // Monitor Off
                          SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Monitor powered off, quitting stream");
-                         
-                         // Use interrupt() to ensure the connection is stopped immediately
-                         // which helps prevent hangs during cleanup if the display is off.
-                         interrupt();
+
+                         // Stop input handler first to prevent processing input during cleanup
+                         if (m_InputHandler) {
+                             m_InputHandler->setCaptureActive(false);
+                         }
+
+                         // Post SDL_QUIT to the event queue instead of calling interrupt() directly
+                         // This allows the current frame rendering to complete before cleanup begins,
+                         // preventing deadlocks when the display subsystem is powering down
+                         SDL_Event quitEvent;
+                         quitEvent.type = SDL_QUIT;
+                         SDL_PushEvent(&quitEvent);
                      }
                 }
             }
