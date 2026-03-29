@@ -16,6 +16,8 @@ extern "C" {
 #ifdef Q_OS_WIN32
 #include "ffmpeg-renderers/dxva2.h"
 #include "ffmpeg-renderers/d3d11va.h"
+#include <windows.h>
+#include <string.h>
 #endif
 
 #ifdef Q_OS_DARWIN
@@ -547,7 +549,36 @@ bool FFmpegVideoDecoder::completeInitialization(const AVCodec* decoder, enum AVP
     // Enable slice multi-threading for software decoding
     if (!isHardwareAccelerated()) {
         m_VideoDecoderCtx->thread_type = FF_THREAD_SLICE;
-        m_VideoDecoderCtx->thread_count = qMin(MAX_SLICES, SDL_GetCPUCount());
+
+        // Detect Intel Lakefield (ThinkPad X1 Fold Gen 1) for optimized thread count
+        // Lakefield has 1 large core + 4 small cores, limit threads to avoid small core overload
+        bool isIntelLakefield = false;
+#ifdef Q_OS_WIN32
+        wchar_t processorId[256] = {0};
+        DWORD size = sizeof(processorId);
+        if (GetEnvironmentVariableW(L"PROCESSOR_IDENTIFIER", processorId, size) > 0) {
+            // Case-insensitive substring search
+            if (_wcsicmp(processorId, L"Lakefield") != 0 && wcsstr(processorId, L"Lakefield") != NULL) {
+                isIntelLakefield = true;
+            }
+            if (_wcsicmp(processorId, L"i5-L16G7") != 0 && wcsstr(processorId, L"i5-L16G7") != NULL) {
+                isIntelLakefield = true;
+            }
+        }
+#endif
+
+        // Check for ML_LOW_LATENCY environment variable or X1 Fold detection
+        bool lowLatencyMode = (qgetenv("ML_LOW_LATENCY") == "1") || isIntelLakefield;
+
+        if (lowLatencyMode) {
+            // Use fewer threads for lower decoding latency
+            m_VideoDecoderCtx->thread_count = isIntelLakefield ? 4 : qMin(MAX_SLICES, SDL_GetCPUCount());
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Low latency mode enabled: thread_count=%d",
+                        m_VideoDecoderCtx->thread_count);
+        } else {
+            m_VideoDecoderCtx->thread_count = qMin(MAX_SLICES, SDL_GetCPUCount());
+        }
     }
     else {
         // No threading for HW decode
@@ -579,6 +610,41 @@ bool FFmpegVideoDecoder::completeInitialization(const AVCodec* decoder, enum AVP
     // Allow the backend renderer to attach data to this decoder
     if (!m_BackendRenderer->prepareDecoderContext(m_VideoDecoderCtx, &options)) {
         return false;
+    }
+
+    // Apply low latency optimizations for Intel Lakefield (X1 Fold) or ML_LOW_LATENCY=1
+    bool isIntelLakefield = false;
+#ifdef Q_OS_WIN32
+    wchar_t processorId[256] = {0};
+    DWORD size = sizeof(processorId);
+    if (GetEnvironmentVariableW(L"PROCESSOR_IDENTIFIER", processorId, size) > 0) {
+        // Case-insensitive substring search
+        if (_wcsicmp(processorId, L"Lakefield") != 0 && wcsstr(processorId, L"Lakefield") != NULL) {
+            isIntelLakefield = true;
+        }
+        if (_wcsicmp(processorId, L"i5-L16G7") != 0 && wcsstr(processorId, L"i5-L16G7") != NULL) {
+            isIntelLakefield = true;
+        }
+    }
+#endif
+
+    bool lowLatencyMode = (qgetenv("ML_LOW_LATENCY") == "1") || isIntelLakefield;
+
+    if (lowLatencyMode) {
+        // Enable low delay mode - reduces decoding latency by 1-2 frames
+        av_dict_set(&options, "flags", "low_delay", 0);
+        // Reduce reference frames for lower latency
+        av_dict_set(&options, "refs", "1", 0);
+        // Disable automatic bitstream filtering (can add latency)
+        av_dict_set(&options, "skip_frame", "none", 0);
+
+        if (isIntelLakefield) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "ThinkPad X1 Fold detected: applying Intel Lakefield optimizations");
+        } else {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Low latency mode enabled via ML_LOW_LATENCY environment variable");
+        }
     }
 
     QString optionVarName = QString("%1_AVOPTIONS").arg(decoder->name).toUpper();

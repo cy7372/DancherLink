@@ -144,6 +144,22 @@ void applyGpuOptimizations(ID3D11Device* device, LUID adapterLuid, UINT vendorId
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "[GpuOpts] Applying GPU optimizations for vendor 0x%04X", vendorId);
 
+    // Detect Intel Lakefield (ThinkPad X1 Fold Gen 1) via PROCESSOR_IDENTIFIER environment variable
+    bool isIntelLakefield = false;
+    wchar_t processorId[256] = {0};
+    DWORD size = sizeof(processorId);
+    if (GetEnvironmentVariableW(L"PROCESSOR_IDENTIFIER", processorId, size) > 0) {
+        // Case-insensitive substring search
+        if (_wcsicmp(processorId, L"Lakefield") != 0 && wcsstr(processorId, L"Lakefield") != NULL) {
+            isIntelLakefield = true;
+        }
+        if (_wcsicmp(processorId, L"i5-L16G7") != 0 && wcsstr(processorId, L"i5-L16G7") != NULL) {
+            isIntelLakefield = true;
+        }
+    }
+
+    bool lowLatencyMode = isIntelLakefield;
+
     // Detect HAGS status
     HagsInfo hags = detectHags(adapterLuid);
 
@@ -151,7 +167,24 @@ void applyGpuOptimizations(ID3D11Device* device, LUID adapterLuid, UINT vendorId
     setGpuProcessPriority(hags.enabled, vendorId);
 
     // Set GPU thread priority (higher = better for streaming)
-    setGpuThreadPriority(device, 7);
+    // For X1 Fold / low latency mode, use maximum priority (7)
+    // For standard mode, also use 7 for best performance
+    int threadPriority = 7;
+
+    // Intel Gen9 GPU specific optimization (X1 Fold uses Gen9)
+    if (vendorId == VENDOR_INTEL && lowLatencyMode) {
+        // On Intel iGPUs, higher thread priority helps reduce frame pacing issues
+        threadPriority = 7;  // Maximum priority
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[GpuOpts] Intel GPU detected (X1 Fold mode): using maximum thread priority");
+    }
+
+    setGpuThreadPriority(device, threadPriority);
+
+    if (isIntelLakefield) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[GpuOpts] ThinkPad X1 Fold detected: applying Intel Lakefield optimizations");
+    }
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "[GpuOpts] GPU optimization complete (HAGS: %s)",

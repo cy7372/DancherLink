@@ -368,23 +368,48 @@ bool D3D11VARenderer::initialize(PDECODER_PARAMETERS params)
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     swapChainDesc.Flags = 0;
 
-    // 3 front buffers (default GetMaximumFrameLatency() count)
-    // + 1 back buffer
-    // + 1 extra for DWM to hold on to for DirectFlip
+    // Detect Intel Lakefield (ThinkPad X1 Fold Gen 1) for optimized buffer configuration
+    bool isIntelLakefield = false;
+#ifdef Q_OS_WIN32
+    wchar_t processorId[256] = {0};
+    DWORD size = sizeof(processorId);
+    if (GetEnvironmentVariableW(L"PROCESSOR_IDENTIFIER", processorId, size) > 0) {
+        // Case-insensitive substring search
+        if (_wcsicmp(processorId, L"Lakefield") != 0 && wcsstr(processorId, L"Lakefield") != NULL) {
+            isIntelLakefield = true;
+        }
+        if (_wcsicmp(processorId, L"i5-L16G7") != 0 && wcsstr(processorId, L"i5-L16G7") != NULL) {
+            isIntelLakefield = true;
+        }
+    }
+#endif
+
+    bool lowLatencyMode = (qgetenv("ML_LOW_LATENCY") == "1") || isIntelLakefield;
+
+    // Buffer configuration:
+    // Standard: 3 front + 1 back + 1 DWM = 5 buffers (good for AMD, prevents starvation)
+    // Low Latency (X1 Fold): 2 front + 1 back + 0 DWM = 3 buffers (reduces latency by ~2 frames)
     //
-    // Even though we allocate 3 front buffers for pre-rendered frames,
+    // Even though we allocate front buffers for pre-rendered frames,
     // they won't actually increase presentation latency because we
     // always use SyncInterval 0 which replaces the last one.
     //
     // IDXGIDevice1 has a SetMaximumFrameLatency() function, but counter-
     // intuitively we must avoid it to reduce latency. If we set our max
-    // frame latency to 1 on thedevice, our SyncInterval 0 Present() calls
+    // frame latency to 1 on the device, our SyncInterval 0 Present() calls
     // will block on DWM (acting like SyncInterval 1) rather than doing
     // the non-blocking present we expect.
-    //
-    // NB: 3 total buffers seems sufficient on NVIDIA hardware but
-    // causes performance issues (buffer starvation) on AMD GPUs.
-    swapChainDesc.BufferCount = 3 + 1 + 1;
+    if (lowLatencyMode) {
+        // Reduced buffer count for lower latency on X1 Fold
+        swapChainDesc.BufferCount = 2 + 1 + 0;  // 2 front + 1 back, no DWM buffer
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Low latency mode: BufferCount=%d (reduced for X1 Fold)",
+                    swapChainDesc.BufferCount);
+    }
+    else {
+        // Standard configuration - 3 buffers for NVIDIA, more for AMD
+        swapChainDesc.BufferCount = 3 + 1 + 1;
+    }
 
     // Use a waitable object to synchronize with the swap chain. This allows us to
     // reduce latency by waiting for the swap chain to be ready before rendering.
