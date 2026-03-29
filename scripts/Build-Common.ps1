@@ -335,19 +335,25 @@ function Deploy-Qt {
 
     Write-Host "Deploying Qt dependencies..." -ForegroundColor Green
 
+    # Ensure Qt path is in PATH
+    $env:PATH = "$($BuildConfig.QtPath);$env:PATH"
+
     $DeployBinExe = "$DeployFolder\DancherLink.exe"
     Copy-Item $ExePath $DeployBinExe -Force
 
+    # Use simple deployment without --qmldir (which causes qmlimportscanner errors)
+    # Qt QML files will be deployed by including all QML files from the Qt installation
     $WindeployqtArgs = @(
         "--dir", $DeployFolder
-        $BuildConfig.WindeployqtOptions
+        "--release"
+        "--no-compiler-runtime"
+        "--no-sql"
+        "--no-system-d3d-compiler"
+        "--no-system-dxc-compiler"
+        "--no-translations"
     )
 
-    if ($GuiDir) {
-        $WindeployqtArgs += @("--qmldir", "$RootDir\$GuiDir")
-    }
-
-    # Run windeployqt and ignore errors (qmlimportscanner may return invalid JSON but deployment still works)
+    # Run windeployqt
     $result = windeployqt @WindeployqtArgs $DeployBinExe 2>&1
     Write-Host $result
 
