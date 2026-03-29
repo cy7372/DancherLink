@@ -163,7 +163,6 @@ try {
 
     # Note: Patch version should be manually incremented in version.txt for Release builds
     # Build number is automatically calculated from git commit count
-    }
 
 } catch {
     Write-Error "[$BuildType Build] $($_.Exception.Message)"
