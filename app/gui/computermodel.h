@@ -74,6 +74,7 @@ private:
     QVector<NvComputer*> m_Computers;
     ComputerManager* m_ComputerManager;
     LatencyMeasurer* m_LatencyMeasurer;
+    NvComputer* m_MeasuringComputer = nullptr;  // Currently selected computer for latency display
     int m_MeasuringComputerIndex = -1;  // Index of computer we want to measure (-1 means none)
 };
 
