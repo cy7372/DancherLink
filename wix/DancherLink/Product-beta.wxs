@@ -1,7 +1,7 @@
 <?define ShortName = "DancherLink Beta" ?>
 <?define FullName = "DancherLink Beta Streaming Client" ?>
 
-<?define ShortcutName = "$(var.ShortName)" ?>
+<?define ShortcutName = "$(var.ShortcutName)" ?>
 <?define ShortcutDesc = "Stream games and other applications from another PC (Beta)" ?>
 <?define InstallFolder = "DancherLink Beta Streaming" ?>
 
@@ -45,7 +45,7 @@
       <Shortcut Id="StartMenuShortcut"
                 Name="$(var.ShortcutName)"
                 Description="$(var.ShortcutDesc)"
-                Target="[#DancherLinkExe]"
+                Target="[!MoonlightDependencies.DancherLink.exe]"
                 Directory="ApplicationProgramsFolder"
                 WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="CleanupStartMenuShortcut"
@@ -66,7 +66,7 @@
       <Shortcut Id="DesktopShortcut"
                 Name="$(var.ShortcutName)"
                 Description="$(var.ShortcutDesc)"
-                Target="[#DancherLinkExe]"
+                Target="[!MoonlightDependencies.DancherLink.exe]"
                 Directory="DesktopFolder"
                 WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="CleanupDesktopShortcut"
@@ -92,18 +92,12 @@
                      KeyPath="yes" />
     </Component>
 
-    <!-- Main executable - explicit reference for shortcuts -->
-    <Component Id="DancherLinkExe" Directory="INSTALLFOLDER">
-      <File Id="DancherLinkExe" Source="$(var.DeployDir)\DancherLink.exe" KeyPath="yes" />
-    </Component>
-
-    <!-- Auto-include all deployment files (exe is included separately above) -->
+    <!-- Auto-include all deployment files (exe included via wildcard) -->
     <ComponentGroup Id="MoonlightDependencies" Directory="INSTALLFOLDER">
-      <Files Include="$(var.DeployDir)\**" Exclude="$(var.DeployDir)\DancherLink.exe" />
+      <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
     <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
-      <ComponentRef Id="DancherLinkExe" />
       <ComponentGroupRef Id="MoonlightDependencies" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />
