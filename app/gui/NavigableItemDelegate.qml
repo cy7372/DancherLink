@@ -9,6 +9,14 @@ ItemDelegate {
 
     hoverEnabled: true
 
+    // Transparent MouseArea to ensure hover events are captured
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+        z: -1  // Behind all other content
+    }
+
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()
     }
@@ -27,9 +35,5 @@ ItemDelegate {
     Keys.onEnterPressed: {
         clicked()
     }
-
-    // Use ItemDelegate's built-in hovered property
-    // The content in PcView/AppView is rendered in the contentItem
-    // MouseArea is not needed as ItemDelegate handles hover internally
 }
 
