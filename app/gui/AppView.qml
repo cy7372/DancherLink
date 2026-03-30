@@ -115,20 +115,17 @@ CenteredGridView {
         // Local hover state - only true when mouse is over the card
         property bool isHovered: false
 
-        // Transparent overlay for hover detection - uses explicit x/y positioning
-        Item {
-            x: 0; y: 0
-            width: 220
-            height: 287
+        // Hover detection using MouseArea anchored to delegateRoot (not parent/cell container)
+        MouseArea {
+            anchors.left: delegateRoot.left
+            anchors.right: delegateRoot.right
+            anchors.top: delegateRoot.top
+            anchors.bottom: delegateRoot.bottom
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
             z: 1000
-
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-                onEntered: { delegateRoot.isHovered = true }
-                onExited: { delegateRoot.isHovered = false }
-            }
+            onEntered: { delegateRoot.isHovered = true }
+            onExited: { delegateRoot.isHovered = false }
         }
 
         background: Rectangle {
