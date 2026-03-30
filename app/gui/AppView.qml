@@ -124,7 +124,8 @@ CenteredGridView {
             // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
             width: delegateRoot.width
             height: delegateRoot.height
-            color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
+            // Use isHovered for hover state, highlighted is for keyboard/gamepad focus
+            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.highlighted ? AppTheme.backgroundHighlighted : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius

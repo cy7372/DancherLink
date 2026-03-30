@@ -176,7 +176,8 @@ CenteredGridView {
             // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
             width: delegateRoot.width
             height: delegateRoot.height
-            color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
+            // Use isHovered for hover state, highlighted is for keyboard/gamepad focus
+            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.highlighted ? AppTheme.backgroundHighlighted : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
@@ -469,25 +470,27 @@ CenteredGridView {
             // Also prevent wheel events from propagating to Flickable
             onWheel: function(wheel) { wheel.accepted = true }
 
-            // Debug: Track position and size
-            onWidthChanged: {
-                console.log("[PcView] hoverMouseArea width:", width, "delegateRoot.width:", delegateRoot.width)
-            }
-            onHeightChanged: {
-                console.log("[PcView] hoverMouseArea height:", height, "delegateRoot.height:", delegateRoot.height)
-            }
-
-            // Debug: Track containsMouse changes
+            // Debug: Track containsMouse changes with mouse position
             onContainsMouseChanged: {
-                console.log("[PcView] hoverMouseArea containsMouse changed to:", containsMouse, "area:", width, "x", height)
+                // Get global mouse position from Qt.inputMethod (QML standard way)
+                console.log("[PcView] hover CONTAINSMOUSE:", containsMouse,
+                            "cardIndex:", index,
+                            "cardPos:", delegateRoot.x + "," + delegateRoot.y,
+                            "cardSize:", width + "x" + height,
+                            "globalBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, width, height))
             }
 
             onEntered: {
-                console.log("[PcView] hover ENTERED - MouseArea size:", width, "x", height, "delegateRoot size:", delegateRoot.width, "x", delegateRoot.height)
+                console.log("[PcView] hover ENTERED - cardIndex:", index,
+                            "cardPos:", delegateRoot.x + "," + delegateRoot.y,
+                            "isHovered:", delegateRoot.isHovered,
+                            "highlighted:", delegateRoot.highlighted)
                 delegateRoot.isHovered = true
             }
             onExited: {
-                console.log("[PcView] hover EXITED")
+                console.log("[PcView] hover EXITED - cardIndex:", index,
+                            "isHovered:", delegateRoot.isHovered,
+                            "highlighted:", delegateRoot.highlighted)
                 delegateRoot.isHovered = false
             }
         }
