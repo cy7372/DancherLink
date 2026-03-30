@@ -24,13 +24,9 @@ CenteredGridView {
     id: appGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: AppTheme.spacingLg
-    bottomMargin: AppTheme.spacingSm
-    cellWidth: AppTheme.appCardWidth; cellHeight: AppTheme.appCardHeight;
-
-    // Performance optimizations
-    cacheBuffer: 400  // Cache extra items off-screen for smoother scrolling
-    reuseItems: true  // Reuse delegate items instead of creating/destroying
+    topMargin: 20
+    bottomMargin: 5
+    cellWidth: 230; cellHeight: 297;
 
     function computerLost()
     {
@@ -107,7 +103,7 @@ CenteredGridView {
 
     delegate: NavigableItemDelegate {
         id: delegateRoot
-        width: AppTheme.appCardWidth - 8; height: AppTheme.appCardHeight - 8;
+        width: 220; height: 287;
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
@@ -116,148 +112,142 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
-        // Empty contentItem - all content is in background for correct hover bounds
-        contentItem: Item {}
+        // Local hover state - only true when mouse is over the background
+        property bool isHovered: false
 
         background: Rectangle {
             id: delegateBackground
-            color: AppTheme.backgroundPrimary
+            color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
-            states: [
-                State {
-                    name: "highlighted"
-                    when: delegateRoot.highlighted
-                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHighlighted }
-                },
-                State {
-                    name: "hovered"
-                    when: delegateRoot.hovered && !delegateRoot.highlighted
-                    PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
+            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+
+            // MouseArea to track hover state only when over the background
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                onEntered: { delegateRoot.isHovered = true }
+                onExited: { delegateRoot.isHovered = false }
+            }
+        }
+
+        Image {
+            property bool isPlaceholder: false
+
+            id: appIcon
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 10
+            source: model.boxart
+
+            onSourceSizeChanged: {
+                // Nearly all of Nvidia's official box art does not match the dimensions of placeholder
+                // images, however the one known exception is Overcooked. Therefore, we only execute
+                // the image size checks if this is not an app collector game. We know the officially
+                // supported games all have box art, so this check is not required.
+                if (!model.isAppCollectorGame &&
+                    ((sourceSize.width === 130 && sourceSize.height === 180) || // GFE 2.0 placeholder image
+                     (sourceSize.width === 628 && sourceSize.height === 888) || // GFE 3.0 placeholder image
+                     (sourceSize.width === 200 && sourceSize.height === 266)))  // Our no_app_image.png
+                {
+                    isPlaceholder = true
                 }
-            ]
-
-            transitions: [
-                Transition {
-                    ColorAnimation { duration: AppTheme.animationDurationFast }
-                }
-            ]
-
-            // All content as children of background so hover detection matches visual bounds
-            Image {
-                property bool isPlaceholder: false
-
-                id: appIcon
-                anchors.horizontalCenter: delegateBackground.horizontalCenter
-                anchors.top: delegateBackground.top
-                anchors.topMargin: AppTheme.spacingSm
-                source: model.boxart
-
-                onSourceSizeChanged: {
-                    if (!model.isAppCollectorGame &&
-                        ((sourceSize.width === 130 && sourceSize.height === 180) ||
-                         (sourceSize.width === 628 && sourceSize.height === 888) ||
-                         (sourceSize.width === 200 && sourceSize.height === 266)))
-                    {
-                        isPlaceholder = true
-                    }
-                    else
-                    {
-                        isPlaceholder = false
-                    }
-
-                    width = AppTheme.appIconWidth
-                    height = AppTheme.appIconHeight
+                else
+                {
+                    isPlaceholder = false
                 }
 
-                ToolTip.text: model.name
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: (delegateRoot.hovered || delegateRoot.highlighted) && (!appNameText || appNameText.truncated)
+                width = 200
+                height = 267
             }
 
-            Loader {
-                active: model.running
-                asynchronous: true
-                anchors.fill: appIcon
+            // Display a tooltip with the full name if it's truncated
+            ToolTip.text: model.name
+            ToolTip.delay: 1000
+            ToolTip.timeout: 5000
+            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
+        }
 
-                sourceComponent: Item {
-                    RoundButton {
-                        id: resumeButton
-                        x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
-                        y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
-                        implicitWidth: 72
-                        implicitHeight: 72
+        Loader {
+            active: model.running
+            asynchronous: true
+            anchors.fill: appIcon
 
-                        icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
-                        icon.width: 56
-                        icon.height: 56
+            sourceComponent: Item {
+                RoundButton {
+                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
+                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
+                    anchors.centerIn: parent
+                    implicitWidth: 85
+                    implicitHeight: 85
 
-                        onClicked: {
-                            launchOrResumeSelectedApp(true)
-                        }
+                    icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
+                    icon.width: 75
+                    icon.height: 75
 
-                        ToolTip.text: qsTr("Resume Game")
-                        ToolTip.delay: 1000
-                        ToolTip.timeout: 3000
-                        ToolTip.visible: hovered
-
-                        Material.background: "#D0808080"
-
-                        Behavior on x { PropertyAnimation { duration: 150 } }
-                        Behavior on y { PropertyAnimation { duration: 150 } }
+                    onClicked: {
+                        launchOrResumeSelectedApp(true)
                     }
 
-                    RoundButton {
-                        id: stopButton
-                        x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
-                        y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
-                        implicitWidth: 72
-                        implicitHeight: 72
+                    ToolTip.text: qsTr("Resume Game")
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 3000
+                    ToolTip.visible: hovered
 
-                        icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
-                        icon.width: 56
-                        icon.height: 56
+                    Material.background: "#D0808080"
+                }
 
-                        onClicked: {
-                            doQuitGame()
-                        }
+                RoundButton {
+                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
+                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
+                    anchors.centerIn: parent
+                    implicitWidth: 85
+                    implicitHeight: 85
 
-                        ToolTip.text: qsTr("Quit Game")
-                        ToolTip.delay: 1000
-                        ToolTip.timeout: 3000
-                        ToolTip.visible: hovered
+                    icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
+                    icon.width: 75
+                    icon.height: 75
 
-                        Material.background: "#D0808080"
-
-                        Behavior on x { PropertyAnimation { duration: 150 } }
-                        Behavior on y { PropertyAnimation { duration: 150 } }
+                    onClicked: {
+                        doQuitGame()
                     }
+
+                    ToolTip.text: qsTr("Quit Game")
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 3000
+                    ToolTip.visible: hovered
+
+                    Material.background: "#D0808080"
                 }
             }
+        }
 
-            Loader {
-                id: appNameTextLoader
-                active: appIcon.isPlaceholder
-                width: appIcon.width - AppTheme.spacingMd
-                height: model.running ? 144 : appIcon.height
-                anchors.left: appIcon.left
-                anchors.right: appIcon.right
-                anchors.bottom: appIcon.bottom
+        Loader {
+            id: appNameTextLoader
+            active: appIcon.isPlaceholder
 
-                sourceComponent: Label {
-                    id: appNameText
-                    text: model.name
-                    font.pointSize: AppTheme.fontBody
-                    leftPadding: AppTheme.spacingSm
-                    rightPadding: AppTheme.spacingSm
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    elide: Text.ElideRight
-                }
+            // This loader is not asynchronous to avoid noticeable differences
+            // in the time in which the text loads for each game.
+
+            width: appIcon.width
+            height: model.running ? 175 : appIcon.height
+
+            anchors.left: appIcon.left
+            anchors.right: appIcon.right
+            anchors.bottom: appIcon.bottom
+
+            sourceComponent: Label {
+                id: appNameText
+                text: model.name
+                font.pointSize: 22
+                leftPadding: 20
+                rightPadding: 20
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                elide: Text.ElideRight
             }
         }
 
@@ -293,9 +283,6 @@ CenteredGridView {
                 console.error("component.createObject returned null")
                 return
             }
-
-            // Stop latency measurement during streaming to save resources
-            appModel.stopLatencyMeasurement()
 
             // When a restart is requested (e.g. resolution change), we destroy the old session
             // and create a brand new one. This avoids complex state reset logic in C++ and
@@ -423,16 +410,14 @@ CenteredGridView {
 
     Row {
         anchors.centerIn: parent
-        spacing: AppTheme.spacingSm
+        spacing: 5
         visible: appGrid.count === 0
 
         Label {
             text: qsTr("This computer doesn't seem to have any applications or some applications are hidden")
-            font.pointSize: AppTheme.fontSubtitle
-            horizontalAlignment: Text.AlignHCenter
+            font.pointSize: 20
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
-            maximumLineCount: 2
         }
     }
 
@@ -480,57 +465,52 @@ CenteredGridView {
     // Network latency indicator footer - similar to PC list page
     footer: Item {
         visible: networkLatencyBadge.visible
-        height: 40
+        height: 32
 
         Rectangle {
             id: networkLatencyBadge
             visible: appModel.networkLatencyMs >= 0 && activated
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            width: latencyRow.implicitWidth + AppTheme.spacingMd
-            height: 32
-            radius: AppTheme.borderRadius
-            opacity: 0.9
-
-            // Cache latency value to reduce binding updates
-            property int cachedLatency: appModel.networkLatencyMs
-
+            width: latencyRow.implicitWidth + 20
+            height: 24
+            radius: 4
             color: {
-                var ms = cachedLatency
+                var ms = appModel.networkLatencyMs
                 if (ms < 0)   return "#555555"      // Unknown (gray)
                 if (ms < 20)  return "#2E7D32"      // Good (green)
                 if (ms < 50)  return "#F9A825"      // Fair (yellow)
                 return "#C62828"                    // Poor (red)
             }
+            opacity: 0.9
 
             Row {
                 id: latencyRow
                 anchors.centerIn: parent
-                spacing: AppTheme.spacingSm
+                spacing: 6
 
                 Label {
                     text: qsTr("Network:")
                     color: "white"
-                    font.pointSize: AppTheme.fontCaption
+                    font.pointSize: 9
                     font.bold: true
                 }
 
                 Label {
-                    text: cachedLatency + " ms"
+                    text: appModel.networkLatencyMs + " ms"
                     color: "white"
-                    font.pointSize: AppTheme.fontCaption
+                    font.pointSize: 9
                 }
 
                 Label {
                     text: "|"
                     color: "white"
-                    font.pointSize: AppTheme.fontCaption
+                    font.pointSize: 9
                 }
 
                 Label {
                     text: appModel.networkQualityString
                     color: "white"
-                    font.pointSize: AppTheme.fontCaption
+                    font.pointSize: 9
                 }
             }
 

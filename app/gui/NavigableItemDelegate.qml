@@ -9,9 +9,6 @@ ItemDelegate {
 
     hoverEnabled: true
 
-    // Ensure the contentItem doesn't intercept mouse events
-    contentItem: Item {}
-
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()
     }
