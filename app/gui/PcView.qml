@@ -219,29 +219,13 @@ CenteredGridView {
                 id: pcDelegateMouseArea
                 anchors.fill: parent
                 acceptedButtons: Qt.RightButton
-                propagateComposedEvents: true
+                hoverEnabled: true  // Enable hover for the entire card
 
                 onClicked: {
                     if (!pcGrid.currentItem || pcGrid.currentItem !== delegateRoot) {
                         pcGrid.currentIndex = index
                     }
                     pcContextMenu.open()
-                }
-            }
-        }
-
-        MouseArea {
-            id: pcDelegateMouseAreaOverlay
-            anchors.fill: parent
-            acceptedButtons: Qt.RightButton
-            propagateComposedEvents: true
-
-            onClicked: {
-                if (!pcGrid.currentItem || pcGrid.currentItem !== delegateRoot) {
-                    pcGrid.currentIndex = index
-                }
-                if (delegateRoot.pcContextMenu) {
-                    delegateRoot.pcContextMenu.open()
                 }
             }
         }
