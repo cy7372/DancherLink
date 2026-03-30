@@ -186,8 +186,7 @@ CenteredGridView {
 
             sourceComponent: Item {
                 RoundButton {
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -40 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -64 : -48
+                    id: resumeButton
                     anchors.centerIn: parent
                     implicitWidth: 72
                     implicitHeight: 72
@@ -206,11 +205,18 @@ CenteredGridView {
                     ToolTip.visible: hovered
 
                     Material.background: "#D0808080"
+
+                    // Position adjustments based on placeholder state
+                    // Using explicit position binding instead of anchors for smoother updates
+                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
+                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
+
+                    Behavior on x { PropertyAnimation { duration: 150 } }
+                    Behavior on y { PropertyAnimation { duration: 150 } }
                 }
 
                 RoundButton {
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 40 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? 48 : 48
+                    id: stopButton
                     anchors.centerIn: parent
                     implicitWidth: 72
                     implicitHeight: 72
@@ -229,6 +235,13 @@ CenteredGridView {
                     ToolTip.visible: hovered
 
                     Material.background: "#D0808080"
+
+                    // Position adjustments based on placeholder state
+                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
+                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
+
+                    Behavior on x { PropertyAnimation { duration: 150 } }
+                    Behavior on y { PropertyAnimation { duration: 150 } }
                 }
             }
         }
