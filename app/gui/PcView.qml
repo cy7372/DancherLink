@@ -55,15 +55,11 @@ CenteredGridView {
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
 
-        // If no selection and we have computers, select the first one
-        if (currentIndex === -1 && computerModel && computerModel.rowCount() > 0) {
-            currentIndex = 0
-        }
-
-        // Highlight the first item if a gamepad is connected
-        if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
-            currentIndex = 0
-        }
+        // CRITICAL: Do NOT auto-select the first computer!
+        // Setting currentIndex = 0 causes the first card's 'highlighted' property
+        // to be always true, which looks like hover is triggered everywhere.
+        // Keep currentIndex = -1 until the user actually interacts with the UI.
+        // The first computer will still be used for streaming by default.
 
         // Start latency measurement for selected computer
         if (currentIndex >= 0 && computerModel) {

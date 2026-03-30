@@ -58,10 +58,10 @@ CenteredGridView {
         // Start latency measurement when entering the app list
         appModel.startLatencyMeasurement()
 
-        // Highlight the first item if a gamepad is connected
-        if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
-            currentIndex = 0
-        }
+        // CRITICAL: Do NOT auto-select the first app!
+        // Setting currentIndex = 0 causes the first card's 'highlighted' property
+        // to be always true, which looks like hover is triggered everywhere.
+        // Keep currentIndex = -1 until the user actually interacts with the UI.
 
         if (!showGames && !showHiddenGames) {
             // Check if there's a direct launch app
