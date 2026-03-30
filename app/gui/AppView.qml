@@ -312,7 +312,7 @@ CenteredGridView {
         }
 
         MouseArea {
-            anchors.fill: parent
+            anchors.fill: delegateRoot
             acceptedButtons: Qt.RightButton;
             onClicked: {
                 parent.pressAndHold()
@@ -322,7 +322,7 @@ CenteredGridView {
         // MouseArea to track hover state over the entire delegate area
         // Placed at the end (top layer) with acceptedButtons: Qt.NoButton to not intercept clicks
         MouseArea {
-            anchors.fill: parent
+            anchors.fill: delegateRoot
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             onEntered: { delegateRoot.isHovered = true }
