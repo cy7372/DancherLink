@@ -23,7 +23,16 @@ CenteredGridView {
     cellWidth: 310; cellHeight: 330;
     objectName: qsTr("Computers")
 
-    // DEBUG: Track Flickable mouse interception
+    // CRITICAL: Track keyboard/gamepad selection independently from GridView's currentIndex
+    // GridView automatically sets currentIndex when mouse interacts, which causes
+    // the highlighted state to be always true. We use this separate property to
+    // only highlight when using keyboard/gamepad navigation.
+    property int keyboardSelectedIndex: -1
+
+    // DEBUG: Track GridView behavior
+    onCurrentIndexChanged: {
+        console.log("[PcView] GridView currentIndex changed:", currentIndex, "keyboardSelectedIndex:", keyboardSelectedIndex)
+    }
     onContentYChanged: {
         console.log("[PcView] GridView contentY changed:", contentY)
     }
@@ -168,6 +177,7 @@ CenteredGridView {
         width: pcGrid.cellWidth
         height: pcGrid.cellHeight
         grid: pcGrid
+        cardIndex: index  // CRITICAL: Pass index to NavigableItemDelegate for keyboardSelectedIndex check
 
         property alias pcContextMenu : pcContextMenuLoader.item
 

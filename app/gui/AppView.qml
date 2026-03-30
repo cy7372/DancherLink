@@ -21,6 +21,12 @@ CenteredGridView {
     // QML's property change detection for dynamically assigned properties
     property var networkModel: appModel
 
+    // CRITICAL: Track keyboard/gamepad selection independently from GridView's currentIndex
+    // GridView automatically sets currentIndex when mouse interacts, which causes
+    // the highlighted state to be always true. We use this separate property to
+    // only highlight when using keyboard/gamepad navigation.
+    property int keyboardSelectedIndex: -1
+
     id: appGrid
     focus: true
     activeFocusOnTab: true
@@ -107,6 +113,7 @@ CenteredGridView {
         width: appGrid.cellWidth
         height: appGrid.cellHeight
         grid: appGrid
+        cardIndex: index  // CRITICAL: Pass index to NavigableItemDelegate for keyboardSelectedIndex check
 
         property alias appContextMenu: appContextMenuLoader.item
         property alias appNameText: appNameTextLoader.item
