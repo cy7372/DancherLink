@@ -358,20 +358,28 @@ function Deploy-Qt {
     )
 
     # Run windeployqt - qmlimportscanner may fail but deployment still works
-    # We need to capture output and check for actual deployment success
+    # Use -Verbose to force output to stderr (which we ignore)
+    # Avoid deadlock by not capturing stdout/stderr
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = "windeployqt"
     $psi.Arguments = $WindeployqtArgs + $DeployBinExe
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
 
     $proc = [System.Diagnostics.Process]::Start($psi)
-    $output = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
-    $proc.WaitForExit()
 
-    Write-Host $output
+    # Wait with timeout to avoid hanging indefinitely
+    $timeout = 600  # 10 minutes
+    $startTime = Get-Date
+    while (-not $proc.HasExited) {
+        $elapsed = (New-TimeSpan -Start $startTime -End (Get-Date)).TotalSeconds
+        if ($elapsed -gt $timeout) {
+            Write-Host "  [Warning] windeployqt timeout, killing process..." -ForegroundColor Yellow
+            $proc.Kill()
+            break
+        }
+        Start-Sleep -Milliseconds 500
+    }
 
     # Check if Qt QML modules were deployed (look for Qt6Quick.dll or similar)
     $qmlFiles = Get-ChildItem "$DeployFolder\*.dll" -Filter "Qt6*.dll" -ErrorAction SilentlyContinue
@@ -384,7 +392,7 @@ function Deploy-Qt {
     # Remove exe - WiX will add it separately
     Remove-Item $DeployBinExe -Force
 
-    return $output
+    return $null
 }
 
 function Deploy-QtTranslations {
