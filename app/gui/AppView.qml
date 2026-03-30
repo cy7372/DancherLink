@@ -130,7 +130,7 @@ CenteredGridView {
                 },
                 State {
                     name: "hovered"
-                    when: parent.hovered && !parent.highlighted
+                    when: parent.isHovered && !parent.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
                 }
             ]
@@ -176,7 +176,7 @@ CenteredGridView {
             ToolTip.text: model.name
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
-            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
+            ToolTip.visible: (parent.isHovered || parent.highlighted) && (!appNameText || appNameText.truncated)
         }
 
         Loader {
@@ -187,7 +187,9 @@ CenteredGridView {
             sourceComponent: Item {
                 RoundButton {
                     id: resumeButton
-                    anchors.centerIn: parent
+                    // Using explicit x/y positioning instead of anchors to allow dynamic offset
+                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
+                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
                     implicitWidth: 72
                     implicitHeight: 72
 
@@ -206,18 +208,15 @@ CenteredGridView {
 
                     Material.background: "#D0808080"
 
-                    // Position adjustments based on placeholder state
-                    // Using explicit position binding instead of anchors for smoother updates
-                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
-                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
-
                     Behavior on x { PropertyAnimation { duration: 150 } }
                     Behavior on y { PropertyAnimation { duration: 150 } }
                 }
 
                 RoundButton {
                     id: stopButton
-                    anchors.centerIn: parent
+                    // Using explicit x/y positioning instead of anchors to allow dynamic offset
+                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
+                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
                     implicitWidth: 72
                     implicitHeight: 72
 
@@ -235,10 +234,6 @@ CenteredGridView {
                     ToolTip.visible: hovered
 
                     Material.background: "#D0808080"
-
-                    // Position adjustments based on placeholder state
-                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
-                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
 
                     Behavior on x { PropertyAnimation { duration: 150 } }
                     Behavior on y { PropertyAnimation { duration: 150 } }
