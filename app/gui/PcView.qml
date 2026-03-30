@@ -451,7 +451,13 @@ CenteredGridView {
         // Hover detection MouseArea - MUST be after all other visual elements to receive events
         MouseArea {
             id: hoverMouseArea
-            anchors.fill: delegateRoot
+            // CRITICAL: Use explicit width/height bindings instead of anchors.fill
+            // anchors.fill: delegateRoot causes issues when parent IS delegateRoot
+            parent: delegateRoot
+            x: 0
+            y: 0
+            width: delegateRoot.width
+            height: delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
 
@@ -462,9 +468,17 @@ CenteredGridView {
             // Also prevent wheel events from propagating to Flickable
             onWheel: { wheel.accepted = true }
 
+            // Debug: Track position and size
+            onWidthChanged: {
+                console.log("[PcView] hoverMouseArea width:", width, "delegateRoot.width:", delegateRoot.width)
+            }
+            onHeightChanged: {
+                console.log("[PcView] hoverMouseArea height:", height, "delegateRoot.height:", delegateRoot.height)
+            }
+
             // Debug: Track containsMouse changes
             onContainsMouseChanged: {
-                console.log("[PcView] hoverMouseArea containsMouse changed to:", containsMouse)
+                console.log("[PcView] hoverMouseArea containsMouse changed to:", containsMouse, "mouse pos:", mouse.x, mouse.y, "area:", width, "x", height)
             }
 
             onEntered: {
