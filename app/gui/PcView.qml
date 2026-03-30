@@ -163,7 +163,10 @@ CenteredGridView {
 
     delegate: NavigableItemDelegate {
         id: delegateRoot
-        width: 300; height: 320;
+        // CRITICAL: Match cellWidth/cellHeight from GridView (310x330)
+        // Using explicit values here to ensure MouseArea has correct bounds
+        width: pcGrid.cellWidth
+        height: pcGrid.cellHeight
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item
@@ -172,7 +175,8 @@ CenteredGridView {
         property bool isHovered: false
 
         onIsHoveredChanged: {
-            console.log("[PcView] delegateRoot.isHovered changed to:", isHovered, "highlighted:", highlighted)
+            console.log("[PcView] delegateRoot.isHovered changed to:", isHovered, "customHighlighted:", customHighlighted,
+                        "delegateSize:", width + "x" + height, "cellSize:", pcGrid.cellWidth + "x" + pcGrid.cellHeight)
         }
 
         background: Rectangle {
@@ -180,8 +184,8 @@ CenteredGridView {
             // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
             width: delegateRoot.width
             height: delegateRoot.height
-            // Use isHovered for hover state, highlighted is for keyboard/gamepad focus
-            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.highlighted ? AppTheme.backgroundHighlighted : "transparent")
+            // Use isHovered for hover state, customHighlighted is for keyboard/gamepad focus
+            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
@@ -189,7 +193,7 @@ CenteredGridView {
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
 
             onColorChanged: {
-                console.log("[PcView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "highlighted:", delegateRoot.highlighted)
+                console.log("[PcView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "customHighlighted:", delegateRoot.customHighlighted)
             }
         }
 
@@ -461,8 +465,9 @@ CenteredGridView {
             parent: delegateRoot
             x: 0
             y: 0
-            width: 300  // Hard-coded to match delegateRoot.width
-            height: 320 // Hard-coded to match delegateRoot.height
+            // Bind to delegateRoot size explicitly
+            width: delegateRoot.width
+            height: delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
@@ -475,7 +480,8 @@ CenteredGridView {
             onContainsMouseChanged: {
                 console.log("[PcView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
                             "mouseAreaSize:", width + "x" + height,
-                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height)
+                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height,
+                            "mouseAreaPos:", x + "," + y)
                 delegateRoot.isHovered = containsMouse
             }
 

@@ -103,7 +103,9 @@ CenteredGridView {
 
     delegate: NavigableItemDelegate {
         id: delegateRoot
-        width: 220; height: 287;
+        // CRITICAL: Match cellWidth/cellHeight from GridView (230x297)
+        width: appGrid.cellWidth
+        height: appGrid.cellHeight
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
@@ -116,7 +118,8 @@ CenteredGridView {
         property bool isHovered: false
 
         onIsHoveredChanged: {
-            console.log("[AppView] delegateRoot.isHovered changed to:", isHovered, "highlighted:", highlighted)
+            console.log("[AppView] delegateRoot.isHovered changed to:", isHovered, "customHighlighted:", customHighlighted,
+                        "delegateSize:", width + "x" + height, "cellSize:", appGrid.cellWidth + "x" + appGrid.cellHeight)
         }
 
         background: Rectangle {
@@ -124,8 +127,8 @@ CenteredGridView {
             // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
             width: delegateRoot.width
             height: delegateRoot.height
-            // Use isHovered for hover state, highlighted is for keyboard/gamepad focus
-            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.highlighted ? AppTheme.backgroundHighlighted : "transparent")
+            // Use isHovered for hover state, customHighlighted is for keyboard/gamepad focus
+            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
@@ -133,7 +136,7 @@ CenteredGridView {
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
 
             onColorChanged: {
-                console.log("[AppView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "highlighted:", delegateRoot.highlighted)
+                console.log("[AppView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "customHighlighted:", delegateRoot.customHighlighted)
             }
         }
 
@@ -171,7 +174,7 @@ CenteredGridView {
             ToolTip.text: model.name
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
-            ToolTip.visible: (delegateRoot.isHovered || delegateRoot.highlighted) && (!appNameText || appNameText.truncated)
+            ToolTip.visible: (delegateRoot.isHovered || delegateRoot.customHighlighted) && (!appNameText || appNameText.truncated)
         }
 
         Loader {
@@ -332,8 +335,9 @@ CenteredGridView {
             parent: delegateRoot
             x: 0
             y: 0
-            width: 220  // Hard-coded to match delegateRoot.width
-            height: 287 // Hard-coded to match delegateRoot.height
+            // Bind to delegateRoot size explicitly
+            width: delegateRoot.width
+            height: delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
@@ -346,7 +350,8 @@ CenteredGridView {
             onContainsMouseChanged: {
                 console.log("[AppView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
                             "mouseAreaSize:", width + "x" + height,
-                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height)
+                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height,
+                            "mouseAreaPos:", x + "," + y)
                 delegateRoot.isHovered = containsMouse
             }
 
