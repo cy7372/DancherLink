@@ -324,11 +324,20 @@ CenteredGridView {
             }
         }
 
-        // Hover detection MouseArea - MUST be after all other visual elements to receive events
+        // Hover detection using HoverHandler - more reliable than MouseArea for hover detection
+        // HoverHandler is not affected by Flickable event interception
+        HoverHandler {
+            id: hoverHandler
+            target: delegateRoot
+            onHoveredChanged: {
+                console.log("[AppView] HoverHandler hovered:", hovered, "cardIndex:", index)
+                delegateRoot.isHovered = hovered
+            }
+        }
+
+        // Invisible hover area for tooltip reference
         MouseArea {
             id: hoverMouseArea
-            // CRITICAL: Use explicit width/height bindings instead of anchors.fill
-            // anchors.fill: delegateRoot causes issues when parent IS delegateRoot
             parent: delegateRoot
             x: 0
             y: 0
@@ -336,33 +345,7 @@ CenteredGridView {
             height: delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
-
-            // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
-            // Use function syntax to properly receive mouse parameter
-            onPressed: function(mouse) { mouse.accepted = true }
-            onReleased: function(mouse) { mouse.accepted = true }
-            onPositionChanged: function(mouse) { mouse.accepted = true }
-            onWheel: function(wheel) { wheel.accepted = true }
-
-            onWidthChanged: {
-                console.log("[AppView] hoverMouseArea width:", width, "delegateRoot.width:", delegateRoot.width)
-            }
-            onHeightChanged: {
-                console.log("[AppView] hoverMouseArea height:", height, "delegateRoot.height:", delegateRoot.height)
-            }
-
-            onContainsMouseChanged: {
-                console.log("[AppView] hoverMouseArea containsMouse changed to:", containsMouse, "area:", width, "x", height)
-            }
-
-            onEntered: {
-                console.log("[AppView] hover ENTERED - MouseArea size:", width, "x", height, "delegateRoot size:", delegateRoot.width, "x", delegateRoot.height)
-                delegateRoot.isHovered = true
-            }
-            onExited: {
-                console.log("[AppView] hover EXITED")
-                delegateRoot.isHovered = false
-            }
+            visible: false
         }
 
         MouseArea {

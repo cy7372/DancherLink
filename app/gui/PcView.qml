@@ -23,6 +23,14 @@ CenteredGridView {
     cellWidth: 310; cellHeight: 330;
     objectName: qsTr("Computers")
 
+    // DEBUG: Track Flickable mouse interception
+    onContentYChanged: {
+        console.log("[PcView] GridView contentY changed:", contentY)
+    }
+    onFlickingChanged: {
+        console.log("[PcView] GridView flicking:", flicking)
+    }
+
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
         // We do this here instead of onActivated to avoid losing the user's
@@ -449,11 +457,22 @@ CenteredGridView {
             }
         }
 
-        // Hover detection MouseArea - MUST be after all other visual elements to receive events
+        // Hover detection using HoverHandler - more reliable than MouseArea for hover detection
+        // HoverHandler is not affected by Flickable event interception
+        HoverHandler {
+            id: hoverHandler
+            target: delegateRoot
+            onHoveredChanged: {
+                console.log("[PcView] HoverHandler hovered:", hovered, "cardIndex:", index,
+                            "globalPos:", cursorPosition.x + "," + cursorPosition.y,
+                            "cardBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, delegateRoot.width, delegateRoot.height))
+                delegateRoot.isHovered = hovered
+            }
+        }
+
+        // Invisible hover area for tooltip and visual feedback reference
         MouseArea {
             id: hoverMouseArea
-            // CRITICAL: Use explicit width/height bindings instead of anchors.fill
-            // anchors.fill: delegateRoot causes issues when parent IS delegateRoot
             parent: delegateRoot
             x: 0
             y: 0
@@ -461,38 +480,7 @@ CenteredGridView {
             height: delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
-
-            // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
-            // Use function syntax to properly receive mouse parameter
-            onPressed: function(mouse) { mouse.accepted = true }
-            onReleased: function(mouse) { mouse.accepted = true }
-            onPositionChanged: function(mouse) { mouse.accepted = true }
-            // Also prevent wheel events from propagating to Flickable
-            onWheel: function(wheel) { wheel.accepted = true }
-
-            // Debug: Track containsMouse changes with mouse position
-            onContainsMouseChanged: {
-                // Get global mouse position from Qt.inputMethod (QML standard way)
-                console.log("[PcView] hover CONTAINSMOUSE:", containsMouse,
-                            "cardIndex:", index,
-                            "cardPos:", delegateRoot.x + "," + delegateRoot.y,
-                            "cardSize:", width + "x" + height,
-                            "globalBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, width, height))
-            }
-
-            onEntered: {
-                console.log("[PcView] hover ENTERED - cardIndex:", index,
-                            "cardPos:", delegateRoot.x + "," + delegateRoot.y,
-                            "isHovered:", delegateRoot.isHovered,
-                            "highlighted:", delegateRoot.highlighted)
-                delegateRoot.isHovered = true
-            }
-            onExited: {
-                console.log("[PcView] hover EXITED - cardIndex:", index,
-                            "isHovered:", delegateRoot.isHovered,
-                            "highlighted:", delegateRoot.highlighted)
-                delegateRoot.isHovered = false
-            }
+            visible: false
         }
 
         MouseArea {
