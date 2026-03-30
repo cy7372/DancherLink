@@ -4,7 +4,6 @@ import QtQuick.Window 2.15
 
 ItemDelegate {
     property GridView grid
-    property bool isHovered: mouseArea.containsMouse
 
     highlighted: grid.activeFocus && grid.currentItem === this
 
@@ -29,11 +28,7 @@ ItemDelegate {
         clicked()
     }
 
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton  // Don't intercept clicks
-    }
+    // Use ItemDelegate's built-in hovered property
+    // No need for custom MouseArea since ItemDelegate handles hover internally
 }
 
