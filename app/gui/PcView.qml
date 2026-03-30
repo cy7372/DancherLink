@@ -171,7 +171,7 @@ CenteredGridView {
                 },
                 State {
                     name: "hovered"
-                    when: parent.hovered && !parent.highlighted
+                    when: parent.isHovered && !parent.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
                 }
             ]

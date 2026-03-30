@@ -130,7 +130,7 @@ CenteredGridView {
                 },
                 State {
                     name: "hovered"
-                    when: parent.hovered && !parent.highlighted
+                    when: parent.isHovered && !parent.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
                 }
             ]
@@ -176,7 +176,7 @@ CenteredGridView {
             ToolTip.text: model.name
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
-            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
+            ToolTip.visible: (parent.isHovered || parent.highlighted) && (!appNameText || appNameText.truncated)
         }
 
         Loader {
