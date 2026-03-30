@@ -169,14 +169,37 @@ CenteredGridView {
 
         background: Rectangle {
             id: delegateBackground
-            width: delegateRoot.width
-            height: delegateRoot.height
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+        }
+
+        // Invisible hover detection layer - placed at top to capture mouse events
+        // Uses explicit size (not anchors) to avoid GridView cell size interference
+        Item {
+            id: hoverDetectionLayer
+            width: 300
+            height: 320
+            anchors.centerIn: parent
+            z: 1000  // Above all other content
+
+            MouseArea {
+                id: hoverMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                onEntered: {
+                    console.log("[PcView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", parent.width, "x", parent.height)
+                    delegateRoot.isHovered = true
+                }
+                onExited: {
+                    console.log("[PcView] hover exited for:", delegateRoot.model ? delegateRoot.model.name : "unknown")
+                    delegateRoot.isHovered = false
+                }
+            }
         }
 
         Image {
@@ -440,30 +463,11 @@ CenteredGridView {
 
         MouseArea {
             id: rightClickMouseArea
-            anchors.fill: parent
-            anchors.leftMargin: (310 - 300) / 2  // Center in cell: 5px
-            anchors.rightMargin: (310 - 300) / 2
-            anchors.topMargin: (330 - 320) / 2   // Center in cell: 5px
-            anchors.bottomMargin: (330 - 320) / 2
+            anchors.fill: delegateRoot
             acceptedButtons: Qt.RightButton
             onClicked: {
-                parent.pressAndHold()
+                delegateRoot.pressAndHold()
             }
-        }
-
-        // MouseArea to track hover state - exact card dimensions (300x320)
-        // Positioned to match the actual card size within the GridView cell (310x330)
-        MouseArea {
-            id: hoverMouseArea
-            anchors.fill: parent
-            anchors.leftMargin: (310 - 300) / 2  // 5px
-            anchors.rightMargin: (310 - 300) / 2
-            anchors.topMargin: (330 - 320) / 2   // 5px
-            anchors.bottomMargin: (330 - 320) / 2
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            onEntered: { delegateRoot.isHovered = true }
-            onExited: { delegateRoot.isHovered = false }
         }
 
         Keys.onMenuPressed: {

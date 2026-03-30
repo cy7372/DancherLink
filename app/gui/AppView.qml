@@ -125,6 +125,31 @@ CenteredGridView {
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
         }
 
+        // Invisible hover detection layer - placed at top to capture mouse events
+        // Uses explicit size (not anchors) to avoid GridView cell size interference
+        Item {
+            id: hoverDetectionLayer
+            width: 220
+            height: 287
+            anchors.centerIn: parent
+            z: 1000  // Above all other content
+
+            MouseArea {
+                id: hoverMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                onEntered: {
+                    console.log("[AppView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", parent.width, "x", parent.height)
+                    delegateRoot.isHovered = true
+                }
+                onExited: {
+                    console.log("[AppView] hover exited for:", delegateRoot.model ? delegateRoot.model.name : "unknown")
+                    delegateRoot.isHovered = false
+                }
+            }
+        }
+
         Image {
             property bool isPlaceholder: false
 
@@ -313,30 +338,11 @@ CenteredGridView {
 
         MouseArea {
             id: rightClickMouseArea
-            anchors.fill: parent
-            anchors.leftMargin: (230 - 220) / 2  // Center in cell: 5px
-            anchors.rightMargin: (230 - 220) / 2
-            anchors.topMargin: (297 - 287) / 2   // Center in cell: 5px
-            anchors.bottomMargin: (297 - 287) / 2
+            anchors.fill: delegateRoot
             acceptedButtons: Qt.RightButton
             onClicked: {
-                parent.pressAndHold()
+                delegateRoot.pressAndHold()
             }
-        }
-
-        // MouseArea to track hover state - exact card dimensions (220x287)
-        // Positioned to match the actual card size within the GridView cell (230x297)
-        MouseArea {
-            id: hoverMouseArea
-            anchors.fill: parent
-            anchors.leftMargin: (230 - 220) / 2  // 5px
-            anchors.rightMargin: (230 - 220) / 2
-            anchors.topMargin: (297 - 287) / 2   // 5px
-            anchors.bottomMargin: (297 - 287) / 2
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            onEntered: { delegateRoot.isHovered = true }
-            onExited: { delegateRoot.isHovered = false }
         }
 
         Keys.onReturnPressed: {
