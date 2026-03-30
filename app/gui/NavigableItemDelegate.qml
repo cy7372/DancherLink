@@ -4,7 +4,7 @@ import QtQuick.Window 2.15
 
 ItemDelegate {
     property GridView grid
-    property bool isHovered: mouseAreaEntered
+    property bool isHovered: mouseArea.mouseAreaEntered
 
     highlighted: grid.activeFocus && grid.currentItem === this
 
