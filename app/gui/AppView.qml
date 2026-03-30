@@ -337,10 +337,11 @@ CenteredGridView {
             acceptedButtons: Qt.NoButton
 
             // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
-            onPressed: { mouse.accepted = true }
-            onReleased: { mouse.accepted = true }
-            onPositionChanged: { mouse.accepted = true }
-            onWheel: { wheel.accepted = true }
+            // Use function syntax to properly receive mouse parameter
+            onPressed: function(mouse) { mouse.accepted = true }
+            onReleased: function(mouse) { mouse.accepted = true }
+            onPositionChanged: function(mouse) { mouse.accepted = true }
+            onWheel: function(wheel) { wheel.accepted = true }
 
             onWidthChanged: {
                 console.log("[AppView] hoverMouseArea width:", width, "delegateRoot.width:", delegateRoot.width)
@@ -350,7 +351,7 @@ CenteredGridView {
             }
 
             onContainsMouseChanged: {
-                console.log("[AppView] hoverMouseArea containsMouse changed to:", containsMouse, "mouse pos:", mouse.x, mouse.y, "area:", width, "x", height)
+                console.log("[AppView] hoverMouseArea containsMouse changed to:", containsMouse, "area:", width, "x", height)
             }
 
             onEntered: {
