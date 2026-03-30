@@ -195,6 +195,28 @@ CenteredGridView {
             onColorChanged: {
                 console.log("[PcView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "highlighted:", delegateRoot.highlighted)
             }
+
+            // CRITICAL: Put MouseArea INSIDE background to ensure it receives events
+            // This is the most reliable way because background is the bottom-most element
+            MouseArea {
+                id: hoverMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+
+                onContainsMouseChanged: {
+                    console.log("[PcView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
+                                "globalBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, delegateRoot.width, delegateRoot.height))
+                    delegateRoot.isHovered = containsMouse
+                }
+
+                onEntered: {
+                    console.log("[PcView] hover ENTERED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
+                }
+                onExited: {
+                    console.log("[PcView] hover EXITED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
+                }
+            }
         }
 
         // Image content
@@ -457,32 +479,7 @@ CenteredGridView {
             }
         }
 
-        // Hover detection using HoverHandler - more reliable than MouseArea for hover detection
-        // HoverHandler is not affected by Flickable event interception
-        HoverHandler {
-            id: hoverHandler
-            target: delegateRoot
-            onHoveredChanged: {
-                console.log("[PcView] HoverHandler hovered:", hovered, "cardIndex:", index,
-                            "globalPos:", cursorPosition.x + "," + cursorPosition.y,
-                            "cardBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, delegateRoot.width, delegateRoot.height))
-                delegateRoot.isHovered = hovered
-            }
-        }
-
-        // Invisible hover area for tooltip and visual feedback reference
-        MouseArea {
-            id: hoverMouseArea
-            parent: delegateRoot
-            x: 0
-            y: 0
-            width: delegateRoot.width
-            height: delegateRoot.height
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            visible: false
-        }
-
+        // Right-click menu MouseArea
         MouseArea {
             id: rightClickMouseArea
             anchors.fill: delegateRoot
