@@ -1,7 +1,7 @@
 <?define ShortName = "DancherLink Beta" ?>
 <?define FullName = "DancherLink Beta Streaming Client" ?>
 
-<?define ShortcutName = "$(var.ShortcutName)" ?>
+<?define ShortcutName = "$(var.ShortName)" ?>
 <?define ShortcutDesc = "Stream games and other applications from another PC (Beta)" ?>
 <?define InstallFolder = "DancherLink Beta Streaming" ?>
 
