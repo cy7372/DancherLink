@@ -84,6 +84,7 @@ CenteredGridView {
                     width: 160
                     height: 160
                 }
+                z: 10  // Above MouseArea
             }
 
             // Network latency indicator - shows for currently selected PC
@@ -134,6 +135,7 @@ CenteredGridView {
                         hoverEnabled: true
                     }
                 }
+                z: 10  // Above MouseArea
             }
 
             Image {
@@ -158,6 +160,7 @@ CenteredGridView {
                     hoverEnabled: true
                     acceptedButtons: Qt.NoButton
                 }
+                z: 10  // Above MouseArea
             }
 
             BusyIndicator {
@@ -169,6 +172,7 @@ CenteredGridView {
                 height: 64
                 visible: model.statusUnknown
                 running: visible
+                z: 10  // Above MouseArea
             }
 
             Label {
@@ -184,6 +188,7 @@ CenteredGridView {
                 wrapMode: Text.Wrap
                 elide: Text.ElideRight
                 maximumLineCount: 2
+                z: 10  // Above MouseArea
             }
 
             Loader {
@@ -213,13 +218,15 @@ CenteredGridView {
                         }
                     }
                 }
+                z: 10  // Above MouseArea
             }
 
+            // MouseArea at the bottom so other elements are above it
             MouseArea {
                 id: pcDelegateMouseArea
                 anchors.fill: parent
                 acceptedButtons: Qt.RightButton
-                hoverEnabled: true  // Enable hover for the entire card
+                hoverEnabled: true
 
                 onClicked: {
                     if (!pcGrid.currentItem || pcGrid.currentItem !== delegateRoot) {
@@ -227,6 +234,7 @@ CenteredGridView {
                     }
                     pcContextMenu.open()
                 }
+                z: -1  // Behind all other content
             }
         }
     }
