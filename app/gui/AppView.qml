@@ -135,27 +135,6 @@ CenteredGridView {
             onColorChanged: {
                 console.log("[AppView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "highlighted:", delegateRoot.highlighted)
             }
-
-            // CRITICAL: Put MouseArea INSIDE background to ensure it receives events
-            // This is the most reliable way because background is the bottom-most element
-            MouseArea {
-                id: hoverMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-
-                onContainsMouseChanged: {
-                    console.log("[AppView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index)
-                    delegateRoot.isHovered = containsMouse
-                }
-
-                onEntered: {
-                    console.log("[AppView] hover ENTERED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
-                }
-                onExited: {
-                    console.log("[AppView] hover EXITED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
-                }
-            }
         }
 
         // Image content
@@ -342,6 +321,31 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 appContextMenu.open()
+            }
+        }
+
+        // Hover detection MouseArea - MUST be declared last to be on top
+        MouseArea {
+            id: hoverMouseArea
+            anchors.fill: delegateRoot
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
+            onPressed: function(mouse) { mouse.accepted = true }
+            onReleased: function(mouse) { mouse.accepted = true }
+            onPositionChanged: function(mouse) { mouse.accepted = true }
+            onWheel: function(wheel) { wheel.accepted = true }
+
+            onContainsMouseChanged: {
+                console.log("[AppView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index)
+                delegateRoot.isHovered = containsMouse
+            }
+
+            onEntered: {
+                console.log("[AppView] hover ENTERED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
+            }
+            onExited: {
+                console.log("[AppView] hover EXITED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
             }
         }
 
