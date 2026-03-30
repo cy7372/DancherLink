@@ -186,29 +186,9 @@ CenteredGridView {
             onHeightChanged: {
                 console.log("[PcView] background height changed:", height, "parent.height:", parent.height)
             }
-
-            MouseArea {
-                id: hoverMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-
-                // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
-                onPressed: mouse.accepted = true
-                onReleased: mouse.accepted = true
-                onPositionChanged: mouse.accepted = true
-
-                onEntered: {
-                    console.log("[PcView] hover ENTERED - MouseArea size:", width, "x", height, "parent (background) size:", parent.width, "x", parent.height)
-                    delegateRoot.isHovered = true
-                }
-                onExited: {
-                    console.log("[PcView] hover EXITED")
-                    delegateRoot.isHovered = false
-                }
-            }
         }
 
+        // Image content
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
@@ -465,6 +445,35 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 pcContextMenu.open()
+            }
+        }
+
+        // Hover detection MouseArea - MUST be after all other visual elements to receive events
+        MouseArea {
+            id: hoverMouseArea
+            anchors.fill: delegateRoot
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+
+            // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
+            onPressed: { mouse.accepted = true }
+            onReleased: { mouse.accepted = true }
+            onPositionChanged: { mouse.accepted = true }
+            // Also prevent wheel events from propagating to Flickable
+            onWheel: { wheel.accepted = true }
+
+            // Debug: Track containsMouse changes
+            onContainsMouseChanged: {
+                console.log("[PcView] hoverMouseArea containsMouse changed to:", containsMouse)
+            }
+
+            onEntered: {
+                console.log("[PcView] hover ENTERED - MouseArea size:", width, "x", height, "delegateRoot size:", delegateRoot.width, "x", delegateRoot.height)
+                delegateRoot.isHovered = true
+            }
+            onExited: {
+                console.log("[PcView] hover EXITED")
+                delegateRoot.isHovered = false
             }
         }
 

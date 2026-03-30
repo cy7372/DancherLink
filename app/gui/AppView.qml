@@ -124,28 +124,9 @@ CenteredGridView {
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
-
-            // CRITICAL: MouseArea inside background to receive hover events
-            MouseArea {
-                id: hoverMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-
-                // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
-                onPressed: mouse.accepted = true
-                onReleased: mouse.accepted = true
-                onPositionChanged: mouse.accepted = true
-
-                onEntered: {
-                    delegateRoot.isHovered = true
-                }
-                onExited: {
-                    delegateRoot.isHovered = false
-                }
-            }
         }
 
+        // Image content
         Image {
             property bool isPlaceholder: false
 
@@ -179,7 +160,7 @@ CenteredGridView {
             ToolTip.text: model.name
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
-            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
+            ToolTip.visible: (delegateRoot.isHovered || delegateRoot.highlighted) && (!appNameText || appNameText.truncated)
         }
 
         Loader {
@@ -329,6 +310,33 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 appContextMenu.open()
+            }
+        }
+
+        // Hover detection MouseArea - MUST be after all other visual elements to receive events
+        MouseArea {
+            id: hoverMouseArea
+            anchors.fill: delegateRoot
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+
+            // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
+            onPressed: { mouse.accepted = true }
+            onReleased: { mouse.accepted = true }
+            onPositionChanged: { mouse.accepted = true }
+            onWheel: { wheel.accepted = true }
+
+            onContainsMouseChanged: {
+                console.log("[AppView] hoverMouseArea containsMouse changed to:", containsMouse)
+            }
+
+            onEntered: {
+                console.log("[AppView] hover ENTERED")
+                delegateRoot.isHovered = true
+            }
+            onExited: {
+                console.log("[AppView] hover EXITED")
+                delegateRoot.isHovered = false
             }
         }
 
