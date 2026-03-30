@@ -439,20 +439,27 @@ CenteredGridView {
         }
 
         MouseArea {
-            width: 300
-            height: 320
-            anchors.centerIn: parent
-            acceptedButtons: Qt.RightButton;
+            id: rightClickMouseArea
+            anchors.fill: parent
+            anchors.leftMargin: (310 - 300) / 2  // Center in cell: 5px
+            anchors.rightMargin: (310 - 300) / 2
+            anchors.topMargin: (330 - 320) / 2   // Center in cell: 5px
+            anchors.bottomMargin: (330 - 320) / 2
+            acceptedButtons: Qt.RightButton
             onClicked: {
                 parent.pressAndHold()
             }
         }
 
-        // MouseArea to track hover state - placed at top layer with exact card dimensions
+        // MouseArea to track hover state - exact card dimensions (300x320)
+        // Positioned to match the actual card size within the GridView cell (310x330)
         MouseArea {
-            width: 300
-            height: 320
-            anchors.centerIn: parent
+            id: hoverMouseArea
+            anchors.fill: parent
+            anchors.leftMargin: (310 - 300) / 2  // 5px
+            anchors.rightMargin: (310 - 300) / 2
+            anchors.topMargin: (330 - 320) / 2   // 5px
+            anchors.bottomMargin: (330 - 320) / 2
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             onEntered: { delegateRoot.isHovered = true }
