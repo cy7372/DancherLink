@@ -167,25 +167,29 @@ CenteredGridView {
         // Local hover state - only true when mouse is over the card
         property bool isHovered: false
 
-        background: Rectangle {
-            id: delegateBackground
+        // Hover detection MouseArea - must be at delegate root level with explicit dimensions
+        // to avoid GridView cell container size interference
+        MouseArea {
+            id: hoverMouseArea
             width: 300
             height: 320
+            anchors.left: delegateRoot.left
+            anchors.top: delegateRoot.top
+            z: 1000  // Above all other content
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onEntered: { delegateRoot.isHovered = true }
+            onExited: { delegateRoot.isHovered = false }
+        }
+
+        background: Rectangle {
+            id: delegateBackground
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
-
-            // Hover detection MouseArea inside background - parent is now the background Rectangle
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-                onEntered: { delegateRoot.isHovered = true }
-                onExited: { delegateRoot.isHovered = false }
-            }
         }
 
         Image {
