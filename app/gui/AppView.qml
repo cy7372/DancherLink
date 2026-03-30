@@ -115,33 +115,35 @@ CenteredGridView {
         // Local hover state - only true when mouse is over the card
         property bool isHovered: false
 
-        // Accept all mouse events in this MouseArea to prevent event propagation
-        // Use anchors.fill to correctly bind to delegateRoot
-        MouseArea {
-            id: hoverMouseArea
-            // Fill the entire delegate root area
-            anchors.fill: delegateRoot
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            // Prevent parent from receiving hover events
-            propagateComposedEvents: false
-
-            onEntered: {
-                delegateRoot.isHovered = true
-            }
-            onExited: {
-                delegateRoot.isHovered = false
-            }
-        }
-
         background: Rectangle {
             id: delegateBackground
+            anchors.fill: parent
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+
+            // CRITICAL: MouseArea inside background to receive hover events
+            MouseArea {
+                id: hoverMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+
+                // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
+                onPressed: mouse.accepted = true
+                onReleased: mouse.accepted = true
+                onPositionChanged: mouse.accepted = true
+
+                onEntered: {
+                    delegateRoot.isHovered = true
+                }
+                onExited: {
+                    delegateRoot.isHovered = false
+                }
+            }
         }
 
         Image {

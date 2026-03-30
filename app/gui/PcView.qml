@@ -193,6 +193,11 @@ CenteredGridView {
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
 
+                // CRITICAL: Accept all mouse events to prevent Flickable (GridView) from intercepting them
+                onPressed: mouse.accepted = true
+                onReleased: mouse.accepted = true
+                onPositionChanged: mouse.accepted = true
+
                 onEntered: {
                     console.log("[PcView] hover ENTERED - MouseArea size:", width, "x", height, "parent (background) size:", parent.width, "x", parent.height)
                     delegateRoot.isHovered = true
