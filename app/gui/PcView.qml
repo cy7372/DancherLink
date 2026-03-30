@@ -456,7 +456,13 @@ CenteredGridView {
         // Hover detection MouseArea - MUST be declared last to be on top
         MouseArea {
             id: hoverMouseArea
-            anchors.fill: delegateRoot
+            // CRITICAL: Use explicit x/y/width/height instead of anchors.fill
+            // anchors.fill can cause issues with GridView delegate recycling
+            parent: delegateRoot
+            x: 0
+            y: 0
+            width: 300  // Hard-coded to match delegateRoot.width
+            height: 320 // Hard-coded to match delegateRoot.height
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
@@ -464,10 +470,12 @@ CenteredGridView {
             onReleased: function(mouse) { mouse.accepted = true }
             onPositionChanged: function(mouse) { mouse.accepted = true }
             onWheel: function(wheel) { wheel.accepted = true }
+            propagateComposedEvents: false
 
             onContainsMouseChanged: {
                 console.log("[PcView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
-                            "globalBounds:", Qt.rect(delegateRoot.mapToItem(null, 0, 0).x, delegateRoot.mapToItem(null, 0, 0).y, delegateRoot.width, delegateRoot.height))
+                            "mouseAreaSize:", width + "x" + height,
+                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height)
                 delegateRoot.isHovered = containsMouse
             }
 
