@@ -116,6 +116,9 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
+        // Empty contentItem - all content is in background for correct hover bounds
+        contentItem: Item {}
+
         background: Rectangle {
             id: delegateBackground
             color: AppTheme.backgroundPrimary
@@ -141,131 +144,120 @@ CenteredGridView {
                     ColorAnimation { duration: AppTheme.animationDurationFast }
                 }
             ]
-        }
 
-        Image {
-            property bool isPlaceholder: false
+            // All content as children of background so hover detection matches visual bounds
+            Image {
+                property bool isPlaceholder: false
 
-            id: appIcon
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: AppTheme.spacingSm
-            source: model.boxart
+                id: appIcon
+                anchors.horizontalCenter: delegateBackground.horizontalCenter
+                anchors.top: delegateBackground.top
+                anchors.topMargin: AppTheme.spacingSm
+                source: model.boxart
 
-            onSourceSizeChanged: {
-                // Nearly all of Nvidia's official box art does not match the dimensions of placeholder
-                // images, however the one known exception is Overcooked. Therefore, we only execute
-                // the image size checks if this is not an app collector game. We know the officially
-                // supported games all have box art, so this check is not required.
-                if (!model.isAppCollectorGame &&
-                    ((sourceSize.width === 130 && sourceSize.height === 180) || // GFE 2.0 placeholder image
-                     (sourceSize.width === 628 && sourceSize.height === 888) || // GFE 3.0 placeholder image
-                     (sourceSize.width === 200 && sourceSize.height === 266)))  // Our no_app_image.png
-                {
-                    isPlaceholder = true
-                }
-                else
-                {
-                    isPlaceholder = false
-                }
-
-                width = AppTheme.appIconWidth
-                height = AppTheme.appIconHeight
-            }
-
-            // Display a tooltip with the full name if it's truncated
-            ToolTip.text: model.name
-            ToolTip.delay: 1000
-            ToolTip.timeout: 5000
-            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
-        }
-
-        Loader {
-            active: model.running
-            asynchronous: true
-            anchors.fill: appIcon
-
-            sourceComponent: Item {
-                RoundButton {
-                    id: resumeButton
-                    // Using explicit x/y positioning instead of anchors to allow dynamic offset
-                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
-                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
-                    implicitWidth: 72
-                    implicitHeight: 72
-
-                    icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 56
-                    icon.height: 56
-
-                    onClicked: {
-                        launchOrResumeSelectedApp(true)
+                onSourceSizeChanged: {
+                    if (!model.isAppCollectorGame &&
+                        ((sourceSize.width === 130 && sourceSize.height === 180) ||
+                         (sourceSize.width === 628 && sourceSize.height === 888) ||
+                         (sourceSize.width === 200 && sourceSize.height === 266)))
+                    {
+                        isPlaceholder = true
+                    }
+                    else
+                    {
+                        isPlaceholder = false
                     }
 
-                    ToolTip.text: qsTr("Resume Game")
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 3000
-                    ToolTip.visible: hovered
-
-                    Material.background: "#D0808080"
-
-                    Behavior on x { PropertyAnimation { duration: 150 } }
-                    Behavior on y { PropertyAnimation { duration: 150 } }
+                    width = AppTheme.appIconWidth
+                    height = AppTheme.appIconHeight
                 }
 
-                RoundButton {
-                    id: stopButton
-                    // Using explicit x/y positioning instead of anchors to allow dynamic offset
-                    x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
-                    y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
-                    implicitWidth: 72
-                    implicitHeight: 72
+                ToolTip.text: model.name
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: (delegateRoot.hovered || delegateRoot.highlighted) && (!appNameText || appNameText.truncated)
+            }
 
-                    icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 56
-                    icon.height: 56
+            Loader {
+                active: model.running
+                asynchronous: true
+                anchors.fill: appIcon
 
-                    onClicked: {
-                        doQuitGame()
+                sourceComponent: Item {
+                    RoundButton {
+                        id: resumeButton
+                        x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? -40 : 0)
+                        y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? -64 : -48)
+                        implicitWidth: 72
+                        implicitHeight: 72
+
+                        icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
+                        icon.width: 56
+                        icon.height: 56
+
+                        onClicked: {
+                            launchOrResumeSelectedApp(true)
+                        }
+
+                        ToolTip.text: qsTr("Resume Game")
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 3000
+                        ToolTip.visible: hovered
+
+                        Material.background: "#D0808080"
+
+                        Behavior on x { PropertyAnimation { duration: 150 } }
+                        Behavior on y { PropertyAnimation { duration: 150 } }
                     }
 
-                    ToolTip.text: qsTr("Quit Game")
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 3000
-                    ToolTip.visible: hovered
+                    RoundButton {
+                        id: stopButton
+                        x: (parent.width - width) / 2 + (appIcon.isPlaceholder ? 40 : 0)
+                        y: (parent.height - height) / 2 + (appIcon.isPlaceholder ? 48 : 48)
+                        implicitWidth: 72
+                        implicitHeight: 72
 
-                    Material.background: "#D0808080"
+                        icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
+                        icon.width: 56
+                        icon.height: 56
 
-                    Behavior on x { PropertyAnimation { duration: 150 } }
-                    Behavior on y { PropertyAnimation { duration: 150 } }
+                        onClicked: {
+                            doQuitGame()
+                        }
+
+                        ToolTip.text: qsTr("Quit Game")
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 3000
+                        ToolTip.visible: hovered
+
+                        Material.background: "#D0808080"
+
+                        Behavior on x { PropertyAnimation { duration: 150 } }
+                        Behavior on y { PropertyAnimation { duration: 150 } }
+                    }
                 }
             }
-        }
 
-        Loader {
-            id: appNameTextLoader
-            active: appIcon.isPlaceholder
+            Loader {
+                id: appNameTextLoader
+                active: appIcon.isPlaceholder
+                width: appIcon.width - AppTheme.spacingMd
+                height: model.running ? 144 : appIcon.height
+                anchors.left: appIcon.left
+                anchors.right: appIcon.right
+                anchors.bottom: appIcon.bottom
 
-            // This loader is not asynchronous to avoid noticeable differences
-            // in the time in which the text loads for each game.
-
-            width: appIcon.width - AppTheme.spacingMd
-            height: model.running ? 144 : appIcon.height
-
-            anchors.left: appIcon.left
-            anchors.right: appIcon.right
-            anchors.bottom: appIcon.bottom
-
-            sourceComponent: Label {
-                id: appNameText
-                text: model.name
-                font.pointSize: AppTheme.fontBody
-                leftPadding: AppTheme.spacingSm
-                rightPadding: AppTheme.spacingSm
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                elide: Text.ElideRight
+                sourceComponent: Label {
+                    id: appNameText
+                    text: model.name
+                    font.pointSize: AppTheme.fontBody
+                    leftPadding: AppTheme.spacingSm
+                    rightPadding: AppTheme.spacingSm
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideRight
+                }
             }
         }
 

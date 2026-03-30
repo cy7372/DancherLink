@@ -9,13 +9,8 @@ ItemDelegate {
 
     hoverEnabled: true
 
-    // Transparent MouseArea to ensure hover events are captured
-    MouseArea {
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
-        z: -1  // Behind all other content
-    }
+    // Ensure the contentItem doesn't intercept mouse events
+    contentItem: Item {}
 
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()
