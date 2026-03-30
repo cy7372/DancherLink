@@ -167,9 +167,15 @@ CenteredGridView {
         // Local hover state - only true when mouse is over the card
         property bool isHovered: false
 
+        onIsHoveredChanged: {
+            console.log("[PcView] delegateRoot.isHovered changed to:", isHovered, "highlighted:", highlighted)
+        }
+
         background: Rectangle {
             id: delegateBackground
-            anchors.fill: parent
+            // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
+            width: delegateRoot.width
+            height: delegateRoot.height
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
@@ -177,14 +183,8 @@ CenteredGridView {
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
 
-            Component.onCompleted: {
-                console.log("[PcView] background created - parent:", parent, "parent.width:", parent.width, "parent.height:", parent.height, "this.width:", width, "this.height:", height)
-            }
-            onWidthChanged: {
-                console.log("[PcView] background width changed:", width, "parent.width:", parent.width)
-            }
-            onHeightChanged: {
-                console.log("[PcView] background height changed:", height, "parent.height:", parent.height)
+            onColorChanged: {
+                console.log("[PcView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "highlighted:", delegateRoot.highlighted)
             }
         }
 
