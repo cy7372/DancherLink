@@ -164,8 +164,21 @@ CenteredGridView {
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        // Local hover state - only true when mouse is over the background
+        // Local hover state - only true when mouse is over the card
         property bool isHovered: false
+
+        // Hover detection MouseArea - placed first to be at the bottom layer
+        // Uses explicit dimensions to match card size, not GridView cell size
+        MouseArea {
+            id: hoverMouseArea
+            width: delegateRoot.width
+            height: delegateRoot.height
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onEntered: { delegateRoot.isHovered = true }
+            onExited: { delegateRoot.isHovered = false }
+        }
 
         background: Rectangle {
             id: delegateBackground
@@ -175,27 +188,6 @@ CenteredGridView {
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
-        }
-
-        // Invisible hover detection layer - uses exact card dimensions
-        MouseArea {
-            id: hoverMouseArea
-            width: 300
-            height: 320
-            anchors.left: parent.left
-            anchors.top: parent.top
-            color: "transparent"
-            z: 1000  // Above all other content
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            onEntered: {
-                console.log("[PcView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", width, "x", height)
-                delegateRoot.isHovered = true
-            }
-            onExited: {
-                console.log("[PcView] hover exited for:", delegateRoot.model ? delegateRoot.model.name : "unknown")
-                delegateRoot.isHovered = false
-            }
         }
 
         Image {
