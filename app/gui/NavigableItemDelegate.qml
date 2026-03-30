@@ -4,7 +4,6 @@ import QtQuick.Window 2.15
 
 ItemDelegate {
     property GridView grid
-    property bool isHovered: mouseArea.mouseAreaEntered
 
     highlighted: grid.activeFocus && grid.currentItem === this
 
@@ -29,15 +28,8 @@ ItemDelegate {
         clicked()
     }
 
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton  // Don't intercept clicks
-
-        property bool mouseAreaEntered: false
-        onEntered: { mouseAreaEntered = true }
-        onExited: { mouseAreaEntered = false }
-    }
+    // Use ItemDelegate's built-in hovered property
+    // The content in PcView/AppView is rendered in the contentItem
+    // MouseArea is not needed as ItemDelegate handles hover internally
 }
 
