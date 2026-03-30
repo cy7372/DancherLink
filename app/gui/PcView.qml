@@ -169,6 +169,8 @@ CenteredGridView {
 
         background: Rectangle {
             id: delegateBackground
+            width: delegateRoot.width
+            height: delegateRoot.height
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
@@ -437,17 +439,20 @@ CenteredGridView {
         }
 
         MouseArea {
-            anchors.fill: delegateRoot
+            width: 300
+            height: 320
+            anchors.centerIn: parent
             acceptedButtons: Qt.RightButton;
             onClicked: {
                 parent.pressAndHold()
             }
         }
 
-        // MouseArea to track hover state over the entire delegate area
-        // Placed at the end (top layer) with acceptedButtons: Qt.NoButton to not intercept clicks
+        // MouseArea to track hover state - placed at top layer with exact card dimensions
         MouseArea {
-            anchors.fill: delegateRoot
+            width: 300
+            height: 320
+            anchors.centerIn: parent
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
             onEntered: { delegateRoot.isHovered = true }
