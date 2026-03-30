@@ -131,7 +131,7 @@ CenteredGridView {
             id: hoverDetectionLayer
             width: 220
             height: 287
-            anchors.centerIn: parent
+            anchors.centerIn: delegateRoot
             z: 1000  // Above all other content
 
             MouseArea {
