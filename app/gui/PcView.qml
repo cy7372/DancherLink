@@ -167,33 +167,41 @@ CenteredGridView {
         // Local hover state - only true when mouse is over the card
         property bool isHovered: false
 
-        // Accept all mouse events in this MouseArea to prevent event propagation
-        // Use anchors.fill to correctly bind to delegateRoot
-        MouseArea {
-            id: hoverMouseArea
-            // Fill the entire delegate root area
-            anchors.fill: delegateRoot
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            // Prevent parent from receiving hover events
-            propagateComposedEvents: false
-
-            onEntered: {
-                delegateRoot.isHovered = true
-            }
-            onExited: {
-                delegateRoot.isHovered = false
-            }
-        }
-
         background: Rectangle {
             id: delegateBackground
+            anchors.fill: parent
             color: delegateRoot.highlighted ? AppTheme.backgroundHighlighted : (delegateRoot.isHovered ? AppTheme.backgroundHover : "transparent")
             border.color: "transparent"
             border.width: 0
             radius: AppTheme.borderRadius
 
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+
+            Component.onCompleted: {
+                console.log("[PcView] background created - parent:", parent, "parent.width:", parent.width, "parent.height:", parent.height, "this.width:", width, "this.height:", height)
+            }
+            onWidthChanged: {
+                console.log("[PcView] background width changed:", width, "parent.width:", parent.width)
+            }
+            onHeightChanged: {
+                console.log("[PcView] background height changed:", height, "parent.height:", parent.height)
+            }
+
+            MouseArea {
+                id: hoverMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+
+                onEntered: {
+                    console.log("[PcView] hover ENTERED - MouseArea size:", width, "x", height, "parent (background) size:", parent.width, "x", parent.height)
+                    delegateRoot.isHovered = true
+                }
+                onExited: {
+                    console.log("[PcView] hover EXITED")
+                    delegateRoot.isHovered = false
+                }
+            }
         }
 
         Image {
