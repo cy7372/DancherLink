@@ -126,26 +126,23 @@ CenteredGridView {
         }
 
         // Invisible hover detection layer - uses exact card dimensions
-        Rectangle {
-            id: hoverDetectionLayer
-            width: delegateRoot.width
-            height: delegateRoot.height
+        MouseArea {
+            id: hoverMouseArea
+            width: 220
+            height: 287
+            anchors.left: parent.left
+            anchors.top: parent.top
             color: "transparent"
             z: 1000  // Above all other content
-
-            MouseArea {
-                id: hoverMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-                onEntered: {
-                    console.log("[AppView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", width, "x", height)
-                    delegateRoot.isHovered = true
-                }
-                onExited: {
-                    console.log("[AppView] hover exited for:", delegateRoot.model ? delegateRoot.model.name : "unknown")
-                    delegateRoot.isHovered = false
-                }
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onEntered: {
+                console.log("[AppView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", width, "x", height)
+                delegateRoot.isHovered = true
+            }
+            onExited: {
+                console.log("[AppView] hover exited for:", delegateRoot.model ? delegateRoot.model.name : "unknown")
+                delegateRoot.isHovered = false
             }
         }
 
