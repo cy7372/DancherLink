@@ -125,13 +125,12 @@ CenteredGridView {
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
         }
 
-        // Invisible hover detection layer - placed at top to capture mouse events
-        // Uses explicit size (not anchors) to avoid GridView cell size interference
-        Item {
+        // Invisible hover detection layer - uses exact card dimensions
+        Rectangle {
             id: hoverDetectionLayer
-            width: 220
-            height: 287
-            anchors.centerIn: delegateRoot
+            width: delegateRoot.width
+            height: delegateRoot.height
+            color: "transparent"
             z: 1000  // Above all other content
 
             MouseArea {
@@ -140,7 +139,7 @@ CenteredGridView {
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
                 onEntered: {
-                    console.log("[AppView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", parent.width, "x", parent.height)
+                    console.log("[AppView] hover entered for:", delegateRoot.model ? delegateRoot.model.name : "unknown", "layer size:", width, "x", height)
                     delegateRoot.isHovered = true
                 }
                 onExited: {
