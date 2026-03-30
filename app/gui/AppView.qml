@@ -106,6 +106,7 @@ CenteredGridView {
     model: appModel
 
     delegate: NavigableItemDelegate {
+        id: delegateRoot
         width: AppTheme.appCardWidth - 8; height: AppTheme.appCardHeight - 8;
         grid: appGrid
 
@@ -125,12 +126,12 @@ CenteredGridView {
             states: [
                 State {
                     name: "highlighted"
-                    when: parent.highlighted
+                    when: delegateRoot.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHighlighted }
                 },
                 State {
                     name: "hovered"
-                    when: parent.hovered && !parent.highlighted
+                    when: delegateRoot.hovered && !delegateRoot.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
                 }
             ]

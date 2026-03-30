@@ -151,6 +151,7 @@ CenteredGridView {
     // This ensures delegates see a valid computerModel from the start
 
     delegate: NavigableItemDelegate {
+        id: delegateRoot
         width: AppTheme.pcCardWidth - 8; height: AppTheme.pcCardHeight - 8;
         grid: pcGrid
 
@@ -166,12 +167,12 @@ CenteredGridView {
             states: [
                 State {
                     name: "highlighted"
-                    when: parent.highlighted
+                    when: delegateRoot.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHighlighted }
                 },
                 State {
                     name: "hovered"
-                    when: parent.hovered && !parent.highlighted
+                    when: delegateRoot.hovered && !delegateRoot.highlighted
                     PropertyChanges { target: delegateBackground; color: AppTheme.backgroundHover }
                 }
             ]
