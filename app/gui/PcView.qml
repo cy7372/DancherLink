@@ -177,16 +177,6 @@ CenteredGridView {
             Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
         }
 
-        // MouseArea to track hover state over the entire delegate area (excluding child items)
-        MouseArea {
-            anchors.fill: parent
-            z: -1  // Place behind all other content
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            onEntered: { delegateRoot.isHovered = true }
-            onExited: { delegateRoot.isHovered = false }
-        }
-
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
@@ -452,6 +442,16 @@ CenteredGridView {
             onClicked: {
                 parent.pressAndHold()
             }
+        }
+
+        // MouseArea to track hover state over the entire delegate area
+        // Placed at the end (top layer) with acceptedButtons: Qt.NoButton to not intercept clicks
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onEntered: { delegateRoot.isHovered = true }
+            onExited: { delegateRoot.isHovered = false }
         }
 
         Keys.onMenuPressed: {

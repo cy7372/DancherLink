@@ -7,7 +7,8 @@ ItemDelegate {
 
     highlighted: grid.activeFocus && grid.currentItem === this
 
-    hoverEnabled: true
+    // Note: hoverEnabled is intentionally NOT set here
+    // Each delegate in PcView/AppView has its own MouseArea for precise hover detection
 
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()
