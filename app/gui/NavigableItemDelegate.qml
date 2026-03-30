@@ -5,10 +5,10 @@ import QtQuick.Window 2.15
 ItemDelegate {
     property GridView grid
 
-    highlighted: grid.activeFocus && grid.currentItem === this
+    // Disable built-in hover behavior - delegates define their own hover detection
+    hoverEnabled: false
 
-    // Note: hoverEnabled is intentionally NOT set here
-    // Each delegate in PcView/AppView has its own MouseArea for precise hover detection
+    highlighted: grid.activeFocus && grid.currentItem === this
 
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()
