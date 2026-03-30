@@ -1,23 +1,14 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Window 2.15
 
 ItemDelegate {
     property GridView grid
 
-    // CRITICAL: Disable ALL built-in hover and highlight behavior
+    // Disable built-in hover behavior - delegates define their own hover detection
     hoverEnabled: false
-    highlighted: false
-    down: false
-    checkable: false
-    checked: false
-    visible: true
-    enabled: true
-    focus: false
-    activeFocusOnTab: false
-    activeFocusOnPress: false
 
-    // Our custom highlighted logic - only for keyboard/gamepad navigation
+    // Use customHighlighted instead of built-in highlighted to avoid interference
+    highlighted: false
     property bool customHighlighted: grid.activeFocus && grid.currentItem === this
 
     Keys.onLeftPressed: {

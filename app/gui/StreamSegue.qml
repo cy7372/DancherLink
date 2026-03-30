@@ -30,6 +30,13 @@ Item {
     property int previousVisibility: -1
 
     onRestartRequested: {
+        // Save the current window visibility BEFORE showing fullscreen
+        // This ensures we can restore to the correct state after streaming ends
+        if (Window.window) {
+            previousVisibility = Window.window.visibility
+            console.log("StreamSegue: onRestartRequested - saved previousVisibility =", previousVisibility)
+        }
+
         // Reset the UI state to show we are working
         if (Window.window) {
             Window.window.show()
