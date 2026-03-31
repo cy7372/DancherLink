@@ -41,6 +41,7 @@ private:
     void applyPatch(QString patchPath, bool isManual);
     QString getInstallPath();
     QString getTempPatchPath();
+    QString getPatchToolPath();
 
     QVector<int> m_CurrentVersionQuad;
     QNetworkAccessManager* m_Nam;

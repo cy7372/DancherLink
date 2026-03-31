@@ -13,7 +13,6 @@
 #include <QDir>
 #include <QProcess>
 #include <QStandardPaths>
-#include <QMessageDialog>
 
 #ifdef Q_OS_WIN32
 #include <windows.h>
@@ -610,8 +609,9 @@ void AutoUpdateChecker::downloadPatch(QString patchUrl, QString savePath, bool i
 
     connect(reply, &QNetworkReply::downloadProgress,
             this, &AutoUpdateChecker::onPatchDownloadProgress);
-    connect(reply, &QNetworkReply::finished,
-            this, &AutoUpdateChecker::onPatchDownloadFinished);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        onPatchDownloadFinished(reply);
+    });
 
     qDebug() << "Downloading patch from:" << patchUrl;
 }
@@ -634,12 +634,8 @@ void AutoUpdateChecker::onPatchApplyFinished(bool success, QString errorMessage)
         if (!m_PendingPatchPath.isEmpty() && QFile::exists(m_PendingPatchPath)) {
             QFile::remove(m_PendingPatchPath);
         }
-        // Notify user to restart
-#ifdef Q_OS_WIN32
-        QString title = tr("Update Complete");
-        QString message = tr("The update has been applied successfully. Please restart the application to use the new version.");
-        QMessageBox::information(nullptr, title, message);
-#endif
+        // Notify UI that restart is needed
+        // QML will handle showing a dialog to the user
         emit patchApplyFinished(true, QString());
     } else {
         qWarning() << "Patch application failed:" << errorMessage;
