@@ -110,6 +110,12 @@ ItemDelegate {
             Qt.callLater(function() {
                 hoverMouseArea.hoverEnabled = false
                 hoverMouseArea.hoverEnabled = true
+                // CRITICAL: After re-enabling, check if mouse is already over the area
+                // This handles the case where mouse was already hovering before component loaded
+                if (hoverMouseArea.containsMouse && !delegateRoot.isHovered) {
+                    delegateRoot.isHovered = true
+                    delegateRoot.scale = 1.03
+                }
             })
         }
     }
