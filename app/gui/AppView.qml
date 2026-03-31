@@ -190,6 +190,16 @@ CenteredGridView {
                     Material.elevation: hovered ? 4 : 1
                     Material.background: hovered ? "#E0A0A0A0" : "#D0808080"
 
+                    // CRITICAL: Sync hover state with parent card
+                    // Buttons are part of the card, so hovering button should hover card too
+                    onHoveredChanged: {
+                        if (hovered) {
+                            var p = resumeButton.parent
+                            while (p && p.isHovered === undefined) p = p.parent
+                            if (p) { p.isHovered = true; p.scale = 1.03 }
+                        }
+                    }
+
                     onClicked: {
                         launchOrResumeSelectedApp(true)
                     }
@@ -225,6 +235,16 @@ CenteredGridView {
                     // Visual feedback on hover
                     Material.elevation: hovered ? 4 : 1
                     Material.background: hovered ? "#E0A0A0A0" : "#D0808080"
+
+                    // CRITICAL: Sync hover state with parent card
+                    // Buttons are part of the card, so hovering button should hover card too
+                    onHoveredChanged: {
+                        if (hovered) {
+                            var p = quitButton.parent
+                            while (p && p.isHovered === undefined) p = p.parent
+                            if (p) { p.isHovered = true; p.scale = 1.03 }
+                        }
+                    }
 
                     onClicked: {
                         doQuitGame()
