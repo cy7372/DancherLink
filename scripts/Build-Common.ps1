@@ -177,13 +177,18 @@ function Invoke-NativeBuild {
 
     $VcVarsAll = "$VsInstallPath\VC\Auxiliary\Build\vcvarsall.bat"
     $VcArch = "AMD64"
-    $CleanTemp = "C:\build-temp-$PID-$(Get-Random)"
+    $CleanTemp = "C:\bt"
 
     $isBeta = $BuildType -eq "beta"
     $BetaArgs = if ($isBeta) { " -DBUILD_TYPE=`"beta`"" } else { "" }
 
     # Add version parameter for Beta builds
     $VersionArg = if ($Version) { " -DBUILD_VERSION=`"$Version`"" } else { "" }
+
+    # Configure update subscription URL (local server for testing)
+    # Use forward slashes for CMake compatibility
+    $ServerUrlPath = "$RootDir/server/updates.json" -replace '\\', '/'
+    $UpdateUrlArg = " -DUPDATE_SUBSCRIPTION_URL=`"file:///$ServerUrlPath`""
 
     $BatchContent = @"
 @echo off
@@ -213,7 +218,7 @@ cd /d "$CacheFolder"
 echo Running cmake configure...
 del /q CMakeCache.txt
 del /q "%~dp0..\..\..\app\CMakeFiles\DancherLink.dir\flags.make"
-cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs$VersionArg -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
+cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs$VersionArg$UpdateUrlArg -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
 if %ERRORLEVEL% neq 0 (
     echo CMake configuration FAILED
     goto :cleanup
