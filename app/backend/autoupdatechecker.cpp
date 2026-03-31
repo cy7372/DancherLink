@@ -94,7 +94,7 @@ void AutoUpdateChecker::start(bool isManual)
         }
 
         // Run file check in background thread to avoid blocking UI
-        QtConcurrent::run(QtConcurrent::ThreadPriority::LowPriority, [this, localFile, host, isManual]() {
+        QtConcurrent::run([this, localFile, host, isManual]() {
             // If we have a hostname (UNC path), try to ping port 445 (SMB) first
             // to fail fast if the host is offline.
             if (!host.isEmpty()) {
