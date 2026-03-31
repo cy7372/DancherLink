@@ -165,6 +165,7 @@ CenteredGridView {
 
             sourceComponent: Item {
                 RoundButton {
+                    id: resumeButton
                     anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
                     anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
                     anchors.centerIn: parent
@@ -176,6 +177,19 @@ CenteredGridView {
                     icon.width: 75
                     icon.height: 75
 
+                    // Scale animation for hover effect
+                    scale: 1.0
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: AppTheme.animationDurationFast
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
+                    // Visual feedback on hover
+                    Material.elevation: hovered ? 4 : 1
+                    Material.background: hovered ? "#E0A0A0A0" : "#D0808080"
+
                     onClicked: {
                         launchOrResumeSelectedApp(true)
                     }
@@ -184,11 +198,10 @@ CenteredGridView {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 3000
                     ToolTip.visible: hovered
-
-                    Material.background: "#D0808080"
                 }
 
                 RoundButton {
+                    id: quitButton
                     anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
                     anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
                     anchors.centerIn: parent
@@ -200,6 +213,19 @@ CenteredGridView {
                     icon.width: 75
                     icon.height: 75
 
+                    // Scale animation for hover effect
+                    scale: 1.0
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: AppTheme.animationDurationFast
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
+                    // Visual feedback on hover
+                    Material.elevation: hovered ? 4 : 1
+                    Material.background: hovered ? "#E0A0A0A0" : "#D0808080"
+
                     onClicked: {
                         doQuitGame()
                     }
@@ -208,8 +234,6 @@ CenteredGridView {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 3000
                     ToolTip.visible: hovered
-
-                    Material.background: "#D0808080"
                 }
             }
         }
