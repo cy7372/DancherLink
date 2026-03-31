@@ -1,9 +1,16 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+
+import "."
 
 ItemDelegate {
+    id: delegateRoot
     property GridView grid
     property int cardIndex: -1  // Set by delegate
+
+    // Local hover state - only true when mouse is over the card
+    property bool isHovered: false
 
     // Disable built-in hover behavior - delegates define their own hover detection
     hoverEnabled: false
@@ -14,7 +21,6 @@ ItemDelegate {
     property bool customHighlighted: grid && grid.keyboardSelectedIndex === cardIndex
 
     // CRITICAL: Update keyboardSelectedIndex only on keyboard navigation
-    // This ensures highlighted state is only true when using keyboard/gamepad
     Keys.onLeftPressed: {
         if (grid && grid.count > 0) {
             grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
@@ -45,5 +51,40 @@ ItemDelegate {
     Keys.onEnterPressed: {
         clicked()
     }
-}
 
+    // Common background - shared by all delegates
+    background: Rectangle {
+        id: delegateBackground
+        width: delegateRoot.width
+        height: delegateRoot.height
+        // Use isHovered for hover state, customHighlighted for keyboard/gamepad focus
+        color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
+        border.color: "transparent"
+        border.width: 0
+        radius: AppTheme.borderRadius
+
+        Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+    }
+
+    // Hover detection MouseArea - MUST be declared last to be on top
+    MouseArea {
+        id: hoverMouseArea
+        parent: delegateRoot
+        x: 0
+        y: 0
+        width: delegateRoot.width
+        height: delegateRoot.height
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+        // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
+        onPressed: function(mouse) { mouse.accepted = true }
+        onReleased: function(mouse) { mouse.accepted = true }
+        onPositionChanged: function(mouse) { mouse.accepted = true }
+        onWheel: function(wheel) { wheel.accepted = true }
+        propagateComposedEvents: false
+
+        onContainsMouseChanged: {
+            delegateRoot.isHovered = containsMouse
+        }
+    }
+}
