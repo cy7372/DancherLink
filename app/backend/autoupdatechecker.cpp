@@ -677,7 +677,7 @@ void AutoUpdateChecker::applyPatch(QString patchPath, bool isManual)
             return;
         }
 
-        // Run the patch tool
+        // Run the patch tool synchronously
         QProcess process;
         process.setProgram(patchTool);
         process.setArguments(QStringList() << "apply" << patchPath << installPath);
@@ -685,14 +685,7 @@ void AutoUpdateChecker::applyPatch(QString patchPath, bool isManual)
 
         qDebug() << "Running patch tool:" << patchTool << "apply" << patchPath << installPath;
 
-        if (!process.startDetached()) {
-            qWarning() << "Failed to start patch tool:" << process.errorString();
-            QMetaObject::invokeMethod(this, "onPatchApplyFinished",
-                                      Qt::QueuedConnection,
-                                      Q_ARG(bool, false),
-                                      Q_ARG(QString, process.errorString()));
-            return;
-        }
+        process.start();
 
         // Wait for process to finish (with timeout)
         if (!process.waitForFinished(60000)) { // 60 second timeout

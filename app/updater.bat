@@ -24,8 +24,13 @@ if "%ERRORLEVEL%"=="0" (
 
 echo Starting installation...
 msiexec /update "%MSI_PATH%" /quiet /norestart /l*v "%TEMP%\DancherLink_Update.log"
+if "%ERRORLEVEL%"=="0" (
+    echo Installation completed successfully.
+) else (
+    echo Installation failed with error %ERRORLEVEL%. Check log at %TEMP%\DancherLink_Update.log
+)
 
-echo Installation complete. Restarting application...
+echo Restarting application...
 timeout /t 2 /nobreak >NUL
 start "" "%APP_EXE%"
 
