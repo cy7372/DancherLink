@@ -174,3 +174,11 @@ target_compile_definitions(DancherLink PRIVATE
 if(WIN32)
     target_compile_definitions(DancherLink PRIVATE _USE_MATH_DEFINES)
 endif()
+
+# Copy updater script to build output directory
+if(WIN32)
+    add_custom_command(TARGET DancherLink POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/updater.bat" "$<TARGET_FILE_DIR:DancherLink>"
+        COMMENT "Copying updater.bat to output directory"
+    )
+endif()

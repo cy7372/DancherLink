@@ -286,14 +286,27 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
              }
 
              if (isMsi) {
-                 // Use /update for fast upgrade (no uninstall needed)
-                 // /quiet = silent install, /norestart = no auto restart
-                 // MSIRESTARTMANAGERCONTROL=Disable = disable restart manager for faster install
-                 QString params = QString("/update \"%1\" /quiet /norestart").arg(targetPath);
-                 result = ShellExecuteW(nullptr, L"runas",
-                                        L"msiexec.exe",
-                                        reinterpret_cast<const wchar_t*>(params.utf16()),
-                                        nullptr, SW_SHOWNORMAL);
+                 // Use a batch file to wait for app to close, then install
+                 // This prevents file locking issues and provides smoother update experience
+                 QString appPath = QCoreApplication::applicationFilePath();
+                 QString updaterScript = QDir(QCoreApplication::applicationDirPath()).filePath("updater.bat");
+
+                 // Copy MSI to temp location for installer
+                 QString fileName = QFileInfo(localPath).fileName();
+                 QString tempMsiPath = QDir::temp().filePath(fileName);
+                 QFile::copy(localPath, tempMsiPath);
+
+                 qDebug() << "Starting updater script:" << updaterScript;
+                 qDebug() << "MSI path:" << tempMsiPath;
+                 qDebug() << "App path:" << appPath;
+
+                 // Start the updater script (runs independently)
+                 QProcess::startDetached("cmd.exe", QStringList() << "/c" << updaterScript << tempMsiPath << appPath);
+
+                 // Exit current application immediately
+                 QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
+
+                 return true;
              } else {
                  result = ShellExecuteW(nullptr, L"runas",
                                         reinterpret_cast<const wchar_t*>(targetPath.utf16()),
