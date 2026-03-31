@@ -279,8 +279,10 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
              }
 
              if (isMsi) {
-                 // Use /i for install
-                 QString params = QString("/i \"%1\"").arg(targetPath);
+                 // Use /update for fast upgrade (no uninstall needed)
+                 // /quiet = silent install, /norestart = no auto restart
+                 // MSIRESTARTMANAGERCONTROL=Disable = disable restart manager for faster install
+                 QString params = QString("/update \"%1\" /quiet /norestart").arg(targetPath);
                  result = ShellExecuteW(nullptr, L"runas",
                                         L"msiexec.exe",
                                         reinterpret_cast<const wchar_t*>(params.utf16()),
