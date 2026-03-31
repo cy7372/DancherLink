@@ -188,13 +188,6 @@ try {
             Copy-Item $UpdaterBat "$DeployFolder\" -Force
             Write-Host "[$BuildType Build] Copied updater.bat to deploy folder" -ForegroundColor Green
         }
-
-        # Copy patcher tool for incremental updates (Windows only)
-        $PatcherExe = Join-Path $CacheFolder "bin\DancherLink.Patcher.exe"
-        if (Test-Path $PatcherExe) {
-            Copy-Item $PatcherExe "$DeployFolder\" -Force
-            Write-Host "[$BuildType Build] Copied DancherLink.Patcher.exe to deploy folder" -ForegroundColor Green
-        }
     } else {
         throw "DancherLink.exe not found in build output!"
     }
@@ -208,10 +201,6 @@ try {
             -Version $Version `
             -WxsFile $WixFile `
             -Extensions $BuildConfig.WixExtensions
-
-        # Generate differential patch (for incremental updates)
-        Write-Host "[$BuildType Build] Generating differential patch..." -ForegroundColor Green
-        Generate-Patch -RootDir $RootDir -DeployFolder $DeployFolder -Version $Version -BuildType $BuildTypeParam -Arch $Arch
 
         # Update manifest
         Update-Manifest -RootDir $RootDir -Version $Version -Arch $Arch -BuildType $BuildTypeParam

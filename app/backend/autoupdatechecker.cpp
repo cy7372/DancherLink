@@ -23,7 +23,6 @@ AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
     QObject(parent)
 {
     m_Nam = new QNetworkAccessManager(this);
-    m_PatchDownloader = nullptr;
 
     // Never communicate over HTTP
     m_Nam->setStrictTransportSecurityEnabled(true);
@@ -42,8 +41,6 @@ AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
     Q_ASSERT(m_CurrentVersionQuad.count() > 1);
 
     m_CheckInProgress = false;
-    m_PatchDownloadInProgress = false;
-    m_IsManualUpdate = false;
 }
 
 void AutoUpdateChecker::start(bool isManual)
@@ -520,34 +517,8 @@ void AutoUpdateChecker::onUpdateManifestReceived(const QByteArray& data, bool is
                     QString rawUrl = updateObj["browser_url"].toString();
                     QUrl resolvedUrl = m_ManifestUrl.resolved(QUrl(rawUrl));
 
-                    // Check for patch (differential update) support
-                    // Patch allows smaller download by only downloading changed bytes
-                    bool hasPatch = updateObj.contains("patch_url");
-                    QString patchUrl = hasPatch ? updateObj["patch_url"].toString() : QString();
-                    QUrl resolvedPatchUrl;
-                    if (hasPatch && !patchUrl.isEmpty()) {
-                        resolvedPatchUrl = m_ManifestUrl.resolved(QUrl(patchUrl));
-                        qDebug() << "Patch available:" << resolvedPatchUrl.toString();
-                        qDebug() << "Patch URL from JSON:" << patchUrl;
-                        qDebug() << "Manifest URL:" << m_ManifestUrl.toString();
-                    } else {
-                        qDebug() << "No patch_url found in manifest entry";
-                        qDebug() << "Manifest entry keys:" << updateObj.keys();
-                    }
-
-                    // Store info for patch download
-                    m_FullUpdateUrl = resolvedUrl.toString();
-                    m_NewVersion = latestVersion;
-
-                    // Emit patchAvailable if patch exists, otherwise fall back to full update
-                    if (hasPatch && !patchUrl.isEmpty()) {
-                        qDebug() << "Emitting patchAvailable signal";
-                        emit patchAvailable(latestVersion, resolvedPatchUrl.toString(),
-                                           resolvedUrl.toString(), isManual);
-                    } else {
-                        qDebug() << "Emitting updateAvailable signal (full update)";
-                        emit updateAvailable(latestVersion, resolvedUrl.toString(), isManual);
-                    }
+                    qDebug() << "Emitting updateAvailable signal";
+                    emit updateAvailable(latestVersion, resolvedUrl.toString(), isManual);
                     return;
                 }
                 else if (res > 0) {
@@ -570,192 +541,4 @@ void AutoUpdateChecker::onUpdateManifestReceived(const QByteArray& data, bool is
     qWarning() << "No entry in update manifest found for current platform:"
                 << QSysInfo::buildCpuArchitecture() << getPlatform() << QSysInfo::kernelVersion();
     onUpdateCheckFailed("No update entry found for this platform", isManual);
-}
-
-// ============== Patch Update Functions ==============
-
-void AutoUpdateChecker::onPatchDownloadProgress(qint64 received, qint64 total)
-{
-    emit patchDownloadProgress(received, total);
-}
-
-void AutoUpdateChecker::onPatchDownloadFinished(QNetworkReply* reply)
-{
-    m_PatchDownloadInProgress = false;
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "Patch download failed:" << reply->errorString();
-        // Fallback to full update
-        qDebug() << "Falling back to full update...";
-        emit updateAvailable(m_NewVersion, m_FullUpdateUrl, m_IsManualUpdate);
-        reply->deleteLater();
-        return;
-    }
-
-    // Save patch file
-    QString patchPath = getTempPatchPath();
-    QFile file(patchPath);
-    if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to save patch file:" << patchPath;
-        emit updateAvailable(m_NewVersion, m_FullUpdateUrl, m_IsManualUpdate);
-        reply->deleteLater();
-        return;
-    }
-
-    file.write(reply->readAll());
-    file.close();
-    reply->deleteLater();
-
-    qDebug() << "Patch downloaded to:" << patchPath;
-    m_PendingPatchPath = patchPath;
-
-    // Apply patch
-    applyPatch(patchPath, m_IsManualUpdate);
-}
-
-void AutoUpdateChecker::downloadPatch(QString patchUrl, QString savePath, bool isManual)
-{
-    if (m_PatchDownloader) {
-        m_PatchDownloader->deleteLater();
-    }
-    m_PatchDownloader = new QNetworkAccessManager(this);
-
-    QUrl url(patchUrl);
-    QNetworkRequest req(url);
-    req.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
-
-    QNetworkReply* reply = m_PatchDownloader->get(req);
-    m_IsManualUpdate = isManual;
-
-    connect(reply, &QNetworkReply::downloadProgress,
-            this, &AutoUpdateChecker::onPatchDownloadProgress);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        onPatchDownloadFinished(reply);
-    });
-
-    qDebug() << "Downloading patch from:" << patchUrl;
-}
-
-void AutoUpdateChecker::onPatchApplyStarted()
-{
-    // Placeholder for future progress reporting
-}
-
-void AutoUpdateChecker::onPatchApplyProgress(int percent)
-{
-    emit patchApplyProgress(percent);
-}
-
-void AutoUpdateChecker::onPatchApplyFinished(bool success, QString errorMessage)
-{
-    if (success) {
-        qDebug() << "Patch applied successfully!";
-        // Clean up patch file
-        if (!m_PendingPatchPath.isEmpty() && QFile::exists(m_PendingPatchPath)) {
-            QFile::remove(m_PendingPatchPath);
-        }
-        // Notify UI that restart is needed
-        // QML will handle showing a dialog to the user
-        emit patchApplyFinished(true, QString());
-    } else {
-        qWarning() << "Patch application failed:" << errorMessage;
-        // Fallback to full update
-        qDebug() << "Falling back to full update...";
-        emit updateAvailable(m_NewVersion, m_FullUpdateUrl, m_IsManualUpdate);
-        emit patchApplyFinished(false, errorMessage);
-    }
-}
-
-void AutoUpdateChecker::applyPatch(QString patchPath, bool isManual)
-{
-    qDebug() << "Applying patch from:" << patchPath;
-
-    // Run patch application in a separate thread to avoid blocking UI
-    QtConcurrent::run([this, patchPath, isManual]() {
-        QString installPath = getInstallPath();
-        QString patchTool = getPatchToolPath();
-
-        if (!QFile::exists(patchTool)) {
-            qWarning() << "Patch tool not found:" << patchTool;
-            QMetaObject::invokeMethod(this, "onPatchApplyFinished",
-                                      Qt::QueuedConnection,
-                                      Q_ARG(bool, false),
-                                      Q_ARG(QString, "Patch tool not found: " + patchTool));
-            return;
-        }
-
-        // Run the patch tool synchronously
-        QProcess process;
-        process.setProgram(patchTool);
-        process.setArguments(QStringList() << "apply" << patchPath << installPath);
-        process.setWorkingDirectory(installPath);
-
-        qDebug() << "Running patch tool:" << patchTool << "apply" << patchPath << installPath;
-
-        process.start();
-
-        // Wait for process to finish (with timeout)
-        if (!process.waitForFinished(60000)) { // 60 second timeout
-            process.kill();
-            qWarning() << "Patch tool timed out";
-            QMetaObject::invokeMethod(this, "onPatchApplyFinished",
-                                      Qt::QueuedConnection,
-                                      Q_ARG(bool, false),
-                                      Q_ARG(QString, "Patch application timed out"));
-            return;
-        }
-
-        bool success = (process.exitCode() == 0);
-        QString output = QString::fromUtf8(process.readAllStandardOutput());
-        QString error = QString::fromUtf8(process.readAllStandardError());
-
-        if (!success) {
-            qWarning() << "Patch tool failed:" << error;
-        } else {
-            qDebug() << "Patch output:" << output;
-        }
-
-        QMetaObject::invokeMethod(this, "onPatchApplyFinished",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(bool, success),
-                                  Q_ARG(QString, error));
-    });
-}
-
-QString AutoUpdateChecker::getInstallPath()
-{
-    // Get the installation directory (where DancherLink.exe is located)
-    QString appPath = QCoreApplication::applicationDirPath();
-    return appPath;
-}
-
-QString AutoUpdateChecker::getTempPatchPath()
-{
-    // Store patch in app data directory
-    QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    QDir appDataDir(appDataPath);
-    if (!appDataDir.exists()) {
-        appDataDir.mkpath(".");
-    }
-
-    QString updateDirPath = appDataDir.filePath("updates");
-    QDir updateDir(updateDirPath);
-    if (!updateDir.exists()) {
-        updateDir.mkpath(".");
-    }
-
-    // Generate unique patch filename
-    QString patchName = QString("patch_%1.patch").arg(QDateTime::currentMSecsSinceEpoch());
-    return updateDir.filePath(patchName);
-}
-
-QString AutoUpdateChecker::getPatchToolPath()
-{
-    // Patch tool is located in the same directory as the main executable
-    QString appPath = QCoreApplication::applicationDirPath();
-#ifdef Q_OS_WIN32
-    return QDir(appPath).filePath("DancherLink.Patcher.exe");
-#else
-    return QDir(appPath).filePath("dancherlink-patcher");
-#endif
 }

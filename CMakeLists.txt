@@ -89,9 +89,6 @@ endif()
 
 add_subdirectory(app)
 
-# Add patcher tool for incremental updates
-add_subdirectory(patcher)
-
 # Testing configuration
 # Re-enable BUILD_TESTS for our own tests (was disabled for submodules)
 unset(BUILD_TESTS CACHE)
