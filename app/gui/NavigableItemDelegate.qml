@@ -11,25 +11,33 @@ ItemDelegate {
     // CRITICAL: Use keyboardSelectedIndex instead of currentItem to avoid
     // GridView's automatic currentIndex behavior when using mouse
     highlighted: false
-    property bool customHighlighted: grid.keyboardSelectedIndex === cardIndex
+    property bool customHighlighted: grid && grid.keyboardSelectedIndex === cardIndex
 
     // CRITICAL: Update keyboardSelectedIndex only on keyboard navigation
     // This ensures highlighted state is only true when using keyboard/gamepad
     Keys.onLeftPressed: {
-        grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
-        grid.moveCurrentIndexLeft()
+        if (grid && grid.count > 0) {
+            grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
+            grid.moveCurrentIndexLeft()
+        }
     }
     Keys.onRightPressed: {
-        grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
-        grid.moveCurrentIndexRight()
+        if (grid && grid.count > 0) {
+            grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
+            grid.moveCurrentIndexRight()
+        }
     }
     Keys.onDownPressed: {
-        grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
-        grid.moveCurrentIndexDown()
+        if (grid && grid.count > 0) {
+            grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
+            grid.moveCurrentIndexDown()
+        }
     }
     Keys.onUpPressed: {
-        grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
-        grid.moveCurrentIndexUp()
+        if (grid && grid.count > 0) {
+            grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
+            grid.moveCurrentIndexUp()
+        }
     }
     Keys.onReturnPressed: {
         clicked()

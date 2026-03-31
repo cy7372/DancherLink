@@ -30,9 +30,6 @@ CenteredGridView {
     property int keyboardSelectedIndex: -1
 
     // DEBUG: Track GridView behavior
-    onCurrentIndexChanged: {
-        console.log("[PcView] GridView currentIndex changed:", currentIndex, "keyboardSelectedIndex:", keyboardSelectedIndex)
-    }
     onContentYChanged: {
         console.log("[PcView] GridView contentY changed:", contentY)
     }
