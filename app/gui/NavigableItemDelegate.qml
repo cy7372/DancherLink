@@ -102,13 +102,15 @@ ItemDelegate {
         }
     }
 
-    // CRITICAL: Sync hover state when delegate becomes visible
-    // This handles the case where view switches back and mouse is still over the card
+    // CRITICAL: Refresh hover state when view becomes visible
+    // Toggle hoverEnabled to force MouseArea to re-detect mouse position
     onVisibleChanged: {
         if (visible) {
-            // Force sync hover state with current mouse position
-            delegateRoot.isHovered = hoverMouseArea.containsMouse
-            delegateRoot.scale = hoverMouseArea.containsMouse ? 1.03 : 1.0
+            // Use Qt.callLater to ensure layout is complete before toggling
+            Qt.callLater(function() {
+                hoverMouseArea.hoverEnabled = false
+                hoverMouseArea.hoverEnabled = true
+            })
         }
     }
 }
