@@ -84,3 +84,20 @@
   - 明确区分鼠标 hover 状态和键盘选择状态
 
 ---
+
+### 2026-03-31 - MSI 更新安装卡住
+- **症状**: 自动更新时 MSI 安装程序卡住，无法完成更新
+- **根本原因**:
+  - `updater.bat` 中使用 `msiexec /update` 参数来安装 MSI 文件
+  - `/update` 参数是专门用于应用 MSP 补丁文件的，不是用于安装 MSI 包
+  - Windows Installer 尝试将 MSI 作为补丁处理，导致进入错误状态并卡住
+- **解决方案**:
+  - 将 `msiexec /update` 改为 `msiexec /i`
+  - `/i` 是 MSI 安装和升级的正确参数
+- **涉及文件**:
+  - `app/updater.bat` - 第 26 行
+- **预防**:
+  - 记住：`/i` 用于安装 MSI，`/update` 用于应用 MSP 补丁
+  - 更新日志 `%TEMP%\DancherLink_Update.log` 可以帮助诊断安装问题
+
+---
