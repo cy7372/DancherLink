@@ -12,7 +12,7 @@ ItemDelegate {
     // Local hover state - only true when mouse is over the card
     property bool isHovered: false
 
-    // Disable built-in hover behavior - delegates define their own hover detection
+    // Disable built-in hover behavior
     hoverEnabled: false
 
     // CRITICAL: Use keyboardSelectedIndex instead of currentItem to avoid
@@ -78,24 +78,44 @@ ItemDelegate {
         }
     }
 
-    // Hover detection MouseArea - MUST be declared last to be on top
+    // Timer to check hover state after component is fully initialized
+    // This solves the "hover not showing on page enter" issue
+    Timer {
+        id: hoverCheckTimer
+        interval: 50  // Wait 50ms for layout to complete
+        running: false
+        repeat: false
+        onTriggered: {
+            // Force Qt to re-evaluate containsMouse by toggling hoverEnabled briefly
+            hoverMouseArea.hoverEnabled = false
+            hoverMouseArea.hoverEnabled = true
+            // Check containsMouse after toggle
+            if (hoverMouseArea.containsMouse) {
+                delegateRoot.isHovered = true
+                delegateRoot.scale = 1.03
+            }
+        }
+    }
+
+    // Hover detection MouseArea
     MouseArea {
         id: hoverMouseArea
-        parent: delegateRoot
-        x: 0
-        y: 0
-        width: delegateRoot.width
-        height: delegateRoot.height
+        anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.NoButton
-        // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
-        onPressed: function(mouse) { mouse.accepted = true }
-        onReleased: function(mouse) { mouse.accepted = true }
-        onPositionChanged: function(mouse) { mouse.accepted = true }
-        onWheel: function(wheel) { wheel.accepted = true }
         propagateComposedEvents: false
 
-        // Use onEntered/onExited for reliable hover detection
+        // Accept all mouse events to prevent parent from intercepting
+        onPressed: function(mouse) { mouse.accepted = true }
+        onReleased: function(mouse) { mouse.accepted = true }
+        onPositionChanged: function(mouse) {
+            mouse.accepted = true
+            // Real-time hover update based on actual position
+            delegateRoot.isHovered = true
+            delegateRoot.scale = 1.03
+        }
+        onWheel: function(wheel) { wheel.accepted = true }
+
         onEntered: {
             delegateRoot.isHovered = true
             delegateRoot.scale = 1.03
@@ -106,31 +126,16 @@ ItemDelegate {
         }
 
         onContainsMouseChanged: {
-            // Fallback: sync state if containsMouse changes without entered/exited signal
-            // This can happen when hoverEnabled is toggled
             delegateRoot.isHovered = containsMouse
             delegateRoot.scale = containsMouse ? 1.03 : 1.0
         }
     }
 
-    // CRITICAL: Refresh hover state when view becomes visible
-    // When a page is first shown, the mouse may already be over a card
-    // but MouseArea hasn't detected it yet. We need to force a check.
+    // FUNDAMENTAL FIX: Check hover state when page becomes visible
+    // This handles the case where mouse is already over the card when page loads
     onVisibleChanged: {
         if (visible) {
-            // Use double Qt.callLater to ensure Qt has time to update containsMouse
-            Qt.callLater(function() {
-                hoverMouseArea.hoverEnabled = false
-                hoverMouseArea.hoverEnabled = true
-                // CRITICAL: Need another Qt.callLater to check containsMouse
-                // because Qt needs a full event loop cycle to update the mouse state
-                Qt.callLater(function() {
-                    if (hoverMouseArea.containsMouse && !delegateRoot.isHovered) {
-                        delegateRoot.isHovered = true
-                        delegateRoot.scale = 1.03
-                    }
-                })
-            })
+            hoverCheckTimer.start()
         }
     }
 }
