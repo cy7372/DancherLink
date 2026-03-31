@@ -17,7 +17,12 @@
                   DowngradeErrorMessage="A newer version of [ProductName] is already installed."
                   Schedule="afterInstallInitialize"
                   IgnoreRemoveFailure="yes"
-                  AllowDowngrades="no" />
+                  AllowDowngrades="no"
+                  MigrateFeatures="yes" />
+
+    <!-- Optimize file copy during upgrades: only replace files that changed -->
+    <Property Id="REINSTALLMODE" Value="emus" />
+    <Property Id="REINSTALL" Value="ALL" />
     <MediaTemplate CompressionLevel="high" EmbedCab="yes" />
 
     <!-- Optimize install speed: reduce UI updates and disable unnecessary features -->
