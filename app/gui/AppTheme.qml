@@ -54,7 +54,7 @@ QtObject {
     // ============================================
     // Animation Durations (ms)
     // ============================================
-    readonly property int animationDurationFast: 100
+    readonly property int animationDurationFast: 80
     readonly property int animationDurationNormal: 200
 
     // ============================================

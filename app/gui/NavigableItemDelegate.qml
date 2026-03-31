@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
+import QtGraphicalEffects 1.15
 
 import "."
 
@@ -19,6 +20,31 @@ ItemDelegate {
     // GridView's automatic currentIndex behavior when using mouse
     highlighted: false
     property bool customHighlighted: grid && grid.keyboardSelectedIndex === cardIndex
+
+    // Scale and shadow animations for hover effect
+    scale: 1.0
+    Behavior on scale {
+        NumberAnimation {
+            duration: AppTheme.animationDurationFast
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    // Shadow offset for floating effect
+    property real shadowOffset: 4
+    property real shadowRadius: 16
+    Behavior on shadowOffset {
+        NumberAnimation {
+            duration: AppTheme.animationDurationFast
+            easing.type: Easing.OutCubic
+        }
+    }
+    Behavior on shadowRadius {
+        NumberAnimation {
+            duration: AppTheme.animationDurationFast
+            easing.type: Easing.OutCubic
+        }
+    }
 
     // CRITICAL: Update keyboardSelectedIndex only on keyboard navigation
     Keys.onLeftPressed: {
@@ -59,11 +85,25 @@ ItemDelegate {
         height: delegateRoot.height
         // Use isHovered for hover state, customHighlighted for keyboard/gamepad focus
         color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
-        border.color: "transparent"
-        border.width: 0
         radius: AppTheme.borderRadius
 
-        Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
+        // DropShadow for floating effect
+        layer.enabled: true
+        layer.effect: DropShadow {
+            horizontalOffset: 0
+            verticalOffset: delegateRoot.shadowOffset
+            radius: delegateRoot.shadowRadius
+            samples: delegateRoot.shadowRadius * 2
+            color: "#40000000"  // 25% transparent black
+            cached: true
+        }
+
+        Behavior on color {
+            ColorAnimation {
+                duration: AppTheme.animationDurationFast
+                easing.type: Easing.OutCubic
+            }
+        }
     }
 
     // Hover detection MouseArea - MUST be declared last to be on top
@@ -85,6 +125,16 @@ ItemDelegate {
 
         onContainsMouseChanged: {
             delegateRoot.isHovered = containsMouse
+            // Scale and shadow effect on hover - creates floating sensation
+            if (containsMouse) {
+                delegateRoot.scale = 1.03
+                delegateRoot.shadowOffset = 8
+                delegateRoot.shadowRadius = 24
+            } else {
+                delegateRoot.scale = 1.0
+                delegateRoot.shadowOffset = 4
+                delegateRoot.shadowRadius = 16
+            }
         }
     }
 }
