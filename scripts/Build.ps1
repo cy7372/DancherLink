@@ -104,10 +104,11 @@ if ($Type -eq "beta") {
 
 # Get paths (this also cleans directories if not incremental)
 $Paths = Get-BuildPaths -RootDir $RootDir -Arch $Arch -BuildType $BuildTypeParam -Incremental:$Incremental
-$BuildFolder = $Paths.BuildFolder
-$DeployFolder = $Paths.DeployFolder
-$InstallerFolder = $Paths.InstallerFolder
-$SymbolsFolder = $Paths.SymbolsFolder
+$CacheFolder = $Paths.CacheFolder      # CMake intermediate files (.obj, etc.)
+$OutFolder = $Paths.OutFolder          # Final output directory
+$DeployFolder = $Paths.DeployFolder    # Deployed app (exe + DLLs)
+$InstallerFolder = $Paths.InstallerFolder  # MSI output (same as OutFolder)
+$SymbolsFolder = $Paths.SymbolsFolder  # PDB files
 $LogDir = $Paths.LogDir
 $ReleaseFolder = $Paths.ReleaseFolder
 
@@ -134,7 +135,7 @@ try {
     }
 
     $BuildResult = Invoke-NativeBuild `
-        -BuildFolder $BuildFolder `
+        -CacheFolder $CacheFolder `
         -RootDir $RootDir `
         -Arch $Arch `
         -BuildType $BuildTypeParam `
@@ -149,17 +150,22 @@ try {
 
     # Verify build output
     Write-Host "[$BuildType Build] Verifying build output..." -ForegroundColor Green
-    $ExePath = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
+    $ExePath = Find-Executable -SearchPaths @("$CacheFolder\bin", "$CacheFolder\app") -Filter "DancherLink.exe"
     if (-not $ExePath) {
         throw "DancherLink.exe not found in build output!"
     }
     Write-Host "[$BuildType Build] Build output verified: $($ExePath.FullName)" -ForegroundColor Green
 
     # Save PDBs
-    Copy-Symbols -BuildFolder $BuildFolder -SymbolsFolder $SymbolsFolder -Arch $Arch -RootDir $RootDir
+    Copy-Symbols -CacheFolder $CacheFolder -SymbolsFolder $SymbolsFolder -Arch $Arch -RootDir $RootDir
+
+    # Ensure deploy folder exists
+    if (-not (Test-Path $DeployFolder)) {
+        New-Item -ItemType Directory -Path $DeployFolder -Force | Out-Null
+    }
 
     # Copy dependencies
-    Copy-Dependencies -DeployFolder $DeployFolder -Arch $Arch -RootDir $RootDir -BuildFolder $BuildFolder
+    Copy-Dependencies -DeployFolder $DeployFolder -Arch $Arch -RootDir $RootDir -CacheFolder $CacheFolder
 
     # Deploy Qt (unless skipped)
     if (-not $NoDeploy) {
@@ -171,7 +177,7 @@ try {
     }
 
     # Copy final binary to deploy folder BEFORE building MSI
-    $FinalExe = Find-Executable -SearchPaths @("$BuildFolder\bin", "$BuildFolder\app") -Filter "DancherLink.exe"
+    $FinalExe = Find-Executable -SearchPaths @("$CacheFolder\bin", "$CacheFolder\app") -Filter "DancherLink.exe"
     if ($FinalExe) {
         Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
         Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green

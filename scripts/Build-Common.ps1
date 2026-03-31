@@ -72,25 +72,30 @@ function Get-BuildPaths {
     )
 
     $isBeta = $BuildType -eq "beta"
-    $betaSuffix = if ($isBeta) { "-beta" } else { "" }
+    $typeFolder = if ($isBeta) { "beta" } else { "release" }
 
     # Final release output directory (both Release and Beta use the same folder)
     $ReleaseBase = "C:\Users\CyYu\Release\DancherLink"
     $ReleaseFolder = $ReleaseBase
 
+    # New elegant structure:
+    # build/cache/beta or cache/release - CMake intermediate files
+    # build/out/beta or out/release - Final output (app + MSI)
     $paths = @{
-        BuildRoot = "$RootDir\build"
-        BuildFolder = "$RootDir\build\build-$Arch$betaSuffix-release"
-        DeployFolder = "$RootDir\build\deploy-$Arch$betaSuffix-release"
-        InstallerFolder = "$RootDir\build\installer-$Arch$betaSuffix-release"
-        SymbolsFolder = "$RootDir\symbols-$Arch$betaSuffix-release"
-        LogDir = "$RootDir\build\logs"
+        BuildRoot     = "$RootDir\build"
+        CacheFolder   = "$RootDir\build\cache\$typeFolder"      # CMake cache (.obj, .exe temp)
+        OutFolder     = "$RootDir\build\out\$typeFolder"        # Final output directory
+        DeployFolder  = "$RootDir\build\out\$typeFolder\app"    # Deployed app (exe + DLLs)
+        InstallerFolder = "$RootDir\build\out\$typeFolder"      # MSI goes here directly
+        SymbolsFolder = "$RootDir\build\symbols\$typeFolder"    # PDB files
+        LogDir        = "$RootDir\build\logs"
         ReleaseFolder = $ReleaseFolder
     }
 
     # Clean only if not incremental build
     if (-not $Incremental) {
-        foreach ($key in @('DeployFolder', 'BuildFolder', 'InstallerFolder', 'SymbolsFolder')) {
+        # Clean cache, out, and symbols folders for fresh build
+        foreach ($key in @('CacheFolder', 'OutFolder', 'SymbolsFolder')) {
             if (Test-Path $paths[$key]) {
                 Remove-Item -Recurse -Force $paths[$key]
             }
@@ -102,9 +107,9 @@ function Get-BuildPaths {
         }
         Write-Host "Output directories cleaned (full build)" -ForegroundColor Green
     } else {
-        Write-Host "Incremental build (preserving build directory)" -ForegroundColor Yellow
-        # Only ensure directories exist
-        foreach ($key in @('DeployFolder', 'InstallerFolder', 'SymbolsFolder')) {
+        Write-Host "Incremental build (preserving cache)" -ForegroundColor Yellow
+        # Ensure all directories exist
+        foreach ($key in @('CacheFolder', 'OutFolder', 'DeployFolder', 'SymbolsFolder')) {
             if (-not (Test-Path $paths[$key])) {
                 New-Item -ItemType Directory -Path $paths[$key] -Force | Out-Null
             }
@@ -160,7 +165,7 @@ function Generate-Translations {
 
 function Invoke-NativeBuild {
     param(
-        [string]$BuildFolder,
+        [string]$CacheFolder,
         [string]$RootDir,
         [string]$Arch,
         [string]$BuildType,
@@ -199,7 +204,7 @@ echo Setting up Qt path...
 set PATH=$($BuildConfig.QtPath);%PATH%
 set Qt6_DIR=$($BuildConfig.QtCMakeDir)
 
-cd /d "$BuildFolder"
+cd /d "$CacheFolder"
 "@
 
     if (-not $SkipConfigure) {
@@ -207,7 +212,7 @@ cd /d "$BuildFolder"
 
 echo Running cmake configure...
 del /q CMakeCache.txt
-del /q "%~dp0..\..\app\CMakeFiles\DancherLink.dir\flags.make"
+del /q "%~dp0..\..\..\app\CMakeFiles\DancherLink.dir\flags.make"
 cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs$VersionArg -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
 if %ERRORLEVEL% neq 0 (
     echo CMake configuration FAILED
@@ -221,7 +226,7 @@ echo CMake configuration SUCCESS
 
 echo Forcing version update (deleting CMakeCache.txt)...
 del /q CMakeCache.txt
-del /q "%~dp0..\..\app\CMakeFiles\DancherLink.dir\flags.make"
+del /q "%~dp0..\..\..\app\CMakeFiles\DancherLink.dir\flags.make"
 "@
     }
 
@@ -244,7 +249,7 @@ if %ERRORLEVEL% neq 0 (
 echo Build SUCCESS
 "@
 
-    $BuildBatch = "$BuildFolder\do-build.bat"
+    $BuildBatch = "$CacheFolder\do-build.bat"
     Set-Content -Path $BuildBatch -Value $BatchContent -Encoding ASCII
 
     Write-Host "Running build in native cmd.exe with Ninja..." -ForegroundColor Green
@@ -285,7 +290,7 @@ function Find-Executable {
 
 function Copy-Symbols {
     param(
-        [string]$BuildFolder,
+        [string]$CacheFolder,
         [string]$SymbolsFolder,
         [string]$Arch,
         [string]$RootDir
@@ -293,7 +298,7 @@ function Copy-Symbols {
 
     Write-Host "Saving PDBs..." -ForegroundColor Green
     $count = 0
-    Get-ChildItem -Recurse -Filter "*.pdb" -Path $BuildFolder | ForEach-Object {
+    Get-ChildItem -Recurse -Filter "*.pdb" -Path $CacheFolder | ForEach-Object {
         Copy-Item $_.FullName "$SymbolsFolder\" -Force
         $count++
     }
@@ -309,7 +314,7 @@ function Copy-Dependencies {
         [string]$DeployFolder,
         [string]$Arch,
         [string]$RootDir,
-        [string]$BuildFolder
+        [string]$CacheFolder
     )
 
     Write-Host "Copying dependencies..." -ForegroundColor Green
@@ -320,7 +325,7 @@ function Copy-Dependencies {
     }
     Write-Host "  Copied $dllCount DLL files" -ForegroundColor Gray
 
-    $MoonlightDll = Get-ChildItem -Recurse -Filter "moonlight-common-c.dll" -Path $BuildFolder | Select-Object -First 1
+    $MoonlightDll = Get-ChildItem -Recurse -Filter "moonlight-common-c.dll" -Path $CacheFolder | Select-Object -First 1
     if ($MoonlightDll) {
         Copy-Item $MoonlightDll.FullName "$DeployFolder\" -Force
         Write-Host "  Copied moonlight-common-c.dll" -ForegroundColor Gray

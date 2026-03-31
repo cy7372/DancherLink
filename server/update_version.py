@@ -33,11 +33,8 @@ def main():
     # Paths
     server_dir = source_root / "server"
     build_dir = source_root / "build"
-    # Build folder path depends on build type
-    if build_type == "beta":
-        build_folder = build_dir / f"build-{build_arch}-beta-{config}"
-    else:
-        build_folder = build_dir / f"build-{build_arch}-{config}"
+    # New elegant structure: build/out/{beta|release}/
+    out_folder = build_dir / f"out/{build_type}"
 
     # Both release and beta use updates.json
     updates_json = server_dir / "updates.json"
@@ -47,21 +44,14 @@ def main():
     print(f"Config: {config}")
     print(f"Server dir: {server_dir}")
     print(f"Build dir: {build_dir}")
+    print(f"Out folder: {out_folder}")
 
     # Ensure server directory exists
     server_dir.mkdir(parents=True, exist_ok=True)
 
-    # Find the MSI file from installer folder
-    # Path format matches Get-BuildPaths in Build-Common.ps1:
-    #   build/installer-{arch}{-beta}-release
-    # Note: The path always ends with '-release' (lowercase), not the config parameter
-    # MSI file in installer folder does NOT have -beta suffix (added later when copying to server)
-    beta_suffix_path = "-beta" if build_type == "beta" else ""
-    installer_folder = build_dir / f"installer-{build_arch}{beta_suffix_path}-release"
-
-    # MSI file name in installer folder does NOT have -beta suffix
-    # e.g., DancherLink-x86_64-1.0.11.176.msi (both release and beta)
-    msi_file = installer_folder / f"DancherLink-{arch}-{version}.msi"
+    # Find the MSI file from out folder
+    # New structure: build/out/{beta|release}/DancherLink-{arch}-{version}.msi
+    msi_file = out_folder / f"DancherLink-{arch}-{version}.msi"
 
     if not msi_file.exists():
         print(f"Error: MSI not found: {msi_file}")
