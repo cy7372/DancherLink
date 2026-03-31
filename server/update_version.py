@@ -67,6 +67,15 @@ def main():
     shutil.copy2(msi_file, dest_msi)
     print(f"Copied: {dest_msi}")
 
+    # Check for patch file
+    patch_file = out_folder / f"DancherLink-{arch}-{version}.patch"
+    patch_url = None
+    if patch_file.exists():
+        dest_patch = server_dir / f"DancherLink-{arch}-{version}{msi_suffix}.patch"
+        shutil.copy2(patch_file, dest_patch)
+        print(f"Copied patch: {dest_patch}")
+        patch_url = f"DancherLink-{arch}-{version}{msi_suffix}.patch"
+
     # browser_url - relative path (no server/ prefix since updates.json is already in server dir)
     browser_url = f"DancherLink-{arch}-{version}{msi_suffix}.msi"
 
@@ -84,6 +93,16 @@ def main():
 
     if is_beta:
         manifest_entry["isBeta"] = True
+
+    # Add patch URL if available (for incremental updates)
+    if patch_url:
+        manifest_entry["patch_url"] = patch_url
+        # Also include previous version for patch base detection
+        if manifest:
+            for prev_entry in manifest:
+                if prev_entry.get("arch") == arch and prev_entry.get("isBeta") == is_beta:
+                    manifest_entry["base_version"] = prev_entry.get("version")
+                    break
 
     # Read existing manifest and merge
     manifest = []

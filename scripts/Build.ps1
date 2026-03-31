@@ -195,6 +195,10 @@ try {
             -WxsFile $WixFile `
             -Extensions $BuildConfig.WixExtensions
 
+        # Generate differential patch (for incremental updates)
+        Write-Host "[$BuildType Build] Generating differential patch..." -ForegroundColor Green
+        Generate-Patch -RootDir $RootDir -DeployFolder $DeployFolder -Version $Version -BuildType $BuildTypeParam -Arch $Arch
+
         # Update manifest
         Update-Manifest -RootDir $RootDir -Version $Version -Arch $Arch -BuildType $BuildTypeParam
     } else {

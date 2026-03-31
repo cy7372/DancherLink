@@ -578,3 +578,44 @@ function Write-BuildSuccess {
     }
     Write-Host "========================================" -ForegroundColor Green
 }
+
+function Generate-Patch {
+    param(
+        [string]$RootDir,
+        [string]$DeployFolder,
+        [string]$Version,
+        [string]$BuildType,
+        [string]$Arch
+    )
+
+    # Find previous version directory
+    $previousVersionDir = "$RootDir\build\out\$BuildType-previous\app"
+    if (-not (Test-Path $previousVersionDir)) {
+        Write-Host "  No previous version found, skipping patch generation" -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "  Creating patch from previous version..." -ForegroundColor Green
+
+    # Convert paths for Python script
+    $oldDir = $previousVersionDir
+    $newDir = $DeployFolder
+    $patchOutput = "$RootDir\server\DancherLink-$Arch-$Version.patch"
+
+    # Run patch generator
+    $pythonScript = "$RootDir\scripts\create_patch.py"
+    $pythonArgs = @($oldDir, $newDir, $patchOutput)
+
+    try {
+        Write-Host "  Running: python $pythonScript $oldDir $newDir $patchOutput"
+        $result = & python $pythonScript @pythonArgs 2>&1 | Out-String
+        Write-Host $result
+
+        if (Test-Path $patchOutput) {
+            $patchSize = (Get-Item $patchOutput).Length
+            Write-Host "  Patch created: $patchOutput ($([math]::Round($patchSize / 1MB, 2)) MB)" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  Patch generation failed: $_" -ForegroundColor Yellow
+    }
+}
