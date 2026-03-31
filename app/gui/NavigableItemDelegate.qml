@@ -101,4 +101,14 @@ ItemDelegate {
             delegateRoot.scale = containsMouse ? 1.03 : 1.0
         }
     }
+
+    // CRITICAL: Sync hover state when delegate becomes visible
+    // This handles the case where view switches back and mouse is still over the card
+    onVisibleChanged: {
+        if (visible) {
+            // Force sync hover state with current mouse position
+            delegateRoot.isHovered = hoverMouseArea.containsMouse
+            delegateRoot.scale = hoverMouseArea.containsMouse ? 1.03 : 1.0
+        }
+    }
 }
