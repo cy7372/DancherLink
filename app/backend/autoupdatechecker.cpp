@@ -528,6 +528,11 @@ void AutoUpdateChecker::onUpdateManifestReceived(const QByteArray& data, bool is
                     if (hasPatch && !patchUrl.isEmpty()) {
                         resolvedPatchUrl = m_ManifestUrl.resolved(QUrl(patchUrl));
                         qDebug() << "Patch available:" << resolvedPatchUrl.toString();
+                        qDebug() << "Patch URL from JSON:" << patchUrl;
+                        qDebug() << "Manifest URL:" << m_ManifestUrl.toString();
+                    } else {
+                        qDebug() << "No patch_url found in manifest entry";
+                        qDebug() << "Manifest entry keys:" << updateObj.keys();
                     }
 
                     // Store info for patch download
@@ -536,9 +541,11 @@ void AutoUpdateChecker::onUpdateManifestReceived(const QByteArray& data, bool is
 
                     // Emit patchAvailable if patch exists, otherwise fall back to full update
                     if (hasPatch && !patchUrl.isEmpty()) {
+                        qDebug() << "Emitting patchAvailable signal";
                         emit patchAvailable(latestVersion, resolvedPatchUrl.toString(),
                                            resolvedUrl.toString(), isManual);
                     } else {
+                        qDebug() << "Emitting updateAvailable signal (full update)";
                         emit updateAvailable(latestVersion, resolvedUrl.toString(), isManual);
                     }
                     return;
