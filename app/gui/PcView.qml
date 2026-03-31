@@ -30,12 +30,7 @@ CenteredGridView {
     property int keyboardSelectedIndex: -1
 
     // DEBUG: Track GridView behavior
-    onContentYChanged: {
-        console.log("[PcView] GridView contentY changed:", contentY)
-    }
-    onFlickingChanged: {
-        console.log("[PcView] GridView flicking:", flicking)
-    }
+    // Debug logs removed for cleaner output
 
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
@@ -169,42 +164,14 @@ CenteredGridView {
 
     delegate: NavigableItemDelegate {
         id: delegateRoot
-        // CRITICAL: Match cellWidth/cellHeight from GridView (310x330)
-        // Using explicit values here to ensure MouseArea has correct bounds
         width: pcGrid.cellWidth
         height: pcGrid.cellHeight
         grid: pcGrid
-        cardIndex: index  // CRITICAL: Pass index to NavigableItemDelegate for keyboardSelectedIndex check
+        cardIndex: index
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        // Local hover state - only true when mouse is over the card
-        property bool isHovered: false
-
-        onIsHoveredChanged: {
-            console.log("[PcView] delegateRoot.isHovered changed to:", isHovered, "customHighlighted:", customHighlighted,
-                        "delegateSize:", width + "x" + height, "cellSize:", pcGrid.cellWidth + "x" + pcGrid.cellHeight)
-        }
-
-        background: Rectangle {
-            id: delegateBackground
-            // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
-            width: delegateRoot.width
-            height: delegateRoot.height
-            // Use isHovered for hover state, customHighlighted is for keyboard/gamepad focus
-            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
-            border.color: "transparent"
-            border.width: 0
-            radius: AppTheme.borderRadius
-
-            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
-
-            onColorChanged: {
-                console.log("[PcView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "customHighlighted:", delegateRoot.customHighlighted)
-            }
-        }
-
-        // Image content
+        // PC-specific content
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
@@ -461,42 +428,6 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 pcContextMenu.open()
-            }
-        }
-
-        // Hover detection MouseArea - MUST be declared last to be on top
-        MouseArea {
-            id: hoverMouseArea
-            // CRITICAL: Use explicit x/y/width/height instead of anchors.fill
-            // anchors.fill can cause issues with GridView delegate recycling
-            parent: delegateRoot
-            x: 0
-            y: 0
-            // Bind to delegateRoot size explicitly
-            width: delegateRoot.width
-            height: delegateRoot.height
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
-            onPressed: function(mouse) { mouse.accepted = true }
-            onReleased: function(mouse) { mouse.accepted = true }
-            onPositionChanged: function(mouse) { mouse.accepted = true }
-            onWheel: function(wheel) { wheel.accepted = true }
-            propagateComposedEvents: false
-
-            onContainsMouseChanged: {
-                console.log("[PcView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
-                            "mouseAreaSize:", width + "x" + height,
-                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height,
-                            "mouseAreaPos:", x + "," + y)
-                delegateRoot.isHovered = containsMouse
-            }
-
-            onEntered: {
-                console.log("[PcView] hover ENTERED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
-            }
-            onExited: {
-                console.log("[PcView] hover EXITED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
             }
         }
 

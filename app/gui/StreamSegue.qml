@@ -34,7 +34,6 @@ Item {
         // This ensures we can restore to the correct state after streaming ends
         if (Window.window) {
             previousVisibility = Window.window.visibility
-            console.log("StreamSegue: onRestartRequested - saved previousVisibility =", previousVisibility)
         }
 
         // Reset the UI state to show we are working
@@ -140,13 +139,8 @@ Item {
 
     function restoreWindowState() {
         if (!Window.window) {
-            console.log("StreamSegue: restoreWindowState() called but Window.window is null")
             return
         }
-
-        console.log("StreamSegue: restoreWindowState() called, previousVisibility =", previousVisibility,
-                    ", current window.visibility =", Window.window.visibility,
-                    ", uiDisplayMode =", StreamingPreferences.uiDisplayMode)
 
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
@@ -170,8 +164,6 @@ Item {
                 targetVisibility = Window.FullScreen
             }
 
-            console.log("StreamSegue: Setting targetVisibility =", targetVisibility)
-
             // Apply the window state immediately before popping the StackView.
             // This ensures the window state is applied in the correct order
             // and avoids conflicts with Qt's window management after pop().
@@ -182,7 +174,6 @@ Item {
             } else {
                 Window.window.showNormal()
             }
-            console.log("StreamSegue: Window state applied, current visibility =", Window.window.visibility)
         }
     }
 
@@ -245,7 +236,7 @@ Item {
             if (session && session.hostReady) session.hostReady.disconnect(hostReady)
             if (session && session.readyForDeletion) session.readyForDeletion.disconnect(sessionReadyForDeletion)
         } catch (e) {
-            console.log("StreamSegue: Error disconnecting signals (session may be destroyed):", e)
+            // Session may be destroyed already
         }
     }
 

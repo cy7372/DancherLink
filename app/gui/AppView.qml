@@ -121,32 +121,6 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
-        // Local hover state - only true when mouse is over the card
-        property bool isHovered: false
-
-        onIsHoveredChanged: {
-            console.log("[AppView] delegateRoot.isHovered changed to:", isHovered, "customHighlighted:", customHighlighted,
-                        "delegateSize:", width + "x" + height, "cellSize:", appGrid.cellWidth + "x" + appGrid.cellHeight)
-        }
-
-        background: Rectangle {
-            id: delegateBackground
-            // CRITICAL: Use delegateRoot explicitly, not parent (which is the cell container)
-            width: delegateRoot.width
-            height: delegateRoot.height
-            // Use isHovered for hover state, customHighlighted is for keyboard/gamepad focus
-            color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
-            border.color: "transparent"
-            border.width: 0
-            radius: AppTheme.borderRadius
-
-            Behavior on color { ColorAnimation { duration: AppTheme.animationDurationFast } }
-
-            onColorChanged: {
-                console.log("[AppView] background color changed to:", color, "isHovered:", delegateRoot.isHovered, "customHighlighted:", delegateRoot.customHighlighted)
-            }
-        }
-
         // Image content
         Image {
             property bool isPlaceholder: false
@@ -331,42 +305,6 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 appContextMenu.open()
-            }
-        }
-
-        // Hover detection MouseArea - MUST be declared last to be on top
-        MouseArea {
-            id: hoverMouseArea
-            // CRITICAL: Use explicit x/y/width/height instead of anchors.fill
-            // anchors.fill can cause issues with GridView delegate recycling
-            parent: delegateRoot
-            x: 0
-            y: 0
-            // Bind to delegateRoot size explicitly
-            width: delegateRoot.width
-            height: delegateRoot.height
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            // CRITICAL: Accept mouse events to prevent GridView/Flickable from intercepting
-            onPressed: function(mouse) { mouse.accepted = true }
-            onReleased: function(mouse) { mouse.accepted = true }
-            onPositionChanged: function(mouse) { mouse.accepted = true }
-            onWheel: function(wheel) { wheel.accepted = true }
-            propagateComposedEvents: false
-
-            onContainsMouseChanged: {
-                console.log("[AppView] hover CONTAINSMOUSE:", containsMouse, "cardIndex:", index,
-                            "mouseAreaSize:", width + "x" + height,
-                            "delegateSize:", delegateRoot.width + "x" + delegateRoot.height,
-                            "mouseAreaPos:", x + "," + y)
-                delegateRoot.isHovered = containsMouse
-            }
-
-            onEntered: {
-                console.log("[AppView] hover ENTERED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
-            }
-            onExited: {
-                console.log("[AppView] hover EXITED - cardIndex:", index, "isHovered:", delegateRoot.isHovered)
             }
         }
 
