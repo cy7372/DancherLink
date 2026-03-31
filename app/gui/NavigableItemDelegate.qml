@@ -106,10 +106,11 @@ ItemDelegate {
             delegateRoot.scale = 1.0
         }
 
-        onContainsMouseChanged: {
-            delegateRoot.isHovered = containsMouse
-            delegateRoot.scale = containsMouse ? 1.03 : 1.0
-        }
+        // onContainsMouseChanged removed - it conflicts with button hover sync
+        // The card's isHovered can be set by:
+        // 1. onEntered/onExited for the card itself
+        // 2. onPositionChanged when mouse moves over card
+        // 3. Child buttons syncing their hover state to parent
     }
 
     // FUNDAMENTAL FIX: Check hover state once when component is created
