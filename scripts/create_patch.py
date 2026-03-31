@@ -270,7 +270,7 @@ def main():
         json.dump(metadata, f, indent=2)
     print(f"\nMetadata saved to: {metadata_path}")
 
-    print("\n✓ Patch generation complete!")
+    print("\n[OK] Patch generation complete!")
 
 
 if __name__ == "__main__":
