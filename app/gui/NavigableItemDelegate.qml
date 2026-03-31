@@ -95,27 +95,41 @@ ItemDelegate {
         onWheel: function(wheel) { wheel.accepted = true }
         propagateComposedEvents: false
 
+        // Use onEntered/onExited for reliable hover detection
+        onEntered: {
+            delegateRoot.isHovered = true
+            delegateRoot.scale = 1.03
+        }
+        onExited: {
+            delegateRoot.isHovered = false
+            delegateRoot.scale = 1.0
+        }
+
         onContainsMouseChanged: {
+            // Fallback: sync state if containsMouse changes without entered/exited signal
+            // This can happen when hoverEnabled is toggled
             delegateRoot.isHovered = containsMouse
-            // Scale effect on hover
             delegateRoot.scale = containsMouse ? 1.03 : 1.0
         }
     }
 
     // CRITICAL: Refresh hover state when view becomes visible
-    // Toggle hoverEnabled to force MouseArea to re-detect mouse position
+    // When a page is first shown, the mouse may already be over a card
+    // but MouseArea hasn't detected it yet. We need to force a check.
     onVisibleChanged: {
         if (visible) {
-            // Use Qt.callLater to ensure layout is complete before toggling
+            // Use double Qt.callLater to ensure Qt has time to update containsMouse
             Qt.callLater(function() {
                 hoverMouseArea.hoverEnabled = false
                 hoverMouseArea.hoverEnabled = true
-                // CRITICAL: After re-enabling, check if mouse is already over the area
-                // This handles the case where mouse was already hovering before component loaded
-                if (hoverMouseArea.containsMouse && !delegateRoot.isHovered) {
-                    delegateRoot.isHovered = true
-                    delegateRoot.scale = 1.03
-                }
+                // CRITICAL: Need another Qt.callLater to check containsMouse
+                // because Qt needs a full event loop cycle to update the mouse state
+                Qt.callLater(function() {
+                    if (hoverMouseArea.containsMouse && !delegateRoot.isHovered) {
+                        delegateRoot.isHovered = true
+                        delegateRoot.scale = 1.03
+                    }
+                })
             })
         }
     }
