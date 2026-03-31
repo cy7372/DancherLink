@@ -23,7 +23,7 @@ if "%ERRORLEVEL%"=="0" (
 )
 
 echo Starting installation...
-msiexec /update "%MSI_PATH%" /quiet /norestart /l*v "%TEMP%\DancherLink_Update.log"
+msiexec /i "%MSI_PATH%" /quiet /norestart /l*v "%TEMP%\DancherLink_Update.log"
 if "%ERRORLEVEL%"=="0" (
     echo Installation completed successfully.
 ) else (
