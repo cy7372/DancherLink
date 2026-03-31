@@ -170,6 +170,7 @@ CenteredGridView {
                     anchors.centerIn: parent
                     implicitWidth: 85
                     implicitHeight: 85
+                    hoverEnabled: true
 
                     icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
                     icon.width: 75
@@ -193,6 +194,7 @@ CenteredGridView {
                     anchors.centerIn: parent
                     implicitWidth: 85
                     implicitHeight: 85
+                    hoverEnabled: true
 
                     icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
                     icon.width: 75

@@ -78,25 +78,6 @@ ItemDelegate {
         }
     }
 
-    // Timer to check hover state after component is fully initialized
-    // This solves the "hover not showing on page enter" issue
-    Timer {
-        id: hoverCheckTimer
-        interval: 50  // Wait 50ms for layout to complete
-        running: false
-        repeat: false
-        onTriggered: {
-            // Force Qt to re-evaluate containsMouse by toggling hoverEnabled briefly
-            hoverMouseArea.hoverEnabled = false
-            hoverMouseArea.hoverEnabled = true
-            // Check containsMouse after toggle
-            if (hoverMouseArea.containsMouse) {
-                delegateRoot.isHovered = true
-                delegateRoot.scale = 1.03
-            }
-        }
-    }
-
     // Hover detection MouseArea
     MouseArea {
         id: hoverMouseArea
@@ -131,11 +112,15 @@ ItemDelegate {
         }
     }
 
-    // FUNDAMENTAL FIX: Check hover state when page becomes visible
+    // FUNDAMENTAL FIX: Check hover state once when component is created
     // This handles the case where mouse is already over the card when page loads
-    onVisibleChanged: {
-        if (visible) {
-            hoverCheckTimer.start()
-        }
+    // Only runs once per component lifetime - no repeated timers
+    Component.onCompleted: {
+        Qt.callLater(function() {
+            if (hoverMouseArea.containsMouse) {
+                delegateRoot.isHovered = true
+                delegateRoot.scale = 1.03
+            }
+        })
     }
 }
