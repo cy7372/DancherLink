@@ -1,7 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
-import QtGraphicalEffects 1.15
 
 import "."
 
@@ -21,25 +20,9 @@ ItemDelegate {
     highlighted: false
     property bool customHighlighted: grid && grid.keyboardSelectedIndex === cardIndex
 
-    // Scale and shadow animations for hover effect
+    // Scale animation for hover effect
     scale: 1.0
     Behavior on scale {
-        NumberAnimation {
-            duration: AppTheme.animationDurationFast
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    // Shadow offset for floating effect
-    property real shadowOffset: 4
-    property real shadowRadius: 16
-    Behavior on shadowOffset {
-        NumberAnimation {
-            duration: AppTheme.animationDurationFast
-            easing.type: Easing.OutCubic
-        }
-    }
-    Behavior on shadowRadius {
         NumberAnimation {
             duration: AppTheme.animationDurationFast
             easing.type: Easing.OutCubic
@@ -87,17 +70,6 @@ ItemDelegate {
         color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
         radius: AppTheme.borderRadius
 
-        // DropShadow for floating effect
-        layer.enabled: true
-        layer.effect: DropShadow {
-            horizontalOffset: 0
-            verticalOffset: delegateRoot.shadowOffset
-            radius: delegateRoot.shadowRadius
-            samples: delegateRoot.shadowRadius * 2
-            color: "#40000000"  // 25% transparent black
-            cached: true
-        }
-
         Behavior on color {
             ColorAnimation {
                 duration: AppTheme.animationDurationFast
@@ -125,16 +97,8 @@ ItemDelegate {
 
         onContainsMouseChanged: {
             delegateRoot.isHovered = containsMouse
-            // Scale and shadow effect on hover - creates floating sensation
-            if (containsMouse) {
-                delegateRoot.scale = 1.03
-                delegateRoot.shadowOffset = 8
-                delegateRoot.shadowRadius = 24
-            } else {
-                delegateRoot.scale = 1.0
-                delegateRoot.shadowOffset = 4
-                delegateRoot.shadowRadius = 16
-            }
+            // Scale effect on hover
+            delegateRoot.scale = containsMouse ? 1.03 : 1.0
         }
     }
 }
