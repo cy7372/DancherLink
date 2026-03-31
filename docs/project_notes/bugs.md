@@ -61,3 +61,26 @@
   - 从 QML 调用的 C++ 方法必须标记为 `Q_INVOKABLE`
 
 ---
+
+### 2026-03-31 - 鼠标悬停时卡片一直显示高亮效果
+- **症状**: 鼠标悬停在 QT 界面任意位置，卡片都显示高亮背景色，看起来像 hover 效果无处不在
+- **根本原因**:
+  - Qt GridView 有内置行为：当用户与任何卡片交互（鼠标点击或悬停）时，GridView 会自动获得焦点并设置 `currentIndex` 指向当前项目
+  - 使用 `grid.currentItem === this` 来判断卡片是否应该高亮时，这个条件会一直为真
+  - 因为 GridView 自动设置 `currentIndex = 0`（第一个卡片），导致第一个卡片的 `highlighted` 始终为 `true`
+  - 背景颜色一直显示高亮色，用户误以为这是 hover 效果
+- **解决方案**:
+  1. 在 GridView 中添加独立的 `keyboardSelectedIndex` 属性（初始值 -1），专门追踪键盘/游戏 pad 选择状态
+  2. 在 NavigableItemDelegate 中使用 `grid.keyboardSelectedIndex === cardIndex` 替代 `grid.currentItem === this`
+  3. 只在键盘方向键按下时更新 `keyboardSelectedIndex`
+  4. 鼠标交互不会更新 `keyboardSelectedIndex`，保持 hover 和高亮状态分离
+- **涉及文件**:
+  - `app/gui/PcView.qml` - 添加 keyboardSelectedIndex 属性
+  - `app/gui/AppView.qml` - 添加 keyboardSelectedIndex 属性
+  - `app/gui/NavigableItemDelegate.qml` - 修改 highlighted 判断逻辑
+- **预防**:
+  - 在 QML GridView 中使用自定义高亮逻辑时，避免依赖 `currentIndex` 或 `currentItem`
+  - 使用独立的属性追踪键盘/游戏 pad 选择状态
+  - 明确区分鼠标 hover 状态和键盘选择状态
+
+---
