@@ -12,10 +12,10 @@
            Version="$(var.Version)"
            Manufacturer="DancherLink Streaming Project"
            UpgradeCode="5c09f94e-f809-4c6a-9b7b-597c99f041fe">
-    <!-- Standard upgrade behavior -->
+    <!-- Upgrade behavior: install new files before removing old ones for smoother upgrade -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="A newer version of [ProductName] is already installed."
-                  Schedule="afterInstallInitialize"
+                  Schedule="beforeInstallInitialize"
                   IgnoreRemoveFailure="yes"
                   AllowDowngrades="no" />
     <!-- High compression for smaller MSI file -->

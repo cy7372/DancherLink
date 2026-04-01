@@ -298,12 +298,43 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
                  // - u: Reinstall user-specific registry entries
                  // - s: Reinstall shortcuts
                  // This optimizes upgrade by only copying changed files
-                 QProcess::startDetached("msiexec.exe", QStringList()
+
+                 // Start msiexec process to monitor it
+                 QProcess *installProcess = new QProcess(this);
+                 installProcess->start("msiexec.exe", QStringList()
                      << "/i" << tempMsiPath
                      << "/quiet"
                      << "/norestart"
                      << "/l*v" << QDir::temp().filePath("DancherLink_Install.log")
                      << "REINSTALLMODE=emus");
+
+                 // Set up timeout monitoring (5 minutes)
+                 QTimer *timeoutTimer = new QTimer(this);
+                 timeoutTimer->setSingleShot(true);
+                 timeoutTimer->setInterval(300000); // 5 minutes
+
+                 // Connect timeout to fallback handling
+                 QObject::connect(timeoutTimer, &QTimer::timeout, [this, tempMsiPath, installProcess]() {
+                     if (installProcess && installProcess->state() == QProcess::Running) {
+                         qWarning() << "MSI installation timeout after 5 minutes, attempting fallback...";
+                         installProcess->kill();
+
+                         // Fallback: try to open MSI directly for user interaction
+                         QProcess::startDetached("msiexec.exe", QStringList()
+                             << "/i" << tempMsiPath << "/passive");
+                     }
+                 });
+
+                 timeoutTimer->start();
+
+                 // Clean up when process finishes
+                 QObject::connect(installProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                     [timeoutTimer, installProcess](int exitCode, QProcess::ExitStatus) {
+                         timeoutTimer->stop();
+                         qDebug() << "MSI installation finished with code:" << exitCode;
+                         installProcess->deleteLater();
+                         timeoutTimer->deleteLater();
+                     });
 
                  // Exit current application - Windows Restart Manager will handle closure
                  QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
