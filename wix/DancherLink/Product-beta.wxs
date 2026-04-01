@@ -22,11 +22,8 @@
     <!-- High compression for smaller MSI file -->
     <MediaTemplate CompressionLevel="high" EmbedCab="yes" />
 
-    <!-- Optimize install speed -->
-    <Property Id="MSIRESTARTMANAGERCONTROL" Value="None" />
+    <!-- Optimize install speed: disable unnecessary features -->
     <Property Id="MSIDISABLELUAREPAIR" Value="1" />
-    <!-- Skip file verification during upgrades for faster installs -->
-    <Property Id="MSIFASTINSTALL" Value="1" />
 
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Beta Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />

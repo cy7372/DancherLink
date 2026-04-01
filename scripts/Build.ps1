@@ -181,13 +181,6 @@ try {
     if ($FinalExe) {
         Copy-Item $FinalExe.FullName "$DeployFolder\" -Force
         Write-Host "[$BuildType Build] Copied DancherLink.exe to deploy folder" -ForegroundColor Green
-
-        # Copy updater script (Windows only)
-        $UpdaterBat = Join-Path $CacheFolder "bin\updater.bat"
-        if (Test-Path $UpdaterBat) {
-            Copy-Item $UpdaterBat "$DeployFolder\" -Force
-            Write-Host "[$BuildType Build] Copied updater.bat to deploy folder" -ForegroundColor Green
-        }
     } else {
         throw "DancherLink.exe not found in build output!"
     }

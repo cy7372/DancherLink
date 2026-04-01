@@ -284,24 +284,21 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
              }
 
              if (isMsi) {
-                 // Use a batch file to wait for app to close, then install
-                 // This prevents file locking issues and provides smoother update experience
-                 QString appPath = QCoreApplication::applicationFilePath();
-                 QString updaterScript = QDir(QCoreApplication::applicationDirPath()).filePath("updater.bat");
-
                  // Copy MSI to temp location for installer
                  QString fileName = QFileInfo(localPath).fileName();
                  QString tempMsiPath = QDir::temp().filePath(fileName);
                  QFile::copy(localPath, tempMsiPath);
 
-                 qDebug() << "Starting updater script:" << updaterScript;
-                 qDebug() << "MSI path:" << tempMsiPath;
-                 qDebug() << "App path:" << appPath;
+                 qDebug() << "Running MSI installer:" << tempMsiPath;
 
-                 // Start the updater script (runs independently)
-                 QProcess::startDetached("cmd.exe", QStringList() << "/c" << updaterScript << tempMsiPath << appPath);
+                 // Windows Installer Restart Manager will automatically:
+                 // 1. Detect that DancherLink.exe is running
+                 // 2. Prompt user to close the app (or close it automatically)
+                 // 3. Complete the installation
+                 // 4. Optionally restart the app
+                 QProcess::startDetached("msiexec.exe", QStringList() << "/i" << tempMsiPath << "/quiet" << "/norestart");
 
-                 // Exit current application immediately
+                 // Exit current application
                  QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
 
                  return true;
