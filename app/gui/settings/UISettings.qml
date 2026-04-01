@@ -129,6 +129,7 @@ SettingsGroupBox {
 
             onActivated: {
                 StreamingPreferences.uiDisplayMode = uiDisplayModeListModel.get(currentIndex).val
+                StreamingPreferences.save()
             }
         }
 

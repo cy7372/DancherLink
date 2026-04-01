@@ -311,6 +311,11 @@ ApplicationWindow {
         SdlGamepadKeyNavigation.notifyWindowFocus(visible && active)
     }
 
+    onClosing: {
+        // Save preferences before closing to ensure settings like uiDisplayMode are preserved
+        StreamingPreferences.save()
+    }
+
     function navigateTo(url, objectType)
     {
         var existingItem = stackView.find(function(item, index) {
