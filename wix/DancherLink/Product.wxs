@@ -5,13 +5,14 @@
 <?define ShortcutDesc = "Stream games and other applications from another PC" ?>
 <?define InstallFolder = "DancherLink Streaming" ?>
 
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <Package Name="$(var.FullName)"
            Language="1033"
            Version="$(var.Version)"
            Manufacturer="DancherLink Streaming Project"
-           UpgradeCode="5c09f94e-f809-4c6a-9b7b-597c99f041fe">
+           UpgradeCode="5c09f94e-f809-4c6a-9b7b-597c99f041fe"
+           Scope="perMachine">
     <!-- Standard upgrade: remove old version first, then install new one -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="A newer version of [ProductName] is already installed."
@@ -29,8 +30,7 @@
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />
 
-    <!-- There's no way to delete a registry key on uninstall but not major upgrade, so
-        we have to roll our own deletion via custom action -->
+    <!-- Custom action to clean up registry key on uninstall (not on upgrade) -->
     <CustomAction Id="DeleteRegistryKey"
                   Directory="ProgramFiles6432Folder"
                   ExeCommand="reg.exe delete &quot;HKCU\Software\DancherLink Streaming Project&quot; /f"
@@ -64,7 +64,7 @@
                      KeyPath="yes" />
     </Component>
 
-    <Component Id="MoonlightDesktopShortcut" Directory="INSTALLFOLDER" Condition="ADDDESKTOPSHORTCUT = 1">
+    <Component Id="MoonlightDesktopShortcut" Directory="INSTALLFOLDER" Condition="ADDDESKTOPSHORTCUT">
       <Shortcut Id="DesktopShortcut"
                 Name="$(var.ShortcutName)"
                 Description="$(var.ShortcutDesc)"
@@ -99,7 +99,7 @@
       <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
-    <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
+    <Feature Id="ProductFeature" Title="$(var.ShortName)" Level="1" ConfigurableDirectory="INSTALLFOLDER">
       <ComponentGroupRef Id="MoonlightDependencies" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />

@@ -51,7 +51,7 @@ $BuildConfig = @{
     UnusedQtStyles = @("Fusion", "Imagine", "Universal", "Windows", "NativeStyle")
 
     # WiX Configuration
-    WixExtensions = @("WixToolset.Util.wixext", "WixToolset.Firewall.wixext")
+    WixExtensions = @("WixToolset.Util.wixext")
 }
 
 # Export config to parent scope

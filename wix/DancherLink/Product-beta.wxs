@@ -5,7 +5,7 @@
 <?define ShortcutDesc = "Stream games and other applications from another PC (Beta)" ?>
 <?define InstallFolder = "DancherLink Beta Streaming" ?>
 
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <Package Name="$(var.FullName)"
            Language="1033"
@@ -30,7 +30,7 @@
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Beta Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />
 
-    <!-- Custom action to clean up registry key on uninstall -->
+    <!-- Custom action to clean up registry key on uninstall (not on upgrade) -->
     <CustomAction Id="DeleteRegistryKey"
                   Directory="INSTALLFOLDER"
                   ExeCommand="reg.exe delete &quot;HKCU\Software\DancherLink Beta Streaming Project&quot; /f"
@@ -66,7 +66,7 @@
     </Component>
 
     <!-- Desktop shortcut component (conditional) -->
-    <Component Id="MoonlightDesktopShortcut" Directory="INSTALLFOLDER" Condition="ADDDESKTOPSHORTCUT = 1">
+    <Component Id="MoonlightDesktopShortcut" Directory="INSTALLFOLDER" Condition="ADDDESKTOPSHORTCUT">
       <Shortcut Id="DesktopShortcut"
                 Name="$(var.ShortcutName)"
                 Description="$(var.ShortcutDesc)"
@@ -99,7 +99,7 @@
       <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
-    <Feature Id="ProductFeature" Title="DancherLink" Level="1" ConfigurableDirectory="INSTALLFOLDER">
+    <Feature Id="ProductFeature" Title="$(var.ShortName)" Level="1" ConfigurableDirectory="INSTALLFOLDER">
       <ComponentGroupRef Id="MoonlightDependencies" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />
