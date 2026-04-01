@@ -2,6 +2,7 @@
 
 #include <QtGlobal>
 #include <QCoreApplication>
+#include <SDL.h>
 
 AudioQualityMonitor* AudioQualityMonitor::instance()
 {
@@ -15,6 +16,10 @@ AudioQualityMonitor* AudioQualityMonitor::instance()
 AudioQualityMonitor::AudioQualityMonitor(QObject* parent)
     : QObject(parent)
 {
+    // Initialize smoothing parameters
+    m_SmoothingParams.windowSize = 5;
+    m_SmoothingParams.alpha = 0.3f;
+    m_SmoothingParams.updateIntervalMs = 500;
 }
 
 void AudioQualityMonitor::start()
@@ -22,6 +27,13 @@ void AudioQualityMonitor::start()
     QWriteLocker locker(&m_StatsLock);
     m_Running = true;
     m_CurrentStats = AudioStats();
+    m_PreviousStats = AudioStats();
+    m_SmoothedLossRate = 0.0f;
+    m_SmoothedRecoveryRate = 0.0f;
+    m_LossRateHistory.clear();
+    m_RecoveryRateHistory.clear();
+    m_LastUpdateTime = 0;
+    m_PreviousQuality = AudioQuality::Excellent;
 }
 
 void AudioQualityMonitor::stop()
@@ -34,38 +46,96 @@ void AudioQualityMonitor::updateStats(quint32 audioPackets, quint32 fecPackets,
                                        quint32 fecRecovered, quint32 fecFailed,
                                        quint32 outOfSequence)
 {
-    QWriteLocker locker(&m_StatsLock);
+    // Collect signal to emit after releasing the lock
+    bool emitUpdate = false;
 
-    if (!m_Running) {
-        return;
-    }
+    {
+        QWriteLocker locker(&m_StatsLock);
 
-    m_CurrentStats.audioPackets = audioPackets;
-    m_CurrentStats.fecPackets = fecPackets;
-    m_CurrentStats.fecRecovered = fecRecovered;
-    m_CurrentStats.fecFailed = fecFailed;
-    m_CurrentStats.outOfSequence = outOfSequence;
+        if (!m_Running) {
+            return;
+        }
 
-    // Calculate packet loss rate
-    // Total expected packets = audio packets + FEC packets
-    // Lost packets = FEC failed (packets that couldn't be recovered)
-    quint32 totalPackets = audioPackets + fecPackets;
-    if (totalPackets > 0) {
-        // FEC failed represents packets that were lost and couldn't be recovered
-        m_CurrentStats.packetLossRate = static_cast<float>(fecFailed) / totalPackets;
+        // Update raw stats
+        m_CurrentStats.audioPackets = audioPackets;
+        m_CurrentStats.fecPackets = fecPackets;
+        m_CurrentStats.fecRecovered = fecRecovered;
+        m_CurrentStats.fecFailed = fecFailed;
+        m_CurrentStats.outOfSequence = outOfSequence;
 
-        // FEC recovery rate = successfully recovered / total FEC sent
-        if (fecPackets > 0) {
-            m_CurrentStats.fecRecoveryRate = static_cast<float>(fecRecovered) / fecPackets;
+        // Calculate packet loss rate
+        quint32 totalPackets = audioPackets + fecPackets;
+        if (totalPackets > 0) {
+            float lossRate = static_cast<float>(fecFailed) / totalPackets;
+            float recoveryRate = (fecPackets > 0) ?
+                                 static_cast<float>(fecRecovered) / fecPackets : 0.0f;
+
+            // Add to history for smoothing
+            m_LossRateHistory.append(lossRate);
+            m_RecoveryRateHistory.append(recoveryRate);
+
+            // Keep history window bounded
+            while (m_LossRateHistory.size() > m_SmoothingParams.windowSize) {
+                m_LossRateHistory.removeFirst();
+            }
+            while (m_RecoveryRateHistory.size() > m_SmoothingParams.windowSize) {
+                m_RecoveryRateHistory.removeFirst();
+            }
+
+            // Update smoothed rates using exponential moving average
+            updateSmoothedMetrics();
+
+            // Apply smoothed values to current stats
+            m_CurrentStats.packetLossRate = m_SmoothedLossRate;
+            m_CurrentStats.fecRecoveryRate = m_SmoothedRecoveryRate;
         } else {
+            m_CurrentStats.packetLossRate = 0.0f;
             m_CurrentStats.fecRecoveryRate = 0.0f;
+        }
+
+        // Rate-limit quality updates to avoid flickering
+        quint32 currentTime = SDL_GetTicks();
+        if (currentTime - m_LastUpdateTime >= static_cast<quint32>(m_SmoothingParams.updateIntervalMs)) {
+            updateQualityAssessment();
+            m_LastUpdateTime = currentTime;
+
+            // Emit signals if quality changed
+            if (m_CurrentStats.quality != m_PreviousQuality) {
+                emitUpdate = true;
+                m_PreviousQuality = m_CurrentStats.quality;
+            }
         }
     }
 
-    // Update quality assessment
-    updateQualityAssessment();
-
+    if (emitUpdate) {
+        emit qualityChanged();
+    }
     emit statsUpdated();
+}
+
+void AudioQualityMonitor::updateSmoothedMetrics()
+{
+    if (m_LossRateHistory.isEmpty()) {
+        m_SmoothedLossRate = 0.0f;
+        m_SmoothedRecoveryRate = 0.0f;
+        return;
+    }
+
+    // Use EMA smoothing similar to LatencyMeasurer
+    float alpha = m_SmoothingParams.alpha;
+
+    if (m_SmoothedLossRate < 0.0f) {
+        m_SmoothedLossRate = m_LossRateHistory.first();
+    } else {
+        // EMA: smoothed = α * new + (1-α) * old
+        m_SmoothedLossRate = alpha * m_LossRateHistory.last() + (1.0f - alpha) * m_SmoothedLossRate;
+    }
+
+    if (m_SmoothedRecoveryRate < 0.0f) {
+        m_SmoothedRecoveryRate = m_RecoveryRateHistory.first();
+    } else {
+        m_SmoothedRecoveryRate = alpha * m_RecoveryRateHistory.last() + (1.0f - alpha) * m_SmoothedRecoveryRate;
+    }
 }
 
 void AudioQualityMonitor::updateQualityAssessment()
@@ -73,6 +143,7 @@ void AudioQualityMonitor::updateQualityAssessment()
     float lossRate = m_CurrentStats.packetLossRate;
     float fecRate = m_CurrentStats.fecRecoveryRate;
 
+    // Quality thresholds (using smoothed values)
     if (lossRate < 0.01f && fecRate < 0.05f) {
         m_CurrentStats.quality = AudioQuality::Excellent;
     } else if (lossRate < 0.03f && fecRate < 0.15f) {
@@ -84,8 +155,6 @@ void AudioQualityMonitor::updateQualityAssessment()
     } else {
         m_CurrentStats.quality = AudioQuality::Bad;
     }
-
-    emit qualityChanged();
 }
 
 QString AudioQualityMonitor::qualityString() const

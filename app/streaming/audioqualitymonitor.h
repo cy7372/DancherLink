@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QReadWriteLock>
 #include <QString>
+#include <QList>
 
 // Audio quality level enumeration
 enum class AudioQuality {
@@ -28,6 +29,13 @@ struct AudioStats {
 
     // Quality assessment
     AudioQuality quality = AudioQuality::Excellent;
+};
+
+// Smoothing parameters for audio quality
+struct AudioSmoothingParams {
+    int windowSize = 5;           // Number of samples to average
+    float alpha = 0.3f;           // Exponential smoothing factor
+    int updateIntervalMs = 500;   // Minimum time between quality updates
 };
 
 class AudioQualityMonitor : public QObject
@@ -63,8 +71,20 @@ private:
     AudioQualityMonitor(QObject* parent = nullptr);
 
     void updateQualityAssessment();
+    void updateSmoothedMetrics();
 
     AudioStats m_CurrentStats;
+    AudioStats m_PreviousStats;
     mutable QReadWriteLock m_StatsLock;
     bool m_Running = false;
+
+    // Smoothing state
+    float m_SmoothedLossRate = 0.0f;
+    float m_SmoothedRecoveryRate = 0.0f;
+    QList<float> m_LossRateHistory;
+    QList<float> m_RecoveryRateHistory;
+    quint32 m_LastUpdateTime = 0;
+    AudioQuality m_PreviousQuality = AudioQuality::Excellent;
+
+    AudioSmoothingParams m_SmoothingParams;
 };
