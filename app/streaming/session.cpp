@@ -2314,18 +2314,75 @@ void Session::interrupt()
     // just break out of the current wait/poll.
     // However, the current structure relies on SDL_QUIT to exit the loop.
     // Let's modify the loop exit condition or handle SDL_QUIT differently for restart.
-    
+
     // Actually, looking at the loop, SDL_QUIT jumps to DispatchDeferredCleanup.
     // If we want to restart, we probably want to exit the loop, cleanup, and then
     // have the caller (StartStream::Launcher) handle the restart.
     // So sending SDL_QUIT is likely correct for breaking the loop.
-    
+
     // Inject a quit event to our SDL event loop
     SDL_Event event;
     event.type = SDL_QUIT;
     event.quit.timestamp = SDL_GetTicks();
     SDL_PushEvent(&event);
 }
+
+#ifdef Q_OS_WIN32
+// -----------------------------------------------------------------------------
+// Session::setQtWindowToolStyle() - Set or remove WS_EX_TOOLWINDOW style
+// -----------------------------------------------------------------------------
+// WS_EX_TOOLWINDOW makes the window invisible to the taskbar and Alt+Tab.
+// We use this during streaming to prevent the Qt window from appearing
+// when the user presses Windows key or other system shortcuts.
+// -----------------------------------------------------------------------------
+void Session::setQtWindowToolStyle(bool toolStyle)
+{
+    if (m_QtWindow == nullptr) {
+        return;
+    }
+
+    HWND hwnd = reinterpret_cast<HWND>(m_QtWindow->winId());
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+
+    if (toolStyle) {
+        // Add WS_EX_TOOLWINDOW - hides from taskbar and Alt+Tab
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
+    } else {
+        // Remove WS_EX_TOOLWINDOW - makes window visible again
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TOOLWINDOW);
+    }
+
+    // Refresh the window to apply the style change
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+}
+
+// -----------------------------------------------------------------------------
+// Session::restoreWindowStyle() - Restore Qt window style after streaming
+// -----------------------------------------------------------------------------
+// This is called from QML after streaming ends to ensure the window
+// is properly restored to be visible in the taskbar.
+// -----------------------------------------------------------------------------
+void Session::restoreWindowStyle()
+{
+    // Remove the TOOLWINDOW style if it was set
+    setQtWindowToolStyle(false);
+
+    // Also explicitly activate the window to ensure it can receive focus
+    if (m_QtWindow != nullptr) {
+        HWND hwnd = reinterpret_cast<HWND>(m_QtWindow->winId());
+
+        // Try to set as foreground window
+        SetForegroundWindow(hwnd);
+
+        // Bring to top of z-order
+        BringWindowToTop(hwnd);
+
+        // Ensure the window is shown and activated
+        ShowWindow(hwnd, SW_SHOWNA);
+    }
+}
+#endif // Q_OS_WIN32
 
 // -----------------------------------------------------------------------------
 // Session::exec() - Main Session Loop
@@ -3584,7 +3641,44 @@ DispatchDeferredCleanup:
         }
 
         if (hwnd) {
+            // Get the dialog's thread ID for focus restoration later
+            DWORD dialogThread = GetWindowThreadProcessId(hwnd, nullptr);
+            DWORD myThread = GetCurrentThreadId();
+            bool attached = false;
+
+            // Attach to the dialog's thread to ensure proper focus handling
+            if (dialogThread != myThread) {
+                attached = AttachThreadInput(myThread, dialogThread, TRUE);
+            }
+
+            // Bring the dialog to top and give it focus before closing
+            // This ensures Windows knows where to return focus after the dialog closes
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+            SetFocus(hwnd);
+
+            // Use SendMessage to synchronously close the dialog
+            // This blocks until the dialog is fully destroyed
             SendMessageA(hwnd, WM_CLOSE, 0, 0);
+
+            // Small delay to ensure the dialog is fully destroyed and focus is restored
+            SDL_Delay(50);
+
+            if (attached) {
+                AttachThreadInput(myThread, dialogThread, FALSE);
+            }
+
+            // CRITICAL: After closing the dialog, we must ensure the foreground window
+            // is properly restored. If we're in a lock/screen-off scenario, the dialog
+            // closure might not properly restore focus, leaving our Qt window in a
+            // state where it's visible but not in the taskbar.
+            //
+            // We explicitly activate the desktop window to reset the foreground state,
+            // which will help ensure our Qt window can properly re-acquire focus later.
+            HWND shellWindow = GetShellWindow();
+            if (shellWindow) {
+                SetForegroundWindow(shellWindow);
+            }
         }
         m_ResolutionDialogPending = false;
     }
