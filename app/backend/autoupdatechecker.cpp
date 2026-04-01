@@ -284,46 +284,45 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
              }
 
              if (isMsi) {
-                 // Copy MSI to temp location for installer
-                 QString fileName = QFileInfo(localPath).fileName();
-                 QString tempMsiPath = QDir::temp().filePath(fileName);
-                 QFile::copy(localPath, tempMsiPath);
+                // Use the already-copied MSI from targetPath (set above during elevation handling)
+                // If targetPath wasn't set (no elevation needed), use the original localPath
+                QString msiToInstall = targetPath.isEmpty() ? localPath : targetPath;
 
-                 qDebug() << "Running MSI installer:" << tempMsiPath;
+                qDebug() << "Running MSI installer:" << msiToInstall;
 
-                 // Use /i for install/upgrade - Windows Installer handles detection
-                 // REINSTALLMODE=emus ensures:
-                 // - e: Reinstall same-directory files
-                 // - m: Reinstall files from media/compressed
-                 // - u: Reinstall user-specific registry entries
-                 // - s: Reinstall shortcuts
-                 // This optimizes upgrade by only copying changed files
+                // Use /i for install/upgrade - Windows Installer handles detection
+                // REINSTALLMODE=emus ensures:
+                // - e: Reinstall same-directory files
+                // - m: Reinstall files from media/compressed
+                // - u: Reinstall user-specific registry entries
+                // - s: Reinstall shortcuts
+                // This optimizes upgrade by only copying changed files
 
-                 // Start msiexec process to monitor it
-                 QProcess *installProcess = new QProcess(this);
-                 installProcess->start("msiexec.exe", QStringList()
-                     << "/i" << tempMsiPath
-                     << "/quiet"
-                     << "/norestart"
-                     << "/l*v" << QDir::temp().filePath("DancherLink_Install.log")
-                     << "REINSTALLMODE=emus");
+                // Start msiexec process to monitor it
+                QProcess *installProcess = new QProcess(this);
+                installProcess->start("msiexec.exe", QStringList()
+                    << "/i" << msiToInstall
+                    << "/quiet"
+                    << "/norestart"
+                    << "/l*v" << QDir::temp().filePath("DancherLink_Install.log")
+                    << "REINSTALLMODE=emus");
 
-                 // Set up timeout monitoring (5 minutes)
-                 QTimer *timeoutTimer = new QTimer(this);
-                 timeoutTimer->setSingleShot(true);
-                 timeoutTimer->setInterval(300000); // 5 minutes
+                // Set up timeout monitoring (5 minutes)
+                QTimer *timeoutTimer = new QTimer(this);
+                timeoutTimer->setSingleShot(true);
+                timeoutTimer->setInterval(300000); // 5 minutes
 
-                 // Connect timeout to fallback handling
-                 QObject::connect(timeoutTimer, &QTimer::timeout, [this, tempMsiPath, installProcess]() {
-                     if (installProcess && installProcess->state() == QProcess::Running) {
-                         qWarning() << "MSI installation timeout after 5 minutes, attempting fallback...";
-                         installProcess->kill();
+                // Connect timeout to fallback handling
+                QObject::connect(timeoutTimer, &QTimer::timeout, [this, msiToInstall, installProcess]() {
+                    if (installProcess && installProcess->state() == QProcess::Running) {
+                        qWarning() << "MSI installation timeout after 5 minutes, attempting fallback...";
+                        installProcess->kill();
 
-                         // Fallback: try to open MSI directly for user interaction
-                         QProcess::startDetached("msiexec.exe", QStringList()
-                             << "/i" << tempMsiPath << "/passive");
-                     }
-                 });
+                        // Fallback: try to open MSI directly for user interaction
+                        QProcess::startDetached("msiexec.exe", QStringList()
+                            << "/i" << msiToInstall << "/passive");
+                    }
+                });
 
                  timeoutTimer->start();
 
