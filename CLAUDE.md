@@ -35,6 +35,8 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 - `app/streaming/video/ffmpeg-renderers/d3d11va.cpp` — Primary Windows video renderer
 - `app/streaming/video/ffmpeg-renderers/gpuopts.cpp` — GPU optimization (HAGS, priority)
 - `app/streaming/session.cpp` — Streaming session lifecycle
+- `app/streaming/audio/audio.cpp` — Audio renderer with Opus DRED enhancement
+- `app/streaming/audioqualitymonitor.cpp` — Real-time audio quality monitoring
 - `app/backend/computermanager.cpp` — PC discovery and management
 - `moonlight-common-c/src/PlatformSockets.c` — Socket buffer configuration
 - `moonlight-common-c/src/VideoStream.c` — RTP packet buffering
@@ -52,6 +54,12 @@ DancherLink is an enhanced PC game streaming client based on Moonlight, targetin
 - STUN is disabled for privacy (DancherLink-specific)
 - Network buffers: Socket RCVBUF min 512KB, RTP buffer 8192 packets (optimized for 4K high bitrate)
 - GPU optimization: Auto-detects HAGS, sets GPU process/thread priority for streaming
+
+## Audio Enhancement Features
+- **Opus DRED (Data-Resilient Extension)**: Enabled with 30ms redundant data for packet loss recovery
+- **7.1.4 Surround Sound**: 12-channel audio support (7.1 + 4 height channels)
+- **Audio Quality Monitor**: Real-time monitoring with EMA smoothing (α=0.3, 5-sample window)
+- **Quality Thresholds**: Excellent (<1% loss), Good (1-3%), Fair (3-5%), Poor (5-10%), Bad (>10%)
 
 ## Project Memory System
 

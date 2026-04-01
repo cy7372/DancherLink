@@ -4,7 +4,7 @@
 .DESCRIPTION
     Builds the release or beta version of DancherLink using a single unified script.
 .PARAMETER Type
-    Build type: "release" (default) or "beta".
+    Build type: "beta" (default) or "release".
 .PARAMETER Incremental
     Skip CMake configure and clean build for faster iteration.
 .PARAMETER NoMsi
@@ -12,23 +12,26 @@
 .PARAMETER NoDeploy
     Skip Qt deployment step (windeployqt).
 .EXAMPLE
-    .\Build.ps1 -Type release
-    Build stable release version.
+    .\Build.ps1
+    Build beta version (default).
 .EXAMPLE
     .\Build.ps1 -Type beta
     Build beta version.
 .EXAMPLE
-    .\Build.ps1 -Type release -Incremental
+    .\Build.ps1 -Type release
+    Build stable release version.
+.EXAMPLE
+    .\Build.ps1 -Incremental
     Incremental build (faster iteration).
 .EXAMPLE
-    .\Build.ps1 -Type beta -NoDeploy
+    .\Build.ps1 -NoDeploy
     Build beta without Qt deployment.
 #>
 
 [CmdletBinding()]
 param(
     [ValidateSet("release", "beta")]
-    [string]$Type = "release",
+    [string]$Type = "beta",
     [switch]$Incremental,
     [switch]$NoMsi,
     [switch]$NoDeploy,
@@ -41,15 +44,16 @@ if ($Help) {
     Write-Host "Usage: .\Build.ps1 [-Type <release|beta>] [-Incremental] [-NoMsi] [-NoDeploy]" -ForegroundColor White
     Write-Host ""
     Write-Host "Parameters:" -ForegroundColor Cyan
-    Write-Host "  -Type        Build type: 'release' (default) or 'beta'" -ForegroundColor White
+    Write-Host "  -Type        Build type: 'beta' (default) or 'release'" -ForegroundColor White
     Write-Host "  -Incremental Skip CMake configure for faster iteration" -ForegroundColor White
     Write-Host "  -NoMsi       Skip MSI packaging step" -ForegroundColor White
     Write-Host "  -NoDeploy    Skip Qt deployment step" -ForegroundColor White
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Cyan
-    Write-Host "  .\Build.ps1 -Type release    # Build stable release" -ForegroundColor White
-    Write-Host "  .\Build.ps1 -Type beta       # Build beta version" -ForegroundColor White
-    Write-Host "  .\Build.ps1 -Incremental     # Faster incremental build" -ForegroundColor White
+    Write-Host "  .\Build.ps1                # Build beta version (default)" -ForegroundColor White
+    Write-Host "  .\Build.ps1 -Type beta     # Build beta version" -ForegroundColor White
+    Write-Host "  .\Build.ps1 -Type release  # Build stable release" -ForegroundColor White
+    Write-Host "  .\Build.ps1 -Incremental   # Faster incremental build" -ForegroundColor White
     exit 0
 }
 
