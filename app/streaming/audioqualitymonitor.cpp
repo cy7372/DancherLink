@@ -1,6 +1,7 @@
 #include "audioqualitymonitor.h"
 
 #include <QtGlobal>
+#include <QCoreApplication>
 
 AudioQualityMonitor* AudioQualityMonitor::s_Instance = nullptr;
 
@@ -95,16 +96,16 @@ QString AudioQualityMonitor::qualityString() const
 
     switch (m_CurrentStats.quality) {
     case AudioQuality::Excellent:
-        return tr("Excellent");
+        return QCoreApplication::translate("AudioQualityMonitor", "Excellent");
     case AudioQuality::Good:
-        return tr("Good");
+        return QCoreApplication::translate("AudioQualityMonitor", "Good");
     case AudioQuality::Fair:
-        return tr("Fair");
+        return QCoreApplication::translate("AudioQualityMonitor", "Fair");
     case AudioQuality::Poor:
-        return tr("Poor");
+        return QCoreApplication::translate("AudioQualityMonitor", "Poor");
     case AudioQuality::Bad:
-        return tr("Bad");
+        return QCoreApplication::translate("AudioQualityMonitor", "Bad");
     }
 
-    return tr("Unknown");
+    return QCoreApplication::translate("AudioQualityMonitor", "Unknown");
 }

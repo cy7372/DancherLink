@@ -67,4 +67,6 @@ private:
     AudioStats m_CurrentStats;
     mutable QReadWriteLock m_StatsLock;
     bool m_Running = false;
+
+    static AudioQualityMonitor* s_Instance;
 };

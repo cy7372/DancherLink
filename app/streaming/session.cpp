@@ -2331,63 +2331,6 @@ void Session::interrupt()
     SDL_PushEvent(&event);
 }
 
-#ifdef Q_OS_WIN32
-// -----------------------------------------------------------------------------
-// Session::setQtWindowToolStyle() - Set or remove WS_EX_TOOLWINDOW style
-// -----------------------------------------------------------------------------
-// WS_EX_TOOLWINDOW makes the window invisible to the taskbar and Alt+Tab.
-// We use this during streaming to prevent the Qt window from appearing
-// when the user presses Windows key or other system shortcuts.
-// -----------------------------------------------------------------------------
-void Session::setQtWindowToolStyle(bool toolStyle)
-{
-    if (m_QtWindow == nullptr) {
-        return;
-    }
-
-    HWND hwnd = reinterpret_cast<HWND>(m_QtWindow->winId());
-    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-
-    if (toolStyle) {
-        // Add WS_EX_TOOLWINDOW - hides from taskbar and Alt+Tab
-        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
-    } else {
-        // Remove WS_EX_TOOLWINDOW - makes window visible again
-        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TOOLWINDOW);
-    }
-
-    // Refresh the window to apply the style change
-    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-}
-
-// -----------------------------------------------------------------------------
-// Session::restoreWindowStyle() - Restore Qt window style after streaming
-// -----------------------------------------------------------------------------
-// This is called from QML after streaming ends to ensure the window
-// is properly restored to be visible in the taskbar.
-// -----------------------------------------------------------------------------
-void Session::restoreWindowStyle()
-{
-    // Remove the TOOLWINDOW style if it was set
-    setQtWindowToolStyle(false);
-
-    // Also explicitly activate the window to ensure it can receive focus
-    if (m_QtWindow != nullptr) {
-        HWND hwnd = reinterpret_cast<HWND>(m_QtWindow->winId());
-
-        // Try to set as foreground window
-        SetForegroundWindow(hwnd);
-
-        // Bring to top of z-order
-        BringWindowToTop(hwnd);
-
-        // Ensure the window is shown and activated
-        ShowWindow(hwnd, SW_SHOWNA);
-    }
-}
-#endif // Q_OS_WIN32
-
 // -----------------------------------------------------------------------------
 // Session::exec() - Main Session Loop
 // -----------------------------------------------------------------------------
