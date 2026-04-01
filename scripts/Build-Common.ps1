@@ -74,9 +74,29 @@ function Get-BuildPaths {
     $isBeta = $BuildType -eq "beta"
     $typeFolder = if ($isBeta) { "beta" } else { "release" }
 
-    # Final release output directory (both Release and Beta use the same folder)
-    $ReleaseBase = "C:\Users\CyYu\Release\DancherLink"
+# Release folder configuration (supports UNC paths)
+# Default: C:\Users\CyYu\Release\DancherLink
+# UNC Example: \\cyyu.me\Users\CyYu\Release\DancherLink
+$ReleaseBase = if ($env:DANCHERLINK_RELEASE_FOLDER) {
+    $env:DANCHERLINK_RELEASE_FOLDER
+} else {
+    "C:\Users\CyYu\Release\DancherLink"
+}
     $ReleaseFolder = $ReleaseBase
+
+    # Convert UNC path to file:// URL format
+    # \\server\share\path -> file://server/share/path
+    # C:\path -> file:///C:/path
+    function Convert-ToFileUrl {
+        param([string]$Path)
+        if ($Path -match '^\\\\([^\\]+)\\(.+)$') {
+            # UNC path: \\server\share\path
+            return "file://$($matches[1])/$($matches[2] -replace '\\','/')"
+        } else {
+            # Local path: C:\path
+            return "file:///$($Path -replace '\\','/')"
+        }
+    }
 
     # New elegant structure:
     # build/cache/beta or cache/release - CMake intermediate files
@@ -213,7 +233,8 @@ cd /d "$CacheFolder"
 echo Running cmake configure...
 del /q CMakeCache.txt
 del /q "%~dp0..\..\..\app\CMakeFiles\DancherLink.dir\flags.make"
-cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs$VersionArg -DUPDATE_SUBSCRIPTION_URL="file://$($ReleaseFolder -replace '\\','/')/updates.json" -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
+$UpdateSubscriptionUrl = Convert-ToFileUrl -Path "$ReleaseFolder/updates.json"
+cmake -S "$RootDir" -G "$($BuildConfig.CMakeGenerator)" -DCMAKE_BUILD_TYPE="$($BuildConfig.CMakeBuildType)" -DARCH_DIR="$Arch"$BetaArgs$VersionArg -DUPDATE_SUBSCRIPTION_URL="$UpdateSubscriptionUrl" -DOPENSSL_INCLUDE_DIR="$($OpenSslPaths.Inc)" -DOPENSSL_CRYPTO_LIBRARY:FILEPATH="$($OpenSslPaths.Crypto)" -DOPENSSL_SSL_LIBRARY:FILEPATH="$($OpenSslPaths.Ssl)"
 if %ERRORLEVEL% neq 0 (
     echo CMake configuration FAILED
     goto :cleanup
