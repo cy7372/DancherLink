@@ -21,8 +21,10 @@
     <!-- High compression for smaller MSI file -->
     <MediaTemplate CompressionLevel="high" EmbedCab="yes" />
 
-    <!-- Optimize install speed: disable unnecessary features -->
+    <!-- Optimize install speed -->
     <Property Id="MSIDISABLELUAREPAIR" Value="1" />
+    <!-- Enable logging for troubleshooting -->
+    <Property Id="MsiLogging" Value="voicewarmup" />
 
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />

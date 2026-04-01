@@ -291,14 +291,21 @@ bool AutoUpdateChecker::openUpdateUrl(QString urlStr)
 
                  qDebug() << "Running MSI installer:" << tempMsiPath;
 
-                 // Windows Installer Restart Manager will automatically:
-                 // 1. Detect that DancherLink.exe is running
-                 // 2. Prompt user to close the app (or close it automatically)
-                 // 3. Complete the installation
-                 // 4. Optionally restart the app
-                 QProcess::startDetached("msiexec.exe", QStringList() << "/i" << tempMsiPath << "/quiet" << "/norestart");
+                 // Use /i for install/upgrade - Windows Installer handles detection
+                 // REINSTALLMODE=emus ensures:
+                 // - e: Reinstall same-directory files
+                 // - m: Reinstall files from media/compressed
+                 // - u: Reinstall user-specific registry entries
+                 // - s: Reinstall shortcuts
+                 // This optimizes upgrade by only copying changed files
+                 QProcess::startDetached("msiexec.exe", QStringList()
+                     << "/i" << tempMsiPath
+                     << "/quiet"
+                     << "/norestart"
+                     << "/l*v" << QDir::temp().filePath("DancherLink_Install.log")
+                     << "REINSTALLMODE=emus");
 
-                 // Exit current application
+                 // Exit current application - Windows Restart Manager will handle closure
                  QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
 
                  return true;
