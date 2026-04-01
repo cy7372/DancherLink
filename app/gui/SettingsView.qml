@@ -71,8 +71,6 @@ Page {
         contentWidth: settingsPage.width
         contentHeight: isWideLayout ? Math.max(settingsColumn1.height, settingsColumn2.height)
                                     : settingsColumn1.height + settingsColumn2.height + columnSpacing
-        flickDecayRate: 120
-        maximumFlickVelocity: 3000
 
         ScrollBar.vertical: ScrollBar {
             anchors.left: parent.right
