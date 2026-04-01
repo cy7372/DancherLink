@@ -28,7 +28,8 @@ public:
     {
         AC_STEREO,
         AC_51_SURROUND,
-        AC_71_SURROUND
+        AC_71_SURROUND,
+        AC_714_SURROUND  // 7.1.4 Dolby Atmos capable
     };
     Q_ENUM(AudioConfig)
 

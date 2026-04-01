@@ -3,6 +3,7 @@
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "streaming/networkqualitymonitor.h"
+#include "streaming/audioqualitymonitor.h"
 #include "backend/logmanager.h"
 #include "backend/richpresencemanager.h"
 #include "backend/nvhttp.h"
@@ -1061,6 +1062,9 @@ bool Session::initialize(QQuickWindow* qtWindow)
         break;
     case StreamingPreferences::AC_71_SURROUND:
         m_StreamConfig.audioConfiguration = AUDIO_CONFIGURATION_71_SURROUND;
+        break;
+    case StreamingPreferences::AC_714_SURROUND:
+        m_StreamConfig.audioConfiguration = AUDIO_CONFIGURATION_714_SURROUND;
         break;
     }
 
@@ -2674,6 +2678,9 @@ void Session::exec()
         LiRequestIdrFrame();
     });
 
+    // Start audio quality monitoring
+    AudioQualityMonitor::instance()->start();
+
 #ifdef Q_OS_WIN32
     HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
@@ -2725,6 +2732,18 @@ void Session::exec()
                     stats->packetCountFecRecovered,
                     stats->packetCountFecFailed,
                     stats->packetCountOOS
+                );
+            }
+
+            // Update audio quality stats
+            const RTP_AUDIO_STATS* audioStats = LiGetRTPAudioStats();
+            if (audioStats) {
+                AudioQualityMonitor::instance()->updateStats(
+                    audioStats->packetCountAudio,
+                    audioStats->packetCountFec,
+                    audioStats->packetCountFecRecovered,
+                    audioStats->packetCountFecFailed,
+                    audioStats->packetCountOOS
                 );
             }
 
@@ -3577,6 +3596,9 @@ void Session::exec()
 DispatchDeferredCleanup:
     // Stop network quality monitoring
     NetworkQualityMonitor::instance()->stop();
+
+    // Stop audio quality monitoring
+    AudioQualityMonitor::instance()->stop();
 
 #ifdef Q_OS_WIN32
     // Increment the generation counter to invalidate any pending dialog threads

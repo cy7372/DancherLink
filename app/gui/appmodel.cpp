@@ -13,6 +13,8 @@
 #include <QtMath>
 #include <QReadLocker>
 
+#include "streaming/audioqualitymonitor.h"
+
 #ifdef Q_OS_WIN32
 #include <shobjidl.h>
 #include <shlguid.h>
@@ -102,6 +104,16 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
             emit packetLossRateChanged(m_PacketLossRate);
             emit networkStatusChanged();
         }
+    });
+
+    // Connect to AudioQualityMonitor for audio quality updates
+    connect(AudioQualityMonitor::instance(), &AudioQualityMonitor::statsUpdated,
+            this, [this]() {
+        emit audioQualityChanged();
+    });
+    connect(AudioQualityMonitor::instance(), &AudioQualityMonitor::qualityChanged,
+            this, [this]() {
+        emit audioQualityChanged();
     });
 }
 
@@ -194,6 +206,32 @@ QString AppModel::networkQualityDetailed() const
 int AppModel::recommendedBitrate() const
 {
     return NetworkQualityMonitor::instance()->recommendedBitrate();
+}
+
+// Audio quality methods
+QString AppModel::audioQualityString() const
+{
+    return AudioQualityMonitor::instance()->qualityString();
+}
+
+float AppModel::audioPacketLossRate() const
+{
+    return AudioQualityMonitor::instance()->packetLossRate();
+}
+
+QString AppModel::audioQualityDetailed() const
+{
+    QString quality = audioQualityString();
+    float lossRate = audioPacketLossRate() * 100.0f;  // Convert to percentage
+    float fecRate = AudioQualityMonitor::instance()->fecRecoveryRate() * 100.0f;
+
+    int latencyMs = networkLatencyMs();
+    if (latencyMs < 0) {
+        return tr("N/A");
+    }
+
+    // Format: "Excellent (丢包 1.5%, FEC 恢复 2.3%)"
+    return QString("%1 (%2)").arg(quality).arg(tr("丢包 %1%, FEC 恢复 %2%").arg(lossRate, 0, 'f', 1).arg(fecRate, 0, 'f', 1));
 }
 
 // Helper function to reduce FPS by steps, respecting standard FPS tiers

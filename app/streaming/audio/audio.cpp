@@ -87,9 +87,20 @@ bool Session::initializeAudioRenderer()
         return false;
     }
 
+    // Enable Opus DRED (Data-Resilient Extension) for improved packet loss robustness
+    // DRED adds redundancy data to help recover from packet loss
+    int dredEnabled = 1;
+    opus_multistream_decoder_ctl(m_OpusDecoder, OPUS_SET_DRED_ENABLED(dredEnabled));
+
+    // Set expected packet loss rate to optimize DRED behavior (default 5%)
+    int expectedLoss = 5;
+    opus_multistream_decoder_ctl(m_OpusDecoder, OPUS_SET_PACKET_LOSS_PERCENT(expectedLoss));
+
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Audio stream has %d channels",
                 m_ActiveAudioConfig.channelCount);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Opus DRED enabled for packet loss robustness");
     return true;
 }
 

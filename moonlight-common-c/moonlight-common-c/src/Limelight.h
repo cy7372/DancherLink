@@ -202,6 +202,10 @@ typedef struct _DECODE_UNIT {
 // Specifies that the audio stream should be in 7.1 surround sound if the PC is able
 #define AUDIO_CONFIGURATION_71_SURROUND MAKE_AUDIO_CONFIGURATION(8, 0x63F)
 
+// Specifies that the audio stream should be in 7.1.4 surround sound (Dolby Atmos capable)
+// Channel mask: 0x63F (7.1) + 0x3000000 (Top Front + Top Middle + Top Rear) = 0x300063F
+#define AUDIO_CONFIGURATION_714_SURROUND MAKE_AUDIO_CONFIGURATION(12, 0x300063F)
+
 // Specifies an audio configuration by channel count and channel mask
 // See https://docs.microsoft.com/en-us/windows-hardware/drivers/audio/channel-mask for channelMask values
 // NOTE: Not all combinations are supported by GFE and/or this library.
@@ -218,7 +222,7 @@ typedef struct _DECODE_UNIT {
     (CHANNEL_MASK_FROM_AUDIO_CONFIGURATION(x) << 16 | CHANNEL_COUNT_FROM_AUDIO_CONFIGURATION(x))
 
 // The maximum number of channels supported
-#define AUDIO_CONFIGURATION_MAX_CHANNEL_COUNT 8
+#define AUDIO_CONFIGURATION_MAX_CHANNEL_COUNT 12
 
 // Passed in StreamConfiguration.supportedVideoFormats to specify supported codecs
 // and to DecoderRendererSetup() to specify selected codec.

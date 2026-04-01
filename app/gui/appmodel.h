@@ -19,6 +19,11 @@ class AppModel : public QAbstractListModel
     Q_PROPERTY(QString networkQualityDetailed READ networkQualityDetailed NOTIFY networkStatusChanged)
     Q_PROPERTY(int recommendedBitrate READ recommendedBitrate NOTIFY networkStatusChanged)
 
+    // Audio quality properties
+    Q_PROPERTY(QString audioQualityString READ audioQualityString NOTIFY audioQualityChanged)
+    Q_PROPERTY(float audioPacketLossRate READ audioPacketLossRate NOTIFY audioQualityChanged)
+    Q_PROPERTY(QString audioQualityDetailed READ audioQualityDetailed NOTIFY audioQualityChanged)
+
     enum Roles
     {
         NameRole = Qt::UserRole,
@@ -59,6 +64,11 @@ public:
     QString networkQualityDetailed() const;
     int recommendedBitrate() const;
 
+    // Audio quality methods
+    QString audioQualityString() const;
+    float audioPacketLossRate() const;
+    QString audioQualityDetailed() const;
+
     QVariant data(const QModelIndex &index, int role) const override;
 
     int rowCount(const QModelIndex &parent) const override;
@@ -83,6 +93,7 @@ signals:
     void networkLatencyChanged(int rttMs);
     void packetLossRateChanged(float lossRate);
     void networkStatusChanged();
+    void audioQualityChanged();
 
 private:
     void updateAppList(QVector<NvApp> newList);
