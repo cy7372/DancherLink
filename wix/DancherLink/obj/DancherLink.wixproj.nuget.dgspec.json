@@ -1,0 +1,61 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj": {}
+  },
+  "projects": {
+    "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj": {
+      "version": "1.0.13.311",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+        "projectName": "DancherLink",
+        "projectPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+        "packagesPath": "C:\\Users\\CyYu\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\obj\\",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\CyYu\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "native": {
+            "targetAlias": "netstandard2.0",
+            "projectReferences": {}
+          }
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "native": {
+          "targetAlias": "netstandard2.0",
+          "dependencies": {
+            "WixToolset.Firewall.wixext": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            },
+            "WixToolset.Util.wixext": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "version": 3,
+  "targets": {
+    "native,Version=v0.0": {
+      "WixToolset.Firewall.wixext/6.0.2": {
+        "type": "package",
+        "build": {
+          "build/WixToolset.Firewall.wixext.targets": {}
+        }
+      },
+      "WixToolset.Util.wixext/6.0.2": {
+        "type": "package",
+        "build": {
+          "build/WixToolset.Util.wixext.targets": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "WixToolset.Firewall.wixext/6.0.2": {
+      "sha512": "teqswWqGN1B/YyrggFrECCGR9UAH/ERcxwg4088tNOpd/8I2SM5TNx8py97WOHtRzYu2wnFz/CytwPTY0e5nAA==",
+      "type": "package",
+      "path": "wixtoolset.firewall.wixext/6.0.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "OSMFEULA.txt",
+        "README.md",
+        "build/WixToolset.Firewall.wixext.targets",
+        "icon.png",
+        "wixext6/WixToolset.Firewall.wixext.dll",
+        "wixtoolset.firewall.wixext.6.0.2.nupkg.sha512",
+        "wixtoolset.firewall.wixext.nuspec"
+      ]
+    },
+    "WixToolset.Util.wixext/6.0.2": {
+      "sha512": "plP64ub/0KjNbtLeaeiibVCPkKfr439WTKZmTwVSoQ4fznLHBZLsE0+wcyk6dA5cQuQsD5hlmnVGTKgPioiusQ==",
+      "type": "package",
+      "path": "wixtoolset.util.wixext/6.0.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "OSMFEULA.txt",
+        "README.md",
+        "build/WixToolset.Util.wixext.targets",
+        "icon.png",
+        "wixext6/WixToolset.Util.wixext.dll",
+        "wixtoolset.util.wixext.6.0.2.nupkg.sha512",
+        "wixtoolset.util.wixext.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "native,Version=v0.0": [
+      "WixToolset.Firewall.wixext >= 6.0.2",
+      "WixToolset.Util.wixext >= 6.0.2"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\CyYu\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.13.311",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+      "projectName": "DancherLink",
+      "projectPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\DancherLink.wixproj",
+      "packagesPath": "C:\\Users\\CyYu\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\CyYu\\Programs\\DancherLink-qt\\wix\\DancherLink\\obj\\",
+      "projectStyle": "PackageReference",
+      "UsingMicrosoftNETSdk": false,
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\CyYu\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "netstandard2.0"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "native": {
+          "targetAlias": "netstandard2.0",
+          "projectReferences": {}
+        }
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      }
+    },
+    "frameworks": {
+      "native": {
+        "targetAlias": "netstandard2.0",
+        "dependencies": {
+          "WixToolset.Firewall.wixext": {
+            "target": "Package",
+            "version": "[6.0.2, )"
+          },
+          "WixToolset.Util.wixext": {
+            "target": "Package",
+            "version": "[6.0.2, )"
+          }
+        }
+      }
+    }
+  }
+}

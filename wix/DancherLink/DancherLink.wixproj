@@ -1,32 +1,34 @@
 <Project Sdk="WixToolset.Sdk/6.0.2" ToolsVersion="5.0">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DefineConstants>Debug</DefineConstants>
   </PropertyGroup>
   <PropertyGroup>
-    <OutputPath>$(BUILD_FOLDER)\</OutputPath>
-    <IntermediateOutputPath>$(BUILD_FOLDER)\</IntermediateOutputPath>
+    <OutputPath>$(BuildFolder)\</OutputPath>
+    <IntermediateOutputPath>$(BuildFolder)\obj\</IntermediateOutputPath>
     <OutputName>DancherLink</OutputName>
   </PropertyGroup>
   <PropertyGroup>
-    <DefineConstants>DeployDir=$(DEPLOY_FOLDER);BuildDir=$(BUILD_FOLDER);Version=$(Version)</DefineConstants>
     <SuppressIces>ICE69;ICE61</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition="$(SIGN)!=''">
     <SignOutput>true</SignOutput>
   </PropertyGroup>
-  <!-- Use Product-beta.wxs for beta builds, Product.wxs for release -->
-  <PropertyGroup Condition="$(ProductWxs) != ''">
-    <DefineConstants>ProductWxs=$(ProductWxs)</DefineConstants>
+  <!-- WiX preprocessor variables -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);Version=$(Version);DeployDir=$(DeployFolder);BuildDir=$(BuildFolder)</DefineConstants>
   </PropertyGroup>
-  <Target Name="SignMsi">
-    <Exec Command='signtool.exe $(SIGNTOOL_PARAMS) %(SignMsi.FullPath)' />
-  </Target>
   <ItemGroup>
     <PackageReference Include="WixToolset.Firewall.wixext" Version="6.0.2" />
     <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
-    <PackageReference Include="WixToolset.Heat" Version="6.0.2" />
   </ItemGroup>
-  <!-- Specify which .wxs file to use -->
+  <!-- Remove all default .wxs files first -->
+  <ItemGroup>
+    <WixSource Remove="*.wxs" />
+  </ItemGroup>
+  <!-- Specify which .wxs file to use based on ProductWxs property -->
   <ItemGroup Condition="$(ProductWxs) != ''">
     <WixSource Include="$(MSBuildThisFileDirectory)\$(ProductWxs)" />
   </ItemGroup>

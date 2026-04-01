@@ -11,7 +11,8 @@
            Language="1033"
            Version="$(var.Version)"
            Manufacturer="DancherLink Streaming Project"
-           UpgradeCode="8a3f2e1d-9c7b-4f5a-a8e6-1b2c3d4e5f6a">
+           UpgradeCode="8a3f2e1d-9c7b-4f5a-a8e6-1b2c3d4e5f6a"
+           Scope="perMachine">
     <!-- Standard upgrade: remove old version first, then install new one -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="A newer version of [ProductName] is already installed."
@@ -19,31 +20,31 @@
                   IgnoreRemoveFailure="yes"
                   AllowDowngrades="no"
                   MigrateFeatures="yes" />
-    <!-- High compression for smaller MSI file -->
+
+    <!-- MSI package properties -->
     <MediaTemplate CompressionLevel="high" EmbedCab="yes" />
 
-    <!-- Optimize install speed -->
+    <!-- Optimize install speed and enable logging -->
     <Property Id="MSIDISABLELUAREPAIR" Value="1" />
-    <!-- Enable logging for troubleshooting -->
     <Property Id="MsiLogging" Value="voicewarmup" />
-
     <Property Id="APPDATAFOLDER" Value="%LOCALAPPDATA%\DancherLink Beta Streaming Project" />
     <Property Id="ADDDESKTOPSHORTCUT" Value="1" />
 
-    <!-- There's no way to delete a registry key on uninstall but not major upgrade, so
-        we have to roll our own deletion via custom action -->
+    <!-- Custom action to clean up registry key on uninstall -->
     <CustomAction Id="DeleteRegistryKey"
-                  Directory="ProgramFiles6432Folder"
+                  Directory="INSTALLFOLDER"
                   ExeCommand="reg.exe delete &quot;HKCU\Software\DancherLink Beta Streaming Project&quot; /f"
                   Execute="deferred"
                   Return="ignore"
                   Impersonate="yes" />
+
     <InstallExecuteSequence>
       <Custom Action="DeleteRegistryKey"
               Before="InstallFinalize"
-              Condition="Installed AND REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+              Condition="Installed AND REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     </InstallExecuteSequence>
 
+    <!-- Main application component -->
     <Component Id="MoonlightShortcuts" Directory="INSTALLFOLDER">
       <Shortcut Id="StartMenuShortcut"
                 Name="$(var.ShortcutName)"
@@ -54,8 +55,7 @@
       <RemoveFolder Id="CleanupStartMenuShortcut"
                     Directory="ApplicationProgramsFolder"
                     On="uninstall" />
-      <util:RemoveFolderEx Id="CleanupAppDataFolder"
-                           On="uninstall"
+      <util:RemoveFolderEx On="uninstall"
                            Property="APPDATAFOLDER" />
       <RegistryValue Root="HKCU"
                      Key="Software\DancherLink Beta Streaming Project"
@@ -65,6 +65,7 @@
                      KeyPath="yes" />
     </Component>
 
+    <!-- Desktop shortcut component (conditional) -->
     <Component Id="MoonlightDesktopShortcut" Directory="INSTALLFOLDER" Condition="ADDDESKTOPSHORTCUT = 1">
       <Shortcut Id="DesktopShortcut"
                 Name="$(var.ShortcutName)"
@@ -83,9 +84,7 @@
                      KeyPath="yes" />
     </Component>
 
-    <!-- Persist desktop shortcut's installed state to let Bundle.wxs know if
-         the desktop shortcut should installed by default when upgrading the
-         product -->
+    <!-- Persist desktop shortcut install state for upgrades -->
     <Component Id="MoonlightDesktopShortcutState" Directory="INSTALLFOLDER">
       <RegistryValue Root="HKCU"
                      Key="Software\DancherLink Beta Streaming Project"
@@ -95,12 +94,12 @@
                      KeyPath="yes" />
     </Component>
 
-    <!-- Auto-include all deployment files (exe included via wildcard) -->
+    <!-- Auto-include all deployment files using WiX v6 syntax -->
     <ComponentGroup Id="MoonlightDependencies" Directory="INSTALLFOLDER">
       <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
-    <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
+    <Feature Id="ProductFeature" Title="DancherLink" Level="1" ConfigurableDirectory="INSTALLFOLDER">
       <ComponentGroupRef Id="MoonlightDependencies" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />

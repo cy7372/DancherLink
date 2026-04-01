@@ -451,16 +451,13 @@ function Build-Msi {
 
     Write-Host "Building MSI installer..." -ForegroundColor Green
 
-    # Note: We don't copy exe to app/release anymore to avoid GUID conflicts
-    # WiX project should reference exe from DeployFolder only
-
     # Find wix executable
     $wixPath = (Get-Command wix -ErrorAction SilentlyContinue).Source
     if (-not $wixPath) {
         $wixPath = "$env:USERPROFILE\.dotnet\tools\wix.exe"
     }
 
-    # Build wix command
+    # Build wix command with preprocessor variables
     $WixArgs = @("build", "-arch", "x64")
     $WixArgs += @("-out", "$InstallerFolder\DancherLink-x86_64-$Version.msi")
     $WixArgs += @("-d", "Version=$Version")
@@ -472,7 +469,8 @@ function Build-Msi {
     }
     $WixArgs += $WxsFile
 
-    Write-Host "Running: wix build..." -ForegroundColor Green
+    Write-Host "Running: wix build (WiX v6)..." -ForegroundColor Green
+    Write-Host "Command: $wixPath $($WixArgs -join ' ')" -ForegroundColor Gray
 
     # Start process
     $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -482,8 +480,6 @@ function Build-Msi {
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
-
-    Write-Host "Command: $wixPath $($WixArgs -join ' ')" -ForegroundColor Gray
 
     $proc = [System.Diagnostics.Process]::Start($psi)
     $result = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
