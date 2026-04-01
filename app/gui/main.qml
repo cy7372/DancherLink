@@ -74,6 +74,11 @@ ApplicationWindow {
     minimumWidth: 1024
     minimumHeight: 576
 
+    // Start invisible to prevent flicker before Component.onCompleted applies the user's
+    // preferred window state (maximized/fullscreen/windowed). We explicitly show the
+    // window in Component.onCompleted after applying the desired state.
+    visible: false
+
     // No fixed width/height bindings here - they interfere with Qt's window state
     // restoration on Windows. When the window is restored from minimize, QML property
     // bindings are re-evaluated, which can override Qt's restored geometry.
