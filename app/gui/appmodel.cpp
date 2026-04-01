@@ -225,11 +225,6 @@ QString AppModel::audioQualityDetailed() const
     float lossRate = audioPacketLossRate() * 100.0f;  // Convert to percentage
     float fecRate = AudioQualityMonitor::instance()->fecRecoveryRate() * 100.0f;
 
-    int latencyMs = networkLatencyMs();
-    if (latencyMs < 0) {
-        return tr("N/A");
-    }
-
     // Format: "Excellent (丢包 1.5%, FEC 恢复 2.3%)"
     return QString("%1 (%2)").arg(quality).arg(tr("丢包 %1%, FEC 恢复 %2%").arg(lossRate, 0, 'f', 1).arg(fecRate, 0, 'f', 1));
 }

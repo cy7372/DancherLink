@@ -203,8 +203,9 @@ typedef struct _DECODE_UNIT {
 #define AUDIO_CONFIGURATION_71_SURROUND MAKE_AUDIO_CONFIGURATION(8, 0x63F)
 
 // Specifies that the audio stream should be in 7.1.4 surround sound (Dolby Atmos capable)
-// Channel mask: 0x63F (7.1) + 0x3000000 (Top Front + Top Middle + Top Rear) = 0x300063F
-#define AUDIO_CONFIGURATION_714_SURROUND MAKE_AUDIO_CONFIGURATION(12, 0x300063F)
+// Uses 12 channels with 7.1 channel mask (0x63F). The server may map height channels
+// based on its capabilities. This is a best-effort configuration.
+#define AUDIO_CONFIGURATION_714_SURROUND MAKE_AUDIO_CONFIGURATION(12, 0x63F)
 
 // Specifies an audio configuration by channel count and channel mask
 // See https://docs.microsoft.com/en-us/windows-hardware/drivers/audio/channel-mask for channelMask values

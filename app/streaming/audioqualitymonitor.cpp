@@ -3,13 +3,6 @@
 #include <QtGlobal>
 #include <QCoreApplication>
 
-AudioQualityMonitor* AudioQualityMonitor::s_Instance = nullptr;
-
-AudioQualityMonitor::AudioQualityMonitor(QObject* parent)
-    : QObject(parent)
-{
-}
-
 AudioQualityMonitor* AudioQualityMonitor::instance()
 {
     static AudioQualityMonitor* s_Instance = nullptr;
@@ -17,6 +10,11 @@ AudioQualityMonitor* AudioQualityMonitor::instance()
         s_Instance = new AudioQualityMonitor();
     }
     return s_Instance;
+}
+
+AudioQualityMonitor::AudioQualityMonitor(QObject* parent)
+    : QObject(parent)
+{
 }
 
 void AudioQualityMonitor::start()
