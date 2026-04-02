@@ -35,6 +35,13 @@ Item {
     property int debounceResolutionWidth: 0
     property int debounceResolutionHeight: 0
 
+    // CRITICAL: Track restart count to prevent infinite restart loops
+    // If we restart too many times in a short period, we'll stop requesting restarts
+    property int restartCount: 0
+    property int lastRestartTime: 0
+    readonly property int maxRestartsPerMinute: 5  // Max 5 restarts per minute
+    readonly property int restartCooldownMs: 5000  // Min 5s between restarts
+
     // Timer for resolution change debounce during restart
     Timer {
         id: resolutionDebounceTimer
@@ -43,7 +50,8 @@ Item {
             // Debounce period ended - proceed with restart
             waitingForResolutionDebouncing = false
             if (session) {
-                console.log("Resolution debounce ended, proceeding with restart")
+                console.log("Resolution debounce ended, proceeding with restart: " +
+                            debounceResolutionWidth + "x" + debounceResolutionHeight)
                 // Trigger the actual restart
                 restartWithDebouncedResolution()
             }
@@ -52,10 +60,37 @@ Item {
 
     // Function to handle restart after debounce
     function restartWithDebouncedResolution() {
-        // Pop the old segue and create a new one with the debounced resolution
+        // CRITICAL: Check if we're in a restart loop
+        var now = Date.now()
+        if (restartCount > 0 && now - lastRestartTime < restartCooldownMs) {
+            console.warn("Restart cooldown active - skipping restart. Count: " + restartCount +
+                         ", Last restart: " + (now - lastRestartTime) + "ms ago")
+            // Still pop the segue to exit the transition screen
+            stackView.pop(StackView.Immediate)
+            // Return without requesting restart - user can manually restart if needed
+            return
+        }
+
+        // Check if we've exceeded max restarts
+        if (restartCount >= maxRestartsPerMinute) {
+            console.error("Max restarts per minute exceeded (" + restartCount + "). " +
+                          "Please manually restart the stream.")
+            // Show error dialog instead of restarting
+            displayLaunchError(qsTr("Too many resolution changes detected. Please manually restart the stream."))
+            return
+        }
+
+        // Record this restart
+        restartCount++
+        lastRestartTime = now
+        console.log("Restarting stream (count: " + restartCount + "/" + maxRestartsPerMinute + ")")
+
+        // Pop the old segue immediately
         stackView.pop(StackView.Immediate)
         // The caller (AppView) should handle recreating the segue
         // We emit a special signal to indicate we need a delayed restart
+        // CRITICAL: Capture the resolution values NOW before the closure runs
+        // This ensures we use the latest resolution even if more changes arrive
         delayedRestartRequested(debounceResolutionWidth, debounceResolutionHeight)
     }
 
@@ -319,8 +354,10 @@ Item {
         session.sessionFinished.connect(sessionFinished)
         session.sessionRestartRequested.connect(restartRequested)
         session.resolutionChangedDuringRestart.connect(function(width, height) {
-            // New resolution detected during restart - start debounce timer
-            console.log("Resolution changed to " + width + "x" + height + " during restart - starting debounce")
+            // New resolution detected during restart - restart debounce timer
+            // This ensures we always use the LATEST resolution after changes stop
+            console.log("Resolution changed to " + width + "x" + height +
+                        " during restart - restarting debounce timer")
             waitingForResolutionDebouncing = true
             debounceResolutionWidth = width
             debounceResolutionHeight = height
