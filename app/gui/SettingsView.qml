@@ -82,6 +82,14 @@ Page {
             }
         }
 
+        // Divider line between tabs and content
+        Rectangle {
+            Layout.fillWidth: true
+            height: 2
+            color: Material.hintTextColor
+            opacity: 0.3
+        }
+
         // Tab Content
         StackLayout {
             id: tabStack
