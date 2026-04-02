@@ -18,7 +18,9 @@ Item {
 
     // Ensure StreamSegue fills the entire StackView content area
     // This is critical to avoid layout issues when ApplicationWindow has a footer
-    anchors.fill: parent
+    // Use both explicit size and anchors for maximum compatibility across window modes
+    width: parent ? parent.width : 0
+    height: parent ? parent.height : 0
 
     // Opaque background to hide the previous view
     Rectangle {
