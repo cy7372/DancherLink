@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QtConcurrent>
+#include <QThreadPool>
 #include <QDesktopServices>
 #include <QDir>
 #include <QProcess>
@@ -94,7 +95,7 @@ void AutoUpdateChecker::start(bool isManual)
         }
 
         // Run file check in background thread to avoid blocking UI
-        QtConcurrent::run([this, localFile, host, isManual]() {
+        QThreadPool::globalInstance()->start([this, localFile, host, isManual]() {
             // If we have a hostname (UNC path), try to ping port 445 (SMB) first
             // to fail fast if the host is offline.
             if (!host.isEmpty()) {
