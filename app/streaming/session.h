@@ -356,7 +356,7 @@ private:
     int m_InitialDesktopHeight;
 
     // Resolution change debounce - track pending resolution and timestamp
-    static constexpr int RESOLUTION_CHANGE_DEBOUNCE_MS = 1500;
+    static constexpr int RESOLUTION_CHANGE_DEBOUNCE_MS = 1000;
     int m_PendingResolutionWidth = 0;
     int m_PendingResolutionHeight = 0;
     Uint32 m_LastResolutionChangeTime = 0;

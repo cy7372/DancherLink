@@ -14,9 +14,18 @@ Item {
     property string stageText : qsTr("Quitting %1...").arg(appName)
 
     // Ensure QuitSegue fills the entire StackView content area
-    // Use both explicit size and anchors for maximum compatibility across window modes
-    width: parent ? parent.width : 0
-    height: parent ? parent.height : 0
+    anchors.fill: parent
+
+    // Bind to window size to force re-layout when window state changes
+    property var windowRef: Window.window
+    onWindowRefChanged: {
+        if (windowRef) {
+            Qt.callLater(function() {
+                anchors.fill = undefined
+                anchors.fill = parent
+            })
+        }
+    }
 
     function quitAppCompleted(error)
     {

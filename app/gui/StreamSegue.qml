@@ -18,9 +18,21 @@ Item {
 
     // Ensure StreamSegue fills the entire StackView content area
     // This is critical to avoid layout issues when ApplicationWindow has a footer
-    // Use both explicit size and anchors for maximum compatibility across window modes
-    width: parent ? parent.width : 0
-    height: parent ? parent.height : 0
+    anchors.fill: parent
+
+    // Bind to window size to force re-layout when window state changes
+    // This fixes the issue where bottom area is blank when transitioning
+    // from borderless windowed mode to fullscreen
+    property var windowRef: Window.window
+    onWindowRefChanged: {
+        // Force re-layout when window reference changes
+        if (windowRef) {
+            Qt.callLater(function() {
+                anchors.fill = undefined
+                anchors.fill = parent
+            })
+        }
+    }
 
     // Opaque background to hide the previous view
     Rectangle {
