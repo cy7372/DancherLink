@@ -9,8 +9,10 @@ ItemDelegate {
     property GridView grid
     property int cardIndex: -1  // Set by delegate
 
-    // Hover state from card's own MouseArea
-    property bool cardHovered: hoverMouseArea.containsMouse
+    // Hover state - manually maintained, NOT bound to containsMouse.
+    // MouseArea.containsMouse only updates on enter/leave events, so it stays
+    // false when the mouse was already over a card when the page became visible.
+    property bool cardHovered: false
 
     // Hover state from child buttons (set by buttons when hovered)
     property bool childHovered: false
@@ -84,7 +86,9 @@ ItemDelegate {
         }
     }
 
-    // Hover detection MouseArea for the card itself
+    // Hover detection MouseArea — only used for enter/leave EVENT detection.
+    // The actual cardHovered state is maintained manually via onContainsMouseChanged
+    // plus the position-check timer below.
     MouseArea {
         id: hoverMouseArea
         anchors.fill: parent
@@ -92,23 +96,25 @@ ItemDelegate {
         acceptedButtons: Qt.NoButton
         propagateComposedEvents: false
 
-        // Accept all mouse events to prevent parent from intercepting
         onPressed: function(mouse) { mouse.accepted = true }
         onReleased: function(mouse) { mouse.accepted = true }
         onPositionChanged: function(mouse) { mouse.accepted = true }
         onWheel: function(wheel) { wheel.accepted = true }
+
+        // Sync cardHovered from MouseArea enter/leave events
+        onContainsMouseChanged: {
+            delegateRoot.cardHovered = containsMouse
+        }
     }
 
-    // Force refresh hover state when visibility changes (e.g. navigating back to this page)
-    // MouseArea.containsMouse only updates on mouse enter/leave events, so if the mouse
-    // was already over a card when the page became visible, containsMouse stays false.
+    // Refresh hover when visibility changes (e.g. navigating back to this page)
     onVisibleChanged: {
         if (visible) {
             refreshHoverTimer.start()
         }
     }
 
-    // Additional refresh when the parent grid regains active focus
+    // Refresh when the parent grid regains active focus
     // (e.g. user navigates back from AppView to PcView).
     Connections {
         target: grid
@@ -119,24 +125,32 @@ ItemDelegate {
         }
     }
 
-    // Use a Timer to delay the hover refresh until the delegate is fully laid out.
-    // Qt.callLater is too early — the delegate may not have its final position yet.
+    // Also trigger on Component.onCompleted — onVisibleChanged does NOT fire
+    // for newly created delegates (they start with visible: true by default).
+    Component.onCompleted: {
+        refreshHoverTimer.start()
+    }
+
+    // Timer-based hover refresh using QCursor::pos() via C++ helper.
+    // This reliably detects if the cursor is over the card even when
+    // MouseArea.containsMouse is stale (e.g. card appeared under cursor).
     Timer {
         id: refreshHoverTimer
-        interval: 50
+        interval: 200
         onTriggered: {
-            // Check if mouse is currently over this delegate
-            var window = delegateRoot.Window.window
-            if (!window) return
-            var mousePos = mapFromItem(null, window.mouseX, window.mouseY)
-            var isMouseOver = delegateRoot.contains(mousePos)
+            if (!delegateRoot.visible) return
 
-            // Force MouseArea to re-evaluate containsMouse by toggling hoverEnabled.
-            // This is needed because containsMouse only updates on enter/leave events.
-            if (isMouseOver !== hoverMouseArea.containsMouse) {
-                hoverMouseArea.hoverEnabled = false
-                hoverMouseArea.hoverEnabled = true
-            }
+            // Get cursor position via C++ helper (QCursor::pos())
+            var globalPos = cursorHelper.cursorPos()
+
+            // Map screen coordinates to local item coordinates
+            var localPos = delegateRoot.mapFromGlobal(globalPos.x, globalPos.y)
+
+            // Check if cursor is within this delegate's bounds
+            var isMouseOver = delegateRoot.contains(localPos)
+
+            // Update hover state directly (bypasses stale MouseArea.containsMouse)
+            delegateRoot.cardHovered = isMouseOver
         }
     }
 }

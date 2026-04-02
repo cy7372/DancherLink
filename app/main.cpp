@@ -726,8 +726,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Simple helper to expose QCursor::pos() to QML for hover detection
+    class CursorHelper : public QObject {
+    public:
+        explicit CursorHelper(QObject* parent = nullptr) : QObject(parent) {}
+        Q_INVOKABLE QPointF cursorPos() const { return QCursor::pos(); }
+    };
+
     if (hasGUI) {
         engine.rootContext()->setContextProperty("initialView", initialView);
+        engine.rootContext()->setContextProperty("cursorHelper", new CursorHelper(&app));
 
         // Load the main.qml file
         engine.load(QUrl(QStringLiteral("qrc:/gui/main.qml")));
