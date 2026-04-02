@@ -538,10 +538,11 @@ ApplicationWindow {
     footer: Item {
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
         // Also hide during streaming transitions (StreamSegue/QuitSegue) to avoid layout issues
+        // Check by object name to reliably identify StreamSegue and QuitSegue
         visible: currentNetworkModel !== null && stackView.currentItem &&
                  !(stackView.currentItem instanceof PcView) &&
-                 stackView.currentItem.session === undefined &&  // Exclude StreamSegue (has session property)
-                 stackView.currentItem.quitRunningAppFn === undefined  // Exclude QuitSegue (has quitRunningAppFn property)
+                 stackView.currentItem.objectName !== "StreamSegue" &&
+                 stackView.currentItem.objectName !== "QuitSegue"
         height: visible ? 32 : 0
 
         Rectangle {

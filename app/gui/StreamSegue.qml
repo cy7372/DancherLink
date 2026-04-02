@@ -9,6 +9,7 @@ import Session 1.0
 import StreamingPreferences 1.0
 
 Item {
+    objectName: "StreamSegue"
     property Session session
     property string appName
     property string stageText : isResume ? qsTr("Resuming %1...").arg(appName) :
@@ -51,7 +52,7 @@ Item {
     // Timer for resolution change debounce during restart
     Timer {
         id: resolutionDebounceTimer
-        interval: 1000  // 1 second debounce
+        interval: 200  // 200ms debounce
         onTriggered: {
             // Debounce period ended - proceed with restart
             waitingForResolutionDebouncing = false

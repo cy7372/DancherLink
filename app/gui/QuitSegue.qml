@@ -6,6 +6,7 @@ import ComputerManager 1.0
 import Session 1.0
 
 Item {
+    objectName: "QuitSegue"
     property string appName
     property var quitRunningAppFn
     property Session nextSession : null
@@ -15,17 +16,6 @@ Item {
 
     // Ensure QuitSegue fills the entire StackView content area
     anchors.fill: parent
-
-    // Bind to window size to force re-layout when window state changes
-    property var windowRef: Window.window
-    onWindowRefChanged: {
-        if (windowRef) {
-            Qt.callLater(function() {
-                anchors.fill = undefined
-                anchors.fill = parent
-            })
-        }
-    }
 
     function quitAppCompleted(error)
     {
