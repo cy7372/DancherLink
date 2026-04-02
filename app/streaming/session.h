@@ -231,6 +231,9 @@ private:
     bool validateVideoConstraints();
     bool validateAudioConfig();
 
+    // Process pending resolution change after debounce period
+    void processPendingResolutionChange();
+
     IAudioRenderer* createAudioRenderer(const POPUS_MULTISTREAM_CONFIGURATION opusConfig);
 
     bool initializeAudioRenderer();
@@ -351,6 +354,13 @@ private:
     bool m_ResolutionDialogPending;
     int m_InitialDesktopWidth;
     int m_InitialDesktopHeight;
+
+    // Resolution change debounce - track pending resolution and timestamp
+    static constexpr int RESOLUTION_CHANGE_DEBOUNCE_MS = 1500;
+    int m_PendingResolutionWidth = 0;
+    int m_PendingResolutionHeight = 0;
+    Uint32 m_LastResolutionChangeTime = 0;
+    bool m_HasPendingResolutionChange = false;
 
     bool m_AsyncConnectionSuccess;
     int m_PortTestResults;

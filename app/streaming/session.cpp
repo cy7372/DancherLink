@@ -1300,6 +1300,89 @@ bool Session::initialize(QQuickWindow* qtWindow)
 }
 
 // =============================================================================
+// SECTION: Resolution Change Debounce
+// Handles debouncing of resolution changes to avoid rapid consecutive restarts.
+// Always uses the LATEST resolution after changes stop for the debounce period.
+// =============================================================================
+
+void Session::processPendingResolutionChange()
+{
+    if (!isAutoResolutionMode()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Ignoring resolution change to %dx%d because client is not in Auto resolution mode",
+                    m_PendingResolutionWidth, m_PendingResolutionHeight);
+        return;
+    }
+
+    // Skip restart for 1536x2048 (rotated tablet mode) - this is a special resolution
+    // that should not trigger auto-restart to avoid disruption
+    if (m_PendingResolutionWidth == 1536 && m_PendingResolutionHeight == 2048) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Ignoring resolution change to %dx%d (rotated tablet mode)",
+                    m_PendingResolutionWidth, m_PendingResolutionHeight);
+        return;
+    }
+
+    // Localize strings
+    QString title = tr("Resolution Changed");
+    QString message = tr("Host resolution changed to %1x%2.\nRestart stream?")
+                          .arg(m_PendingResolutionWidth).arg(m_PendingResolutionHeight);
+    QString restartBtn = tr("Restart");
+    QString ignoreBtn = tr("Ignore");
+
+    // We need to release the input handler's capture before showing the dialog
+    m_InputHandler->setCaptureActive(false);
+
+    // Force an IDR frame immediately when we detect a resolution change
+    LiRequestIdrFrame();
+
+    // Only show the resolution change dialog if user has enabled it
+    if (m_Preferences->showResolutionChangeDialog) {
+        if (!m_ResolutionDialogPending) {
+            m_ResolutionDialogPending = true;
+
+            s_ResolutionDialogParentWindow = m_Window;
+
+            ResolutionDialogContext* ctx = new ResolutionDialogContext();
+            ctx->title = title.toStdString();
+            ctx->message = message.toStdString();
+            ctx->restartButton = restartBtn.toStdString();
+            ctx->ignoreButton = ignoreBtn.toStdString();
+            ctx->generation = ++s_ResolutionDialogGeneration;
+            ctx->width = m_PendingResolutionWidth;
+            ctx->height = m_PendingResolutionHeight;
+            SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
+        }
+        else {
+#ifdef Q_OS_WIN32
+            HWND hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
+            if (hwnd) {
+                SendMessageA(hwnd, WM_CLOSE, 0, 0);
+            }
+#endif
+            s_ResolutionDialogParentWindow = m_Window;
+            ResolutionDialogContext* ctx = new ResolutionDialogContext();
+            ctx->title = title.toStdString();
+            ctx->message = message.toStdString();
+            ctx->restartButton = restartBtn.toStdString();
+            ctx->ignoreButton = ignoreBtn.toStdString();
+            ctx->generation = ++s_ResolutionDialogGeneration;
+            ctx->width = m_PendingResolutionWidth;
+            ctx->height = m_PendingResolutionHeight;
+            SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
+        }
+    }
+    else {
+        // Auto resolution mode but dialog disabled - restart immediately
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Resolution change to %dx%d - restarting stream immediately (no dialog)",
+                    m_PendingResolutionWidth, m_PendingResolutionHeight);
+        m_RestartRequest = true;
+        interrupt();
+    }
+}
+
+// =============================================================================
 // SECTION: UI Notifications & Warnings
 // Functions for communicating state changes and warnings to the QML UI.
 // =============================================================================
@@ -2626,6 +2709,16 @@ void Session::exec()
         // issues that could cause indefinite timeouts, delayed joystick detection,
         // and other problems.
 
+        // Check for debounced resolution change timeout before waiting for events
+        if (m_HasPendingResolutionChange) {
+            Uint32 elapsed = SDL_GetTicks() - m_LastResolutionChangeTime;
+            if (elapsed >= RESOLUTION_CHANGE_DEBOUNCE_MS) {
+                // Debounce period elapsed - process the pending resolution change
+                m_HasPendingResolutionChange = false;
+                processPendingResolutionChange();
+            }
+        }
+
         // Use a shorter timeout to ensure we can catch external interruptions if needed
         if (!SDL_WaitEventTimeout(&event, 100)) {
             presence.runCallbacks();
@@ -2656,11 +2749,22 @@ void Session::exec()
 
             continue;
         }
-#else
+ #else
         // We explicitly use SDL_PollEvent() and SDL_Delay() because
         // SDL_WaitEvent() has an internal SDL_Delay(10) inside which
         // blocks this thread too long for high polling rate mice and high
         // refresh rate displays.
+
+        // Check for debounced resolution change timeout before polling events
+        if (m_HasPendingResolutionChange) {
+            Uint32 elapsed = SDL_GetTicks() - m_LastResolutionChangeTime;
+            if (elapsed >= RESOLUTION_CHANGE_DEBOUNCE_MS) {
+                // Debounce period elapsed - process the pending resolution change
+                m_HasPendingResolutionChange = false;
+                processPendingResolutionChange();
+            }
+        }
+
         if (!SDL_PollEvent(&event)) {
 #ifndef STEAM_LINK
             SDL_Delay(1);
@@ -3167,80 +3271,16 @@ void Session::exec()
                             break;
                         }
 
-                        // Localize strings
-                        QString title = tr("Resolution Changed");
-                        QString message = tr("Host resolution changed to %1x%2.\nRestart stream?")
-                                            .arg(currentMode.w).arg(currentMode.h);
-                        QString restartBtn = tr("Restart");
-                        QString ignoreBtn = tr("Ignore");
+                        // Debounce resolution changes - update pending resolution and timestamp
+                        // This ensures we always use the LATEST resolution after changes stop for debounce period
+                        m_PendingResolutionWidth = currentMode.w;
+                        m_PendingResolutionHeight = currentMode.h;
+                        m_LastResolutionChangeTime = SDL_GetTicks();
+                        m_HasPendingResolutionChange = true;
 
-                        // Only show the resolution change dialog if:
-                        // 1. User is in "Auto" resolution mode
-                        // 2. User has enabled the confirmation dialog preference
-                        if (isAutoResolutionMode() && m_Preferences->showResolutionChangeDialog) {
-                            if (!m_ResolutionDialogPending) {
-                                m_ResolutionDialogPending = true;
-                                
-                                // Store the window handle for the thread to use
-                                // We set the parent window to ensure the dialog appears on top of the fullscreen game window.
-                                // Although accessing m_Window from another thread is generally risky in SDL, 
-                                // on Windows, the HWND is thread-safe for parenting Message Boxes.
-                                s_ResolutionDialogParentWindow = m_Window;
-                                
-                                ResolutionDialogContext* ctx = new ResolutionDialogContext();
-                                ctx->title = title.toStdString();
-                                ctx->message = message.toStdString();
-                                ctx->restartButton = restartBtn.toStdString();
-                                ctx->ignoreButton = ignoreBtn.toStdString();
-                                ctx->generation = ++s_ResolutionDialogGeneration;
-                                ctx->width = currentMode.w;
-                                ctx->height = currentMode.h;
-                                SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
-                            }
-                            else {
-                                #ifdef Q_OS_WIN32
-                                HWND hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
-                                if (hwnd) {
-                                    // Use SendMessage instead of PostMessage here too, to avoid race conditions
-                                    // when closing an existing dialog to show a new one.
-                                    SendMessageA(hwnd, WM_CLOSE, 0, 0);
-                                }
-                                #endif
-                                
-                                s_ResolutionDialogParentWindow = m_Window;
-                                ResolutionDialogContext* ctx = new ResolutionDialogContext();
-                                ctx->title = title.toStdString();
-                                ctx->message = message.toStdString();
-                                ctx->restartButton = restartBtn.toStdString();
-                                ctx->ignoreButton = ignoreBtn.toStdString();
-                                ctx->generation = ++s_ResolutionDialogGeneration;
-                                ctx->width = currentMode.w;
-                                ctx->height = currentMode.h;
-                                SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
-                            }
-                        }
-                        else if (!isAutoResolutionMode()) {
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                        "Ignoring resolution change to %dx%d because client is not in Auto resolution mode",
-                                        currentMode.w, currentMode.h);
-                        }
-                        else {
-                            // Auto resolution mode but dialog disabled
-                            // Skip restart for 1536x2048 (rotated tablet mode) - this is a special resolution
-                            // that should not trigger auto-restart to avoid disruption
-                            if (currentMode.w == 1536 && currentMode.h == 2048) {
-                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                            "Ignoring resolution change to %dx%d (rotated tablet mode) - no dialog shown",
-                                            currentMode.w, currentMode.h);
-                            }
-                            else {
-                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                            "Resolution change to %dx%d - restarting stream immediately (no dialog)",
-                                            currentMode.w, currentMode.h);
-                                m_RestartRequest = true;
-                                interrupt();
-                            }
-                        }
+                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                    "Resolution change detected: %dx%d - debouncing for %dms",
+                                    currentMode.w, currentMode.h, RESOLUTION_CHANGE_DEBOUNCE_MS);
                         
                         // Break here to avoid handling this event further down
                         break;
