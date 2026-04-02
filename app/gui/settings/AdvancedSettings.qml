@@ -269,54 +269,15 @@ SettingsGroupBox {
             width: parent.width
             text: qsTr("Automatically adapt to screen resolution changes")
             font.pointSize: 12
-            // This option is only valid when using "Auto" resolution (0x0).
-            // If a fixed resolution is selected, we shouldn't prompt the user to change it.
-            enabled: Qt.binding(function() {
-                if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
-                    // Default to disabled when properties are not initialized yet
-                    return false
-                }
-                return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
-            })
-            checked: enabled && StreamingPreferences.detectResolutionChange
+            checked: StreamingPreferences.detectResolutionChange
             onCheckedChanged: {
-                if (enabled) {
-                    StreamingPreferences.detectResolutionChange = checked
-                }
-            }
-
-            // Update enabled state when resolution combo box changes
-            Connections {
-                target: advancedSettings.resolutionComboBox
-                function onCurrentIndexChanged() {
-                    // Force re-evaluation of enabled binding
-                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
-                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
-                            return false
-                        }
-                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
-                    })
-                }
-            }
-
-            // Update when resolutionListModel is assigned
-            Connections {
-                target: advancedSettings
-                function onResolutionListModelChanged() {
-                    // Force re-evaluation of enabled binding
-                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
-                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
-                            return false
-                        }
-                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
-                    })
-                }
+                StreamingPreferences.detectResolutionChange = checked
             }
 
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("Prompts to quit and reconnect when the client display resolution changes.")
+            ToolTip.text: qsTr("Automatically detects when the client display resolution changes and prompts to restart the stream.")
         }
 
         CheckBox {
@@ -324,7 +285,7 @@ SettingsGroupBox {
             width: parent.width
             text: qsTr("Show confirmation dialog on resolution change")
             font.pointSize: 12
-            enabled: detectResolutionChangeCheck.enabled && detectResolutionChangeCheck.checked
+            enabled: detectResolutionChangeCheck.checked
             checked: enabled && StreamingPreferences.showResolutionChangeDialog
             onCheckedChanged: {
                 if (enabled) {

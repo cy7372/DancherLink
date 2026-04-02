@@ -3175,63 +3175,56 @@ void Session::exec()
                         QString restartBtn = tr("Restart");
                         QString ignoreBtn = tr("Ignore");
 
-                        // Only show the resolution change dialog if the user is in "Auto" resolution mode.
-                        // If the user has selected a specific resolution, we should assume they want to stick with it
-                        // even if the host resolution changes.
-                        if (isAutoResolutionMode()) {
-                            if (!m_Preferences->showResolutionChangeDialog) {
-                                // User disabled the confirmation dialog — restart automatically
-                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                            "Auto-restarting stream due to resolution change to %dx%d (dialog disabled)",
-                                            currentMode.w, currentMode.h);
-                                m_RestartRequest = true;
-                                interrupt();
-                            }
-                            else if (!m_ResolutionDialogPending) {
-                                m_ResolutionDialogPending = true;
+                        // Handle resolution change based on user preferences.
+                        // Note: We handle this regardless of whether the user selected "Auto" or a fixed resolution.
+                        // If fixed, the stream will restart with the same fixed resolution on the new display.
+                        if (!m_Preferences->showResolutionChangeDialog) {
+                            // User disabled the confirmation dialog — restart automatically
+                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                        "Auto-restarting stream due to resolution change to %dx%d (dialog disabled)",
+                                        currentMode.w, currentMode.h);
+                            m_RestartRequest = true;
+                            interrupt();
+                        }
+                        else if (!m_ResolutionDialogPending) {
+                            m_ResolutionDialogPending = true;
 
-                                // Store the window handle for the thread to use
-                                // We set the parent window to ensure the dialog appears on top of the fullscreen game window.
-                                // Although accessing m_Window from another thread is generally risky in SDL,
-                                // on Windows, the HWND is thread-safe for parenting Message Boxes.
-                                s_ResolutionDialogParentWindow = m_Window;
+                            // Store the window handle for the thread to use
+                            // We set the parent window to ensure the dialog appears on top of the fullscreen game window.
+                            // Although accessing m_Window from another thread is generally risky in SDL,
+                            // on Windows, the HWND is thread-safe for parenting Message Boxes.
+                            s_ResolutionDialogParentWindow = m_Window;
 
-                                ResolutionDialogContext* ctx = new ResolutionDialogContext();
-                                ctx->title = title.toStdString();
-                                ctx->message = message.toStdString();
-                                ctx->restartButton = restartBtn.toStdString();
-                                ctx->ignoreButton = ignoreBtn.toStdString();
-                                ctx->generation = ++s_ResolutionDialogGeneration;
-                                ctx->width = currentMode.w;
-                                ctx->height = currentMode.h;
-                                SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
-                            }
-                            else {
-                                #ifdef Q_OS_WIN32
-                                HWND hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
-                                if (hwnd) {
-                                    // Use SendMessage instead of PostMessage here too, to avoid race conditions
-                                    // when closing an existing dialog to show a new one.
-                                    SendMessageA(hwnd, WM_CLOSE, 0, 0);
-                                }
-                                #endif
-
-                                s_ResolutionDialogParentWindow = m_Window;
-                                ResolutionDialogContext* ctx = new ResolutionDialogContext();
-                                ctx->title = title.toStdString();
-                                ctx->message = message.toStdString();
-                                ctx->restartButton = restartBtn.toStdString();
-                                ctx->ignoreButton = ignoreBtn.toStdString();
-                                ctx->generation = ++s_ResolutionDialogGeneration;
-                                ctx->width = currentMode.w;
-                                ctx->height = currentMode.h;
-                                SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
-                            }
+                            ResolutionDialogContext* ctx = new ResolutionDialogContext();
+                            ctx->title = title.toStdString();
+                            ctx->message = message.toStdString();
+                            ctx->restartButton = restartBtn.toStdString();
+                            ctx->ignoreButton = ignoreBtn.toStdString();
+                            ctx->generation = ++s_ResolutionDialogGeneration;
+                            ctx->width = currentMode.w;
+                            ctx->height = currentMode.h;
+                            SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
                         }
                         else {
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                        "Ignoring resolution change to %dx%d because client is not in Auto resolution mode",
-                                        currentMode.w, currentMode.h);
+                            #ifdef Q_OS_WIN32
+                            HWND hwnd = FindWindowA(nullptr, title.toLocal8Bit().constData());
+                            if (hwnd) {
+                                // Use SendMessage instead of PostMessage here too, to avoid race conditions
+                                // when closing an existing dialog to show a new one.
+                                SendMessageA(hwnd, WM_CLOSE, 0, 0);
+                            }
+                            #endif
+
+                            s_ResolutionDialogParentWindow = m_Window;
+                            ResolutionDialogContext* ctx = new ResolutionDialogContext();
+                            ctx->title = title.toStdString();
+                            ctx->message = message.toStdString();
+                            ctx->restartButton = restartBtn.toStdString();
+                            ctx->ignoreButton = ignoreBtn.toStdString();
+                            ctx->generation = ++s_ResolutionDialogGeneration;
+                            ctx->width = currentMode.w;
+                            ctx->height = currentMode.h;
+                            SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
                         }
                         
                         // Break here to avoid handling this event further down
