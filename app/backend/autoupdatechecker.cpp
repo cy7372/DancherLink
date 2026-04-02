@@ -13,7 +13,6 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QProcess>
-#include <QStandardPaths>
 
 #ifdef Q_OS_WIN32
 #include <windows.h>
