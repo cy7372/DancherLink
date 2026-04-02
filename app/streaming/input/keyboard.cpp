@@ -1,5 +1,6 @@
 #include "streaming/session.h"
 
+#include <QProcess>
 #include <Limelight.h>
 #include "SDL_compat.h"
 
@@ -156,6 +157,19 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         quitExitEvent.user.code = SDL_CODE_SESSION_EXIT;
         quitExitEvent.user.timestamp = SDL_GetTicks();
         SDL_PushEvent(&quitExitEvent);
+        break;
+
+    case KeyComboOpenVolumeMixer:
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Detected open volume control combo");
+#ifdef Q_OS_WIN32
+        // sndvol.exe opens the volume control panel.
+        // On Win10 this is a simple volume slider (matching the taskbar flyout).
+        // On Win11 this opens the Volume Mixer.
+        QProcess::startDetached("sndvol.exe");
+#else
+        QProcess::startDetached("xdg-open", {"pulse://"});
+#endif
         break;
 
     default:
