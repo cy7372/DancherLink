@@ -13,7 +13,6 @@ ItemDelegate {
     property bool cardHovered: hoverMouseArea.containsMouse
 
     // Hover state from child buttons (set by buttons when hovered)
-    // Using aQtObject to allow buttons to signal their hover state
     property bool childHovered: false
 
     // Combined hover state - automatic binding, no manual sync needed
@@ -98,16 +97,46 @@ ItemDelegate {
         onReleased: function(mouse) { mouse.accepted = true }
         onPositionChanged: function(mouse) { mouse.accepted = true }
         onWheel: function(wheel) { wheel.accepted = true }
-
-        // No manual isHovered setting - uses containsMouse binding
     }
 
-    // Initial hover check for page load
-    Component.onCompleted: {
-        Qt.callLater(function() {
-            // Force refresh containsMouse by toggling hoverEnabled
-            hoverMouseArea.hoverEnabled = false
-            hoverMouseArea.hoverEnabled = true
-        })
+    // Force refresh hover state when visibility changes (e.g. navigating back to this page)
+    // MouseArea.containsMouse only updates on mouse enter/leave events, so if the mouse
+    // was already over a card when the page became visible, containsMouse stays false.
+    onVisibleChanged: {
+        if (visible) {
+            refreshHoverTimer.start()
+        }
+    }
+
+    // Additional refresh when the parent grid regains active focus
+    // (e.g. user navigates back from AppView to PcView).
+    Connections {
+        target: grid
+        function onActiveFocusChanged() {
+            if (grid && grid.activeFocus) {
+                refreshHoverTimer.start()
+            }
+        }
+    }
+
+    // Use a Timer to delay the hover refresh until the delegate is fully laid out.
+    // Qt.callLater is too early — the delegate may not have its final position yet.
+    Timer {
+        id: refreshHoverTimer
+        interval: 50
+        onTriggered: {
+            // Check if mouse is currently over this delegate
+            var window = delegateRoot.Window.window
+            if (!window) return
+            var mousePos = mapFromItem(null, window.mouseX, window.mouseY)
+            var isMouseOver = delegateRoot.contains(mousePos)
+
+            // Force MouseArea to re-evaluate containsMouse by toggling hoverEnabled.
+            // This is needed because containsMouse only updates on enter/leave events.
+            if (isMouseOver !== hoverMouseArea.containsMouse) {
+                hoverMouseArea.hoverEnabled = false
+                hoverMouseArea.hoverEnabled = true
+            }
+        }
     }
 }
