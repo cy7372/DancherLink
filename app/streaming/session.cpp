@@ -733,6 +733,10 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_ResolutionDialogPending(false),
       m_InitialDesktopWidth(0),
       m_InitialDesktopHeight(0),
+      m_ResolutionChangePending(false),
+      m_ResolutionChangeDebounceStart(0),
+      m_PendingResolutionWidth(0),
+      m_PendingResolutionHeight(0),
       m_AsyncConnectionSuccess(false),
       m_PortTestResults(0),
       m_ActiveVideoFormat(0),
@@ -847,6 +851,24 @@ bool Session::detectScreenResolution()
     m_StreamConfig.height = StreamingConstants::HD_HEIGHT;
     m_SessionOptions.width = StreamingConstants::HD_WIDTH;
     m_SessionOptions.height = StreamingConstants::HD_HEIGHT;
+    return false;
+}
+
+bool Session::isResolutionIgnored(int width, int height) const
+{
+    // 1536x2048 is a special resolution (rotated tablet mode, e.g., iPad in portrait)
+    // that should be ignored for auto-adaptation to prevent unnecessary restarts
+    // when the user temporarily rotates their device.
+    const int IGNORED_WIDTH = 1536;
+    const int IGNORED_HEIGHT = 2048;
+
+    if (width == IGNORED_WIDTH && height == IGNORED_HEIGHT) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Resolution %dx%d is in the ignore list (rotated tablet mode). Skipping auto-adaptation.",
+                    width, height);
+        return true;
+    }
+
     return false;
 }
 
@@ -2662,6 +2684,31 @@ void Session::exec()
         // SDL_WaitEvent() has an internal SDL_Delay(10) inside which
         // blocks this thread too long for high polling rate mice and high
         // refresh rate displays.
+        // Check for resolution change debounce timer expiration
+        // This must be checked even when no events are pending to ensure
+        // we trigger the restart after the 1.5s debounce period
+        if (m_ResolutionChangePending && !m_Preferences->showResolutionChangeDialog) {
+            Uint32 elapsed = SDL_GetTicks() - m_ResolutionChangeDebounceStart;
+            if (elapsed >= RESOLUTION_CHANGE_DEBOUNCE_MS) {
+                // Debounce period complete - check if the pending resolution is still valid
+                // (i.e., not the special ignored resolution)
+                if (!isResolutionIgnored(m_PendingResolutionWidth, m_PendingResolutionHeight)) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Resolution change debounce complete (%dms). Restarting stream for %dx%d",
+                                elapsed, m_PendingResolutionWidth, m_PendingResolutionHeight);
+                    m_RestartRequest = true;
+                    interrupt();
+                    // Don't clear pending flag here - let the restart logic handle it
+                }
+                else {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Resolution change debounce complete, but %dx%d is ignored. Canceling restart.",
+                                m_PendingResolutionWidth, m_PendingResolutionHeight);
+                    m_ResolutionChangePending = false;
+                }
+            }
+        }
+
         if (!SDL_PollEvent(&event)) {
 #ifndef STEAM_LINK
             SDL_Delay(1);
@@ -3183,12 +3230,34 @@ void Session::exec()
                                         currentMode.w, currentMode.h);
                         }
                         else if (!m_Preferences->showResolutionChangeDialog) {
-                            // User disabled the confirmation dialog — restart automatically
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                        "Auto-restarting stream due to resolution change to %dx%d (dialog disabled)",
-                                        currentMode.w, currentMode.h);
-                            m_RestartRequest = true;
-                            interrupt();
+                            // User disabled the confirmation dialog — use debounce mechanism
+                            // Check if this is a special resolution that should be ignored
+                            if (isResolutionIgnored(currentMode.w, currentMode.h)) {
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Ignoring resolution change to %dx%d (special resolution)",
+                                            currentMode.w, currentMode.h);
+                            }
+                            else if (m_ResolutionChangePending) {
+                                // Another resolution change is pending - reset the timer with the NEW resolution
+                                // This ensures we always use the "latest" stable resolution
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Resolution changed again during debounce: %dx%d -> %dx%d. Resetting 1.5s timer.",
+                                            m_PendingResolutionWidth, m_PendingResolutionHeight,
+                                            currentMode.w, currentMode.h);
+                                m_PendingResolutionWidth = currentMode.w;
+                                m_PendingResolutionHeight = currentMode.h;
+                                m_ResolutionChangeDebounceStart = SDL_GetTicks();
+                            }
+                            else {
+                                // Start the debounce timer
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Resolution change detected: %dx%d. Starting 1.5s debounce timer.",
+                                            currentMode.w, currentMode.h);
+                                m_ResolutionChangePending = true;
+                                m_PendingResolutionWidth = currentMode.w;
+                                m_PendingResolutionHeight = currentMode.h;
+                                m_ResolutionChangeDebounceStart = SDL_GetTicks();
+                            }
                         }
                         else if (!m_ResolutionDialogPending) {
                             m_ResolutionDialogPending = true;

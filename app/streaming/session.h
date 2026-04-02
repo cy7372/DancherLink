@@ -352,6 +352,16 @@ private:
     int m_InitialDesktopWidth;
     int m_InitialDesktopHeight;
 
+    // Resolution change debounce mechanism (1.5s delay to prevent rapid consecutive changes)
+    bool m_ResolutionChangePending;
+    Uint32 m_ResolutionChangeDebounceStart;
+    int m_PendingResolutionWidth;
+    int m_PendingResolutionHeight;
+    static const Uint32 RESOLUTION_CHANGE_DEBOUNCE_MS = 1500;
+
+    // Special resolution that should be ignored for auto-adaptation (1536x2048 - rotated tablet mode)
+    bool isResolutionIgnored(int width, int height) const;
+
     bool m_AsyncConnectionSuccess;
     int m_PortTestResults;
 
