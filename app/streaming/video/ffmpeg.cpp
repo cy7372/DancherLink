@@ -237,6 +237,7 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_StreamFps(0),
       m_VideoFormat(0),
       m_NeedsSpsFixup(false),
+      m_H264Stream(h264_new()),
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {
@@ -263,6 +264,8 @@ FFmpegVideoDecoder::~FFmpegVideoDecoder()
     // to preserve the log level across reset() during
     // test initialization.
     av_log_set_level(AV_LOG_INFO);
+
+    h264_free(m_H264Stream);
 
     av_packet_free(&m_Pkt);
 }
@@ -1825,12 +1828,15 @@ bool FFmpegVideoDecoder::initialize(PDECODER_PARAMETERS params)
 void FFmpegVideoDecoder::writeBuffer(PLENTRY entry, int& offset)
 {
     if (m_NeedsSpsFixup && entry->bufferType == BUFFER_TYPE_SPS) {
-        h264_stream_t* stream = h264_new();
         int nalStart, nalEnd;
+
+        // Clear SPS state from previous use
+        memset(m_H264Stream->sps, 0, sizeof(sps_t));
+        memset(m_H264Stream->nal, 0, sizeof(nal_t));
 
         // Read the old NALU
         find_nal_unit((uint8_t*)entry->data, entry->length, &nalStart, &nalEnd);
-        read_nal_unit(stream,
+        read_nal_unit(m_H264Stream,
                       reinterpret_cast<unsigned char*>(&entry->data[nalStart]),
                       nalEnd - nalStart);
 
@@ -1839,35 +1845,33 @@ void FFmpegVideoDecoder::writeBuffer(PLENTRY entry, int& offset)
 
         // Fixup the SPS to what OS X needs to use hardware acceleration
         // This is also critical for decoding latency on the Pi 2.
-        stream->sps->num_ref_frames = 1;
-        stream->sps->vui.max_dec_frame_buffering = 1;
+        m_H264Stream->sps->num_ref_frames = 1;
+        m_H264Stream->sps->vui.max_dec_frame_buffering = 1;
 
         // NVENC doesn't seem to add bitstream restrictions anymore (591.59),
         // so we need to add them ourselves if not present to ensure that
         // the max_dec_frame_buffering option actually takes effect.
         // We use the defaults for everything except max_dec_frame_buffering.
-        if (!stream->sps->vui.bitstream_restriction_flag) {
-            stream->sps->vui.bitstream_restriction_flag = 1;
-            stream->sps->vui.motion_vectors_over_pic_boundaries_flag = 1;
-            stream->sps->vui.max_bytes_per_pic_denom = 2;
-            stream->sps->vui.max_bits_per_mb_denom = 1;
-            stream->sps->vui.log2_max_mv_length_horizontal = 16;
-            stream->sps->vui.log2_max_mv_length_vertical = 16;
-            stream->sps->vui.num_reorder_frames = 0;
+        if (!m_H264Stream->sps->vui.bitstream_restriction_flag) {
+            m_H264Stream->sps->vui.bitstream_restriction_flag = 1;
+            m_H264Stream->sps->vui.motion_vectors_over_pic_boundaries_flag = 1;
+            m_H264Stream->sps->vui.max_bytes_per_pic_denom = 2;
+            m_H264Stream->sps->vui.max_bits_per_mb_denom = 1;
+            m_H264Stream->sps->vui.log2_max_mv_length_horizontal = 16;
+            m_H264Stream->sps->vui.log2_max_mv_length_vertical = 16;
+            m_H264Stream->sps->vui.num_reorder_frames = 0;
         }
 
         int initialOffset = offset;
 
         // Copy the modified NALU data. This clobbers byte 0 and starts NALU data at byte 1.
         // Since it prepended one extra byte, subtract one from the returned length.
-        offset += write_nal_unit(stream, (uint8_t*)&m_DecodeBuffer.data()[initialOffset + nalStart - 1],
+        offset += write_nal_unit(m_H264Stream, (uint8_t*)&m_DecodeBuffer.data()[initialOffset + nalStart - 1],
                                  MAX_SPS_EXTRA_SIZE + entry->length - nalStart) - 1;
 
         // Copy the NALU prefix over from the original SPS
         memcpy(&m_DecodeBuffer.data()[initialOffset], entry->data, nalStart);
         offset += nalStart;
-
-        h264_free(stream);
     }
     else {
         // Write the buffer as-is

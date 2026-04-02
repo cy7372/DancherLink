@@ -3525,6 +3525,7 @@ DispatchDeferredCleanup:
 
     // Flush any pending resolution dialog results or other events with allocated data to prevent memory leaks
     SDL_Event pendingEvent;
+    int eventsFlushed = 0;
     while (SDL_PeepEvents(&pendingEvent, 1, SDL_GETEVENT, SDL_USEREVENT, SDL_USEREVENT) == 1) {
         if (pendingEvent.user.code == SDL_CODE_RESOLUTION_DIALOG_RESULT) {
             ResolutionDialogContext* ctx = (ResolutionDialogContext*)pendingEvent.user.data2;
@@ -3533,6 +3534,11 @@ DispatchDeferredCleanup:
         else if (pendingEvent.user.code == SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS) {
             void* state = pendingEvent.user.data2;
             SDL_free(state);
+        }
+
+        if (++eventsFlushed >= 1000) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Event cleanup hit safety limit of 1000 events");
+            break;
         }
     }
 

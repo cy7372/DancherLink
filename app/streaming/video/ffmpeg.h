@@ -12,6 +12,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <h264_stream.h>
 }
 
 class FFmpegVideoDecoder : public IVideoDecoder {
@@ -119,6 +120,7 @@ private:
     int m_StreamFps;
     int m_VideoFormat;
     bool m_NeedsSpsFixup;
+    h264_stream_t* m_H264Stream;
     bool m_TestOnly;
     SDL_Thread* m_DecoderThread;
     SDL_atomic_t m_DecoderThreadShouldQuit;
