@@ -196,7 +196,7 @@ QString ComputerModel::generatePinString()
 
 
 
-void ComputerModel::testConnectionForComputer(int)
+void ComputerModel::testConnectionForComputer(int /* computerIndex */)
 {
     DeferredTestConnectionTask* testConnectionTask = new DeferredTestConnectionTask();
     QObject::connect(testConnectionTask, &DeferredTestConnectionTask::connectionTestCompleted,

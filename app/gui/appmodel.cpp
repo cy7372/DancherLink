@@ -378,11 +378,9 @@ QVariant AppModel::data(const QModelIndex &index, int role) const
     case RunningRole:
         return m_Computer->currentGameId == app.id;
     case BoxArtRole:
-        // loadBoxArt is not const, but we need to call it from a const method.
-        // The method is logically const (it doesn't change the app data, just updates a cache),
-        // so mutable would be appropriate for the cache if we could modify BoxArtManager.
-        // For now, const_cast is the pragmatic solution.
-        return const_cast<BoxArtManager&>(m_BoxArtManager).loadBoxArt(m_Computer, app);
+        // loadBoxArt updates an internal cache but is logically const
+        // (it doesn't change the app data visible to callers).
+        return m_BoxArtManager.loadBoxArt(m_Computer, app);
     case HiddenRole:
         return app.hidden;
     case AppIdRole:

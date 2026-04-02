@@ -189,7 +189,11 @@ private:
         QString serverInfo;
         try {
             serverInfo = http.getServerInfo(NvHTTP::NvLogLevel::NVLL_NONE, true);
+        } catch (const std::exception& e) {
+            qWarning() << "Failed to poll computer for server info:" << e.what();
+            return false;
         } catch (...) {
+            qWarning() << "Failed to poll computer for server info (unknown error)";
             return false;
         }
 
@@ -216,7 +220,11 @@ private:
             if (appList.isEmpty()) {
                 return false;
             }
+        } catch (const std::exception& e) {
+            qWarning() << "Failed to poll computer for app list:" << e.what();
+            return false;
         } catch (...) {
+            qWarning() << "Failed to poll computer for app list (unknown error)";
             return false;
         }
 

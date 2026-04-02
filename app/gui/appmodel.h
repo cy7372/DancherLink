@@ -105,7 +105,7 @@ private:
     void applyAdaptiveSettings(Session* session) const;
 
     NvComputer* m_Computer;
-    BoxArtManager m_BoxArtManager;
+    mutable BoxArtManager m_BoxArtManager;
     ComputerManager* m_ComputerManager;
     QVector<NvApp> m_VisibleApps, m_AllApps;
     int m_CurrentGameId;

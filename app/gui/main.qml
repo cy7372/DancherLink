@@ -143,7 +143,6 @@ ApplicationWindow {
     }
 
     // Use Connections to handle singleton signals globally
-    // Use Connections to handle singleton signals globally
     Connections {
         target: AutoUpdateChecker
 
