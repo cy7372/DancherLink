@@ -20,9 +20,9 @@ Item {
     // Fill parent StackView
     anchors.fill: parent
 
-    // Opaque background covering entire window (including footer area)
+    // Opaque background to hide the previous view
     Rectangle {
-        anchors.fill: Window.window
+        anchors.fill: parent
         color: "black"
         z: -100
     }

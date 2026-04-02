@@ -533,15 +533,10 @@ ApplicationWindow {
         }
     }
 
-    // Network latency indicator - fixed position at bottom center
-    // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
-    // Position footer at bottom using Overlay attached property
-    Item {
+    footer: Rectangle {
         id: footerItem
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
         height: 32
+        color: "transparent"
 
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
         // Also hide during streaming transitions (StreamSegue/QuitSegue) to avoid layout issues
@@ -556,8 +551,8 @@ ApplicationWindow {
 
         Rectangle {
             id: networkIndicator
+            anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
             height: 24
             width: networkIndicatorRow.implicitWidth + 16
             radius: 4
