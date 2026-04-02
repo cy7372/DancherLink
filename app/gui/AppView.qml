@@ -326,6 +326,18 @@ CenteredGridView {
                 launchOrResumeSelectedAppWithVisibility(false, originalPreviousVisibility)
             })
 
+            // Handle delayed restart after resolution debounce during restart
+            // This happens when a new resolution change is detected while we're already restarting
+            segue.delayedRestartRequested.connect(function(width, height) {
+                console.log("Delayed restart requested after resolution debounce: " + width + "x" + height)
+                // Pop the old segue
+                stackView.pop(StackView.Immediate)
+                // Wait a bit for the pop to complete, then create a new session
+                Qt.callLater(function() {
+                    launchOrResumeSelectedAppWithVisibility(false, originalPreviousVisibility)
+                })
+            })
+
             return segue
         }
 

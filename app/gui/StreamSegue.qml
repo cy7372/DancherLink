@@ -43,6 +43,37 @@ Item {
 
     signal restartRequested()
 
+    // Property to track if we're waiting for resolution change debounce during restart
+    property bool waitingForResolutionDebouncing: false
+    property int debounceResolutionWidth: 0
+    property int debounceResolutionHeight: 0
+
+    // Timer for resolution change debounce during restart
+    Timer {
+        id: resolutionDebounceTimer
+        interval: 1000  // 1 second debounce
+        onTriggered: {
+            // Debounce period ended - proceed with restart
+            waitingForResolutionDebouncing = false
+            if (session) {
+                console.log("Resolution debounce ended, proceeding with restart")
+                // Trigger the actual restart
+                restartWithDebouncedResolution()
+            }
+        }
+    }
+
+    // Function to handle restart after debounce
+    function restartWithDebouncedResolution() {
+        // Pop the old segue and create a new one with the debounced resolution
+        stackView.pop(StackView.Immediate)
+        // The caller (AppView) should handle recreating the segue
+        // We emit a special signal to indicate we need a delayed restart
+        delayedRestartRequested(debounceResolutionWidth, debounceResolutionHeight)
+    }
+
+    signal delayedRestartRequested(int width, int height)
+
     // Use -1 as default to indicate "not explicitly set"
     // When explicitly passed (e.g., from QuitSegue), this won't be overwritten
     property int previousVisibility: -1
@@ -129,6 +160,15 @@ Item {
     {
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
+        }
+
+        // Check if we're waiting for resolution debounce
+        // If so, stay on the transition screen and wait for the debounce timer
+        if (waitingForResolutionDebouncing) {
+            console.log("Session finished but waiting for resolution debounce - staying on transition screen")
+            // Re-enable gamepad for the transition screen
+            SdlGamepadKeyNavigation.enable()
+            return
         }
 
         // Re-enable GUI gamepad usage now
@@ -294,6 +334,14 @@ Item {
         session.quitStarting.connect(quitStarting)
         session.sessionFinished.connect(sessionFinished)
         session.sessionRestartRequested.connect(restartRequested)
+        session.resolutionChangedDuringRestart.connect(function(width, height) {
+            // New resolution detected during restart - start debounce timer
+            console.log("Resolution changed to " + width + "x" + height + " during restart - starting debounce")
+            waitingForResolutionDebouncing = true
+            debounceResolutionWidth = width
+            debounceResolutionHeight = height
+            resolutionDebounceTimer.restart()
+        })
         session.hostReady.connect(hostReady)
         session.readyForDeletion.connect(sessionReadyForDeletion)
 

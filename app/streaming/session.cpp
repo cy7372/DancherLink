@@ -1307,6 +1307,26 @@ bool Session::initialize(QQuickWindow* qtWindow)
 
 void Session::processPendingResolutionChange()
 {
+    // Check if we're already in the process of restarting
+    // If so, notify QML to delay the restart and restart the debounce timer
+    if (m_RestartRequest) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Resolution changed to %dx%d during restart - delaying restart for debounce",
+                    m_PendingResolutionWidth, m_PendingResolutionHeight);
+
+        // Cancel the current restart - we'll restart after the new debounce period
+        m_RestartRequest = false;
+
+        // Emit signal to notify StreamSegue that resolution changed during restart
+        // This allows StreamSegue to delay its restart and wait for the new debounce
+        emit resolutionChangedDuringRestart(m_PendingResolutionWidth, m_PendingResolutionHeight);
+
+        // Reset the debounce timer with the new resolution
+        m_LastResolutionChangeTime = SDL_GetTicks();
+        m_HasPendingResolutionChange = true;
+        return;
+    }
+
     if (!isAutoResolutionMode()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Ignoring resolution change to %dx%d because client is not in Auto resolution mode",

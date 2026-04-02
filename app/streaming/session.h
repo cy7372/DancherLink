@@ -203,6 +203,10 @@ signals:
 
     void sessionRestartRequested();
 
+    // Emitted when a new resolution change is detected during restart process
+    // This allows StreamSegue to delay the restart and start a new debounce timer
+    void resolutionChangedDuringRestart(int width, int height);
+
     void hostReady();
 
     // Emitted after sessionFinished() when the session is ready to be destroyed
