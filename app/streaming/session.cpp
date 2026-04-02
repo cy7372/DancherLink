@@ -3174,10 +3174,10 @@ void Session::exec()
                         QString restartBtn = tr("Restart");
                         QString ignoreBtn = tr("Ignore");
 
-                        // Only show the resolution change dialog if the user is in "Auto" resolution mode.
-                        // If the user has selected a specific resolution, we should assume they want to stick with it
-                        // even if the host resolution changes.
-                        if (isAutoResolutionMode()) {
+                        // Only show the resolution change dialog if:
+                        // 1. User is in "Auto" resolution mode
+                        // 2. User has enabled the confirmation dialog preference
+                        if (isAutoResolutionMode() && m_Preferences->showResolutionChangeDialog) {
                             if (!m_ResolutionDialogPending) {
                                 m_ResolutionDialogPending = true;
                                 
@@ -3219,10 +3219,18 @@ void Session::exec()
                                 SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
                             }
                         }
-                        else {
+                        else if (!isAutoResolutionMode()) {
                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                                         "Ignoring resolution change to %dx%d because client is not in Auto resolution mode",
                                         currentMode.w, currentMode.h);
+                        }
+                        else {
+                            // Auto resolution mode but dialog disabled - restart immediately
+                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                        "Resolution change to %dx%d - restarting stream immediately (no dialog)",
+                                        currentMode.w, currentMode.h);
+                            m_RestartRequest = true;
+                            interrupt();
                         }
                         
                         // Break here to avoid handling this event further down
