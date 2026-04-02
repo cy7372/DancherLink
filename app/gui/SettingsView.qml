@@ -35,11 +35,12 @@ Page {
     signal languageChanged()
 
     // Handle language change - notify all tabs to reinitialize
-    onLanguageChanged: {
-        videoTab.onLanguageChanged()
-        audioTab.onLanguageChanged()
-        inputTab.onLanguageChanged()
-        hostTab.onLanguageChanged()
+    function handleLanguageChanged() {
+        videoTab.retranslate()
+        audioTab.retranslate()
+        inputTab.retranslate()
+        hostTab.retranslate()
+        uiTab.retranslate()
     }
 
     background: Rectangle {
@@ -128,7 +129,7 @@ Page {
             // Tab 5: Interface
             UITab {
                 id: uiTab
-                onLanguageChanged: settingsPage.languageChanged()
+                onLanguageChanged: settingsPage.handleLanguageChanged()
             }
         }
     }

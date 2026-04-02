@@ -22,8 +22,13 @@ ScrollView {
     id: audioTab
 
     // Reinitialize on language change
-    function onLanguageChanged() {
-        // Reinitialize combo box to update translated text
+    function retranslate() {
+        // Refresh audio config model
+        audioListModel.setProperty(0, "text", qsTr("Stereo"))
+        audioListModel.setProperty(1, "text", qsTr("5.1 surround sound"))
+        audioListModel.setProperty(2, "text", qsTr("7.1 surround sound"))
+
+        // Reinitialize combo box to update current index
         var saved_audio = StreamingPreferences.audioConfig
         for (var i = 0; i < audioListModel.count; i++) {
             var el_audio = audioListModel.get(i).val;

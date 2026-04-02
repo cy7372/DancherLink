@@ -25,7 +25,7 @@ ScrollView {
     id: hostTab
 
     // Reinitialize on language change
-    function onLanguageChanged() {
+    function retranslate() {
         // Host settings don't have combo boxes that need reinitialization
     }
 

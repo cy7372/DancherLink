@@ -30,8 +30,41 @@ ScrollView {
     signal resolutionModelReady()
 
     // Reinitialize on language change
-    function onLanguageChanged() {
+    function retranslate() {
+        // Refresh FPS model
         fpsComboBox.reinitialize()
+
+        // Refresh resolution model static entries
+        resolutionListModel.setProperty(0, "text", qsTr("Auto"))
+        resolutionListModel.setProperty(1, "text", qsTr("720p"))
+        resolutionListModel.setProperty(2, "text", qsTr("1080p"))
+        resolutionListModel.setProperty(3, "text", qsTr("1440p"))
+        resolutionListModel.setProperty(4, "text", qsTr("4K"))
+
+        // Find and update custom entry if present
+        for (var i = 0; i < resolutionListModel.count; i++) {
+            if (resolutionListModel.get(i).is_custom) {
+                var customText = StreamingPreferences.width > 0 && StreamingPreferences.height > 0
+                    ? qsTr("Custom") + " (" + StreamingPreferences.width + "x" + StreamingPreferences.height + ")"
+                    : qsTr("Custom")
+                resolutionListModel.setProperty(i, "text", customText)
+                break
+            }
+        }
+
+        // Refresh decoder model
+        decoderListModel.setProperty(0, "text", qsTr("Automatic (Recommended)"))
+        decoderListModel.setProperty(1, "text", qsTr("Force software decoding"))
+        decoderListModel.setProperty(2, "text", qsTr("Force hardware decoding"))
+
+        // Refresh codec model
+        codecListModel.setProperty(0, "text", qsTr("Automatic (Recommended)"))
+        codecListModel.setProperty(1, "text", qsTr("H.264"))
+        codecListModel.setProperty(2, "text", qsTr("HEVC (H.265)"))
+        codecListModel.setProperty(3, "text", qsTr("AV1 (Experimental)"))
+
+        // Refresh window mode model
+        windowModeComboBox.model = windowModeComboBox.createModel()
     }
 
     // Export these for cross-tab communication

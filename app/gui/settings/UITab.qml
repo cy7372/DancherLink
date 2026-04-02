@@ -26,6 +26,17 @@ ScrollView {
 
     signal languageChanged()
 
+    // Reinitialize on language change
+    function retranslate() {
+        // Refresh UI display mode model
+        uiDisplayModeListModel.setProperty(0, "text", qsTr("Windowed"))
+        uiDisplayModeListModel.setProperty(1, "text", qsTr("Maximized"))
+        uiDisplayModeListModel.setProperty(2, "text", qsTr("Fullscreen"))
+
+        // Refresh language model
+        languageListModel.setProperty(0, "text", qsTr("Automatic"))
+    }
+
     ScrollBar.vertical.policy: ScrollBar.AsNeeded
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 

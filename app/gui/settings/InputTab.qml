@@ -22,9 +22,10 @@ ScrollView {
     id: inputTab
 
     // Reinitialize on language change
-    function onLanguageChanged() {
-        // Input settings don't have combo boxes that need reinitialization
-        // All text is qsTr() based and will update automatically
+    function retranslate() {
+        // Refresh capture system keys mode model
+        captureSysKeysModeListModel.setProperty(0, "text", qsTr("in fullscreen"))
+        captureSysKeysModeListModel.setProperty(1, "text", qsTr("always"))
     }
 
     ScrollBar.vertical.policy: ScrollBar.AsNeeded
