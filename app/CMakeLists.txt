@@ -63,6 +63,7 @@ set(APP_SOURCES
     backend/systemproperties.cpp
     utils/latencymeasurer.cpp
     wm.cpp
+    cursorhelper.h
     
     # Resources
     resources.qrc
