@@ -281,7 +281,55 @@ CenteredGridView {
             }
         }
 
-        function launchOrResumeSelectedApp(quitExistingApp)
+        // Internal helper to create StreamSegue with specified previousVisibility.
+        // This is used both for initial launch and for restarts (e.g., resolution change).
+        // The previousVisibility parameter is critical for restoring the correct window state
+        // after streaming ends - it must be the window state from BEFORE streaming started,
+        // not the state captured during the stream (which may be fullscreen).
+        function createStreamSegue(runningId, previousVisibility)
+        {
+            var component = Qt.createComponent("StreamSegue.qml")
+            if (component.status !== Component.Ready) {
+                console.error("Failed to create StreamSegue component:", component.errorString())
+                return null
+            }
+
+            var segue = component.createObject(stackView, {
+                                                   "appName": model.name,
+                                                   "session": appModel.createSessionForApp(model.index),
+                                                   "isResume": runningId === model.appid,
+                                                   "previousVisibility": previousVisibility
+                                               })
+
+            if (!segue) {
+                console.error("component.createObject returned null")
+                return null
+            }
+
+            // Save the original previousVisibility before any restarts occur.
+            // This is critical for resolution-change restarts: we must preserve
+            // the original window state (from before streaming started) across
+            // the restart, not capture the state during streaming (which may be
+            // fullscreen due to the splash screen).
+            var originalPreviousVisibility = segue.previousVisibility
+
+            // When a restart is requested (e.g. resolution change), we destroy the old session
+            // and create a brand new one. This avoids complex state reset logic in C++ and
+            // ensures we start with a clean slate.
+            segue.restartRequested.connect(function() {
+                // Pop the old segue immediately. This will trigger the destruction of the old Session.
+                stackView.pop(StackView.Immediate)
+
+                // Start a new session for the same app.
+                // Pass the ORIGINAL previousVisibility to ensure window state is restored correctly
+                // after the stream ends, even after multiple restarts.
+                launchOrResumeSelectedAppWithVisibility(false, originalPreviousVisibility)
+            })
+
+            return segue
+        }
+
+        function launchOrResumeSelectedAppWithVisibility(quitExistingApp, previousVisibility)
         {
             var runningId = appModel.getRunningAppId()
             if (runningId !== 0 && runningId !== model.appid) {
@@ -296,37 +344,16 @@ CenteredGridView {
                 return
             }
 
-            var component = Qt.createComponent("StreamSegue.qml")
-            if (component.status !== Component.Ready) {
-                console.error("Failed to create StreamSegue component:", component.errorString())
-                return
+            var segue = createStreamSegue(runningId, previousVisibility)
+            if (segue) {
+                stackView.push(segue)
             }
+        }
 
-            var segue = component.createObject(stackView, {
-                                                   "appName": model.name,
-                                                   "session": appModel.createSessionForApp(model.index),
-                                                   "isResume": runningId === model.appid,
-                                                   "previousVisibility": stackView.Window.visibility
-                                               })
-
-            if (!segue) {
-                console.error("component.createObject returned null")
-                return
-            }
-
-            // When a restart is requested (e.g. resolution change), we destroy the old session
-            // and create a brand new one. This avoids complex state reset logic in C++ and
-            // ensures we start with a clean slate.
-            segue.restartRequested.connect(function() {
-                // Pop the old segue immediately. This will trigger the destruction of the old Session.
-                stackView.pop(StackView.Immediate)
-
-                // Start a new session for the same app.
-                // launchOrResumeSelectedApp will create a new Session object.
-                launchOrResumeSelectedApp(false)
-            })
-
-            stackView.push(segue)
+        function launchOrResumeSelectedApp(quitExistingApp)
+        {
+            // For initial launch, capture the current window visibility
+            launchOrResumeSelectedAppWithVisibility(quitExistingApp, stackView.Window.visibility)
         }
 
         onClicked: {

@@ -34,17 +34,19 @@ Item {
         // Mark that this is a restart so onDeactivating skips toolbar restoration
         wasRestart = true
 
-        // Save the current window visibility BEFORE showing fullscreen
-        // This ensures we can restore to the correct state after streaming ends
-        if (Window.window) {
+        // CRITICAL: Capture window state BEFORE any window operations.
+        // We must read visibility first, then call show() methods, because
+        // Window.visibility may be updated asynchronously by Qt.
+        if (Window.window && previousVisibility === -1) {
+            // Only capture if not already set (e.g., from QuitSegue)
+            // This preserves the original pre-stream window state
             previousVisibility = Window.window.visibility
         }
 
         // Reset the UI state to show we are working
         if (Window.window) {
+            // Show window first, then set fullscreen for the splash screen
             Window.window.show()
-
-            // Always show the splash screen in fullscreen mode
             Window.window.showFullScreen()
         }
     }
@@ -157,15 +159,26 @@ Item {
             // Apply the desired window state based on previous visibility or preferences
             var targetVisibility = Window.Windowed
 
-            // Treat -1 (not set) as Windowed
-            if (previousVisibility === Window.Maximized) {
-                targetVisibility = Window.Maximized
-            } else if (previousVisibility === Window.FullScreen) {
-                targetVisibility = Window.FullScreen
-            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                targetVisibility = Window.Maximized
-            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                targetVisibility = Window.FullScreen
+            // If previousVisibility was explicitly captured (not -1), use it.
+            // This ensures that after a stream restart (e.g., due to resolution change),
+            // we restore to the actual window state before streaming started,
+            // not the user's UI display mode preference.
+            // Only fall back to uiDisplayMode if previousVisibility was never set.
+            if (previousVisibility !== -1) {
+                // Use the captured pre-stream window state
+                if (previousVisibility === Window.Maximized) {
+                    targetVisibility = Window.Maximized
+                } else if (previousVisibility === Window.FullScreen) {
+                    targetVisibility = Window.FullScreen
+                }
+                // else: previousVisibility was Windowed or other, keep targetVisibility as Windowed
+            } else {
+                // No explicit capture - fall back to user preference
+                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                    targetVisibility = Window.Maximized
+                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                    targetVisibility = Window.FullScreen
+                }
             }
 
             // Apply the window state immediately before popping the StackView.
