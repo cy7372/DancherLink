@@ -4,10 +4,6 @@
 #include <Limelight.h>
 #include "SDL_compat.h"
 
-#ifdef Q_OS_WIN32
-#include <windows.h>
-#endif
-
 #define VK_0 0x30
 #define VK_A 0x41
 
@@ -167,34 +163,7 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected open volume control combo");
 #ifdef Q_OS_WIN32
-        // Simulate Win+Ctrl+V to open the Windows 11 Volume Mixer flyout.
-        // raiseAllKeys() ensures current Ctrl+Alt+Shift modifiers don't interfere.
-        raiseAllKeys();
-        {
-            INPUT inputs[6] = {};
-            // Press Win
-            inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].ki.wVk = VK_LWIN;
-            // Press Ctrl
-            inputs[1].type = INPUT_KEYBOARD;
-            inputs[1].ki.wVk = VK_CONTROL;
-            // Press V
-            inputs[2].type = INPUT_KEYBOARD;
-            inputs[2].ki.wVk = 'V';
-            // Release V
-            inputs[3].type = INPUT_KEYBOARD;
-            inputs[3].ki.wVk = 'V';
-            inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-            // Release Ctrl
-            inputs[4].type = INPUT_KEYBOARD;
-            inputs[4].ki.wVk = VK_CONTROL;
-            inputs[4].ki.dwFlags = KEYEVENTF_KEYUP;
-            // Release Win
-            inputs[5].type = INPUT_KEYBOARD;
-            inputs[5].ki.wVk = VK_LWIN;
-            inputs[5].ki.dwFlags = KEYEVENTF_KEYUP;
-            SendInput(6, inputs, sizeof(INPUT));
-        }
+        QProcess::startDetached("sndvol.exe");
 #else
         QProcess::startDetached("xdg-open", {"pulse://"});
 #endif
