@@ -244,20 +244,9 @@ CenteredGridView {
             visible: false
         }
 
-        // Connect to computerModel's networkLatencyChanged signal to ensure UI updates
-        // Use pcGrid.computerModel directly with proper null checking
-        Connections {
-            target: pcGrid.computerModel
-            function onNetworkLatencyChanged() {
-                // This ensures the delegate is notified when latency changes
-                // Use Qt.callLater to update UI after binding re-evaluation
-                Qt.callLater(function() {
-                    if (latencyBadge) {
-                        latencyBadge.opacity = latencyBadge.opacity
-                    }
-                })
-            }
-        }
+        // Note: latencyBadge.color and latencyLabel.text bindings read from
+        // pcGrid.model.networkLatencyMs which has a proper NOTIFY signal.
+        // Qt's property binding system handles re-evaluation automatically.
 
         Image {
             id: stateIcon

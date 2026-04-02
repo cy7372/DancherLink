@@ -537,8 +537,6 @@ ApplicationWindow {
     // Network latency indicator - fixed position at bottom center
     // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
     footer: Item {
-        property int networkLatencyUpdate: 0  // Updated on networkLatencyChanged signal
-
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
         visible: currentNetworkModel !== null && stackView.currentItem && !(stackView.currentItem instanceof PcView)
         height: visible ? 32 : 0
@@ -566,8 +564,6 @@ ApplicationWindow {
                 Label {
                     id: latencyLabel
                     text: {
-                        // Force re-evaluation when footer.networkLatencyUpdate changes
-                        var _ = footer.networkLatencyUpdate;
                         if (!currentNetworkModel) return ""
                         var ms = currentNetworkModel.networkLatencyMs
                         if (ms === -2) return qsTr("Measuring...")  // Initial measurement in progress
