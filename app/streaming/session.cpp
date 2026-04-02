@@ -1599,7 +1599,8 @@ class DeferredSessionCleanupTask : public QRunnable
 {
 public:
     DeferredSessionCleanupTask(Session* session) :
-        m_Session(session) {}
+        m_Session(session),
+        m_EmittedReadyForDeletion(false) {}
 
 private:
     virtual ~DeferredSessionCleanupTask() override
@@ -1609,12 +1610,9 @@ private:
         Session::s_ActiveSessionSemaphore.release();
 
         // Notify that the session is ready to be cleaned up
-        // BUT ONLY if we aren't planning to restart!
-        // If we are restarting, the Session object will be reused, so we shouldn't
-        // tell QML to delete it.
-        // Even if we are restarting, we want to delete the old session object
-        // to ensure a clean slate for the new connection.
-        if (m_Session) {
+        // For the restart path, readyForDeletion is already emitted in run()
+        // before sessionRestartRequested, so QML cleans up the session first.
+        if (!m_EmittedReadyForDeletion && m_Session) {
             emit m_Session->readyForDeletion();
         }
     }
@@ -1681,16 +1679,19 @@ private:
                 emit m_Session->sessionFinished(m_Session->m_PortTestResults);
             }
         }
-        
-        // Now that the connection is stopped, we can safely request a restart.
-        // This prevents race conditions where the new session tries to start
-        // while the old one is still technically active.
+
+        // For restart: emit readyForDeletion FIRST so QML drops the session reference,
+        // then emit sessionRestartRequested so QML can safely pop the old segue and
+        // create a new session without accessing the stale Session object.
         if (restartRequest && m_Session) {
+            emit m_Session->readyForDeletion();
+            m_EmittedReadyForDeletion = true;
             emit m_Session->sessionRestartRequested();
         }
     }
 
     QPointer<Session> m_Session;
+    bool m_EmittedReadyForDeletion;
 };
 
 // =============================================================================

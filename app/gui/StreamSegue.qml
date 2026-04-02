@@ -15,6 +15,7 @@ Item {
                                            qsTr("Starting %1...").arg(appName)
     property bool isResume : false
     property bool quitAfter : false
+    property bool wasRestart : false
 
     // Opaque background to hide the previous view
     Rectangle {
@@ -30,6 +31,9 @@ Item {
     property int previousVisibility: -1
 
     onRestartRequested: {
+        // Mark that this is a restart so onDeactivating skips toolbar restoration
+        wasRestart = true
+
         // Save the current window visibility BEFORE showing fullscreen
         // This ensures we can restore to the correct state after streaming ends
         if (Window.window) {
@@ -207,20 +211,24 @@ Item {
 
     function sessionReadyForDeletion()
     {
-        // Garbage collect the Session object since it's pretty heavyweight
-        // and keeps other libraries (like SDL_TTF) around until it is deleted.
+        // Drop the reference to the Session object so it can be collected.
+        // We intentionally avoid gc() here because forcing synchronous garbage
+        // collection blocks the JS engine during critical transitions (restart).
+        // Qt's JS engine will naturally collect the orphaned object.
         session = null
-        gc()
     }
 
     StackView.onDeactivating: {
         // Show the toolbar again when popped off the stack
-        if (Window.window && Window.window.toolBar) {
+        // Skip during restart — the new segue will manage toolbar state
+        if (!wasRestart && Window.window && Window.window.toolBar) {
             Window.window.toolBar.visible = true
         }
 
-        // Re-enable GUI gamepad usage now
-        SdlGamepadKeyNavigation.enable()
+        // Re-enable GUI gamepad usage now (skip during restart — new segue manages this)
+        if (!wasRestart) {
+            SdlGamepadKeyNavigation.enable()
+        }
 
         // Safely disconnect signals only if session still exists
         // Session may be destroyed before this handler runs
@@ -258,14 +266,17 @@ Item {
             }
 
             // Show the splash screen according to user's UI display mode preference
+            // During restart, previousVisibility is already FullScreen — respect that
             if (Window.window) {
-                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                if (previousVisibility === Window.FullScreen) {
+                    Window.window.showFullScreen()
+                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
                     Window.window.showMaximized()
                 } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
                     Window.window.showFullScreen()
                 }
             }
-            // For UI_WINDOWED, keep current window state (just hide toolbar)
+            // For UI_WINDOWED and no explicit fullscreen, keep current window state
         })
 
         // Hook up our signals
