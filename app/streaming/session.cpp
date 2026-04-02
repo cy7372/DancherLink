@@ -3211,10 +3211,8 @@ void Session::exec()
                             // It ensures that if the previous request was dropped or ignored
                             // (e.g. because we were minimized), this one goes through.
                             LiRequestIdrFrame();
-                            
-                            break;
                         }
-
+                        else {
                         // Localize strings
                         QString title = tr("Resolution Changed");
                         QString message = tr("Host resolution changed to %1x%2.\nRestart stream?")
@@ -3299,7 +3297,10 @@ void Session::exec()
                             ctx->height = currentMode.h;
                             SDL_DetachThread(SDL_CreateThread(ResolutionDialogThread, "ResDialog", ctx));
                         }
-                        
+
+                        // End of else block for resolution change handling
+                        }
+
                         // Break here to avoid handling this event further down
                         break;
                     }
