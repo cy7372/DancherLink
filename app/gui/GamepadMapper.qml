@@ -57,7 +57,6 @@ Page {
                     Button {
                         text: qsTr("Map")
                         onClicked: {
-                            console.log("Mapping requested for: " + model.name)
                             mappingDialog.gamepadIndex = index
                             mappingDialog.gamepadName = model.name
                             mappingDialog.open()
@@ -148,8 +147,6 @@ Page {
 
         onAccepted: {
             // Save mapping results
-            console.log("Mapping completed for " + gamepadName)
-            console.log(JSON.stringify(mappingResults))
             // TODO: Save to configuration file
         }
 
