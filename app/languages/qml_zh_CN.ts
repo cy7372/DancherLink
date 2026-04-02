@@ -1782,6 +1782,31 @@ Restart stream?</source>
         <source>Prompts to quit and reconnect when the client display resolution changes.</source>
         <translation type="vanished">当客户端显示器分辨率更改时提示退出并重新连接。</translation>
     </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="73"/>
+        <source>Video</source>
+        <translation>视频</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="77"/>
+        <source>Audio</source>
+        <translation>音频</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="81"/>
+        <source>Input</source>
+        <translation>输入</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="85"/>
+        <source>Host</source>
+        <translation>主机</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="89"/>
+        <source>Interface</source>
+        <translation>界面</translation>
+    </message>
 </context>
 <context>
     <name>StreamSegue</name>
@@ -1933,7 +1958,518 @@ Restart stream?</source>
     </message>
 </context>
 <context>
-    <name>main</name>
+    <name>VideoTab</name>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="54"/>
+        <source>Video Streaming</source>
+        <translation>视频串流</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="63"/>
+        <source>Resolution and FPS</source>
+        <translation>分辨率和帧率</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="70"/>
+        <source>Setting values too high for your PC or network connection may cause lag, stuttering, or errors.</source>
+        <translation>如果你的计算机或网络连接设置的值过高，可能会导致延迟，卡顿或错误。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="116"/>
+        <source>Native</source>
+        <translation>原生</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="117"/>
+        <source>Native (Excluding Notch)</source>
+        <translation>原生(不包括刘海)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="147"/>
+        <location filename="../gui/settings/VideoTab.qml" line="155"/>
+        <source>Custom</source>
+        <translation>自定义</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="190"/>
+        <source>Auto</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="191"/>
+        <source>720p</source>
+        <translation>720p</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="192"/>
+        <source>1080p</source>
+        <translation>1080p</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="193"/>
+        <source>1440p</source>
+        <translation>1440p</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="194"/>
+        <source>4K</source>
+        <translation>4K</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="257"/>
+        <source>%1 FPS</source>
+        <translation>%1 帧</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="272"/>
+        <source>Custom (%1 FPS)</source>
+        <translation>自定义(%1 FPS)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="288"/>
+        <source>30 FPS</source>
+        <translation>30 帧</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="289"/>
+        <source>60 FPS</source>
+        <translation>60 帧</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="305"/>
+        <source>Video bitrate: %1 Mbps</source>
+        <translation>视频比特率: %1 Mbps</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="311"/>
+        <source>Lower the bitrate on slower connections. Raise the bitrate to increase image quality.</source>
+        <translation>在较慢的连接上降低比特率。提高比特率以提高图像质量。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="344"/>
+        <source>Use Default</source>
+        <translation>使用默认值</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="361"/>
+        <source>Automatically adjust video bitrate for optimal performance</source>
+        <translation>自动调整视频比特率以获得最佳性能</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="377"/>
+        <source>With automatic bitrate adjustment, the video codec and YUV 4:4:4 settings will be used to determine the target bitrate.</source>
+        <translation>启用自动比特率调整时，视频编解码器和 YUV 4:4:4 设置将用于确定目标比特率。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="387"/>
+        <source>Display Mode</source>
+        <translation>显示模式</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="404"/>
+        <source>Fullscreen</source>
+        <translation>全屏</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="405"/>
+        <source>Borderless windowed</source>
+        <translation>无边框窗口</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="406"/>
+        <source>Windowed</source>
+        <translation>窗口化</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="411"/>
+        <source>(Recommended)</source>
+        <translation>(推荐)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="446"/>
+        <source>V-Sync</source>
+        <translation>垂直同步</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="463"/>
+        <source>Frame pacing</source>
+        <translation>帧速调节</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="481"/>
+        <source>Decoder Settings</source>
+        <translation>解码器设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="490"/>
+        <source>Video decoder</source>
+        <translation>视频解码器</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="515"/>
+        <source>Automatic (Recommended)</source>
+        <translation>自动 (推荐)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="519"/>
+        <source>Force software decoding</source>
+        <translation>强制软件解码</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="523"/>
+        <source>Force hardware decoding</source>
+        <translation>强制硬件解码</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="537"/>
+        <source>Video codec</source>
+        <translation>视频编解码器</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="562"/>
+        <source>H.264</source>
+        <translation>H.264</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="566"/>
+        <source>HEVC (H.265)</source>
+        <translation>HEVC (H.265)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="570"/>
+        <source>AV1 (Experimental)</source>
+        <translation>AV1 (实验性)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="590"/>
+        <source>Video Quality</source>
+        <translation>视频质量</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="601"/>
+        <source>Enable HDR (Experimental)</source>
+        <translation>启用HDR（实验性）</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="621"/>
+        <source>Enable YUV 4:4:4 (Experimental)</source>
+        <translation>启用 YUV 4:4:4（实验性）</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="648"/>
+        <source>Unlock bitrate limit (Experimental)</source>
+        <translation>解锁比特率限制（实验性）</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="669"/>
+        <source>Advanced Options</source>
+        <translation>高级选项</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="680"/>
+        <source>Show performance stats while streaming</source>
+        <translation>在串流中显示性能统计数据</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="698"/>
+        <source>Quit stream on display sleep</source>
+        <translation>显示器休眠时退出串流</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="715"/>
+        <source>Automatically adapt to screen resolution changes</source>
+        <translation>自动适应屏幕分辨率更改</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="735"/>
+        <source>Show confirmation dialog on resolution change</source>
+        <translation>分辨率变化时显示确认弹窗</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="757"/>
+        <source>Custom Resolution</source>
+        <translation>自定义分辨率</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="778"/>
+        <source>Enter a custom resolution:</source>
+        <translation>输入自定义分辨率:</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="789"/>
+        <source>Width</source>
+        <translation>宽度</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="803"/>
+        <source>Height</source>
+        <translation>高度</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="844"/>
+        <source>Custom Frame Rate</source>
+        <translation>自定义帧率</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="853"/>
+        <source>Resolutions that are not officially supported by GeForce Experience, The host will not set your host display resolution. You will need to set it manually while in game.</source>
+        <translation>GeForce Experience 不正式支持自定义分辨率，主机不会设置显示分辨率。你需要在游戏中手动设置。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="854"/>
+        <source>Frame rates that are not supported by your client or host PC may cause streaming errors.</source>
+        <translation>客户端或主机不支持的帧率可能会导致串流错误。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/VideoTab.qml" line="860"/>
+        <source>Enter a custom frame rate:</source>
+        <translation>输入自定义帧率:</translation>
+    </message>
+</context>
+<context>
+    <name>AudioTab</name>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="49"/>
+        <source>Audio Configuration</source>
+        <translation>音频配置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="58"/>
+        <source>Audio output mode</source>
+        <translation>音频输出模式</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="83"/>
+        <source>Stereo</source>
+        <translation>立体声</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="87"/>
+        <source>5.1 surround sound</source>
+        <translation>5.1 环绕声</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="91"/>
+        <source>7.1 surround sound</source>
+        <translation>7.1 环绕声</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="104"/>
+        <source>Mute host PC speakers while streaming</source>
+        <translation>串流时将主机扬声器静音</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="120"/>
+        <source>Enable microphone recording</source>
+        <translation>启用麦克风录音</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AudioTab.qml" line="136"/>
+        <source>Mute audio stream when DancherLink is not the active window</source>
+        <translation>DancherLink 不是活动窗口时静音音频</translation>
+    </message>
+</context>
+<context>
+    <name>InputTab</name>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="42"/>
+        <source>Mouse Settings</source>
+        <translation>鼠标设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="54"/>
+        <source>Optimize mouse for remote desktop instead of games</source>
+        <translation>为远程桌面而不是游戏优化鼠标</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="73"/>
+        <source>Swap left and right mouse buttons</source>
+        <translation>交换鼠标左键和右键</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="85"/>
+        <source>Reverse mouse scrolling direction</source>
+        <translation>反转鼠标滚动方向</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="97"/>
+        <source>Keyboard Settings</source>
+        <translation>键盘设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="113"/>
+        <source>Capture system keyboard shortcuts</source>
+        <translation>捕获系统键盘快捷键</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="151"/>
+        <source>in fullscreen</source>
+        <translation>全屏时</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="155"/>
+        <source>always</source>
+        <translation>总是</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="183"/>
+        <source>Touchscreen Settings</source>
+        <translation>触摸屏设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="195"/>
+        <source>Use touchscreen as a virtual trackpad</source>
+        <translation>将触摸屏用作虚拟触控板</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="212"/>
+        <source>Gamepad Settings</source>
+        <translation>手柄设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="223"/>
+        <source>Swap A/B and X/Y gamepad buttons</source>
+        <translation>交换手柄的 A/B 和 X/Y 按钮</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="239"/>
+        <source>Force gamepad #1 always connected</source>
+        <translation>强制手柄 #1 始终连接</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="257"/>
+        <source>Enable mouse control with gamepads by holding the &apos;Start&apos; button</source>
+        <translation>按住手柄的“Start”按钮启用鼠标控制</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/InputTab.qml" line="268"/>
+        <source>Process gamepad input when DancherLink is in the background</source>
+        <translation>当 DancherLink 在后台时处理手柄输入</translation>
+    </message>
+</context>
+<context>
+    <name>HostTab</name>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="44"/>
+        <source>Host Settings</source>
+        <translation>主机设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="54"/>
+        <source>Optimize game settings for streaming</source>
+        <translation>优化游戏设置以进行串流</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="65"/>
+        <source>Quit app on host PC after ending stream</source>
+        <translation>串流结束后退出主机上的应用程序</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="82"/>
+        <source>Network Discovery</source>
+        <translation>网络发现</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="93"/>
+        <source>Automatically find PCs on the local network (Recommended)</source>
+        <translation>自动在本地网络上查找计算机 (推荐)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="112"/>
+        <source>Automatically detect blocked connections (Recommended)</source>
+        <translation>自动检测被阻止的连接 (推荐)</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="124"/>
+        <source>Update Settings</source>
+        <translation>更新设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="133"/>
+        <source>Subscription URL</source>
+        <translation>订阅 URL</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="140"/>
+        <source>Enter the URL to check for updates.</source>
+        <translation>输入用于检查更新的 URL。</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/HostTab.qml" line="158"/>
+        <source>Check for Updates Now</source>
+        <translation>立即检查更新</translation>
+    </message>
+</context>
+<context>
+    <name>UITab</name>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="41"/>
+        <source>Language</source>
+        <translation>语言</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="70"/>
+        <source>Automatic</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="101"/>
+        <source>Display Mode</source>
+        <translation>显示模式</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="113"/>
+        <source>GUI display mode</source>
+        <translation>GUI 显示模式</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="145"/>
+        <source>Windowed</source>
+        <translation>窗口化</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="149"/>
+        <source>Maximized</source>
+        <translation>最大化</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="153"/>
+        <source>Fullscreen</source>
+        <translation>全屏</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="168"/>
+        <source>Notifications</source>
+        <translation>通知</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="179"/>
+        <source>Show connection quality warnings</source>
+        <translation>显示连接质量警告</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="190"/>
+        <source>Show configuration warnings</source>
+        <translation>显示配置警告</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="202"/>
+        <source>Integrations</source>
+        <translation>集成</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="213"/>
+        <source>Discord Rich Presence integration</source>
+        <translation>Discord Rich Presence 集成</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/UITab.qml" line="230"/>
+        <source>Keep the display awake while streaming</source>
+        <translation>串流时保持屏幕开启</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsView</name>
     <message>
         <location filename="../gui/main.qml" line="597"/>
         <source>Settings</source>
