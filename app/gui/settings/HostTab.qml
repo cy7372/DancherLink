@@ -24,6 +24,11 @@ import AutoUpdateChecker 1.0
 ScrollView {
     id: hostTab
 
+    // Reinitialize on language change
+    function onLanguageChanged() {
+        // Host settings don't have combo boxes that need reinitialization
+    }
+
     ScrollBar.vertical.policy: ScrollBar.AsNeeded
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 

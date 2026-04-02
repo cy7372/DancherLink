@@ -34,6 +34,14 @@ Page {
 
     signal languageChanged()
 
+    // Handle language change - notify all tabs to reinitialize
+    onLanguageChanged: {
+        videoTab.onLanguageChanged()
+        audioTab.onLanguageChanged()
+        inputTab.onLanguageChanged()
+        hostTab.onLanguageChanged()
+    }
+
     background: Rectangle {
         color: Material.background
     }

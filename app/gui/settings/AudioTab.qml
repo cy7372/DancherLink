@@ -21,6 +21,19 @@ import SystemProperties 1.0
 ScrollView {
     id: audioTab
 
+    // Reinitialize on language change
+    function onLanguageChanged() {
+        // Reinitialize combo box to update translated text
+        var saved_audio = StreamingPreferences.audioConfig
+        for (var i = 0; i < audioListModel.count; i++) {
+            var el_audio = audioListModel.get(i).val;
+            if (saved_audio === el_audio) {
+                audioComboBox.currentIndex = i
+                break
+            }
+        }
+    }
+
     ScrollBar.vertical.policy: ScrollBar.AsNeeded
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 

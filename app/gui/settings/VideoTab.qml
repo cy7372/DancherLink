@@ -29,6 +29,11 @@ ScrollView {
 
     signal resolutionModelReady()
 
+    // Reinitialize on language change
+    function onLanguageChanged() {
+        fpsComboBox.reinitialize()
+    }
+
     // Export these for cross-tab communication
     property alias resolutionListModel: resolutionListModel
     property alias resolutionComboBox: resolutionComboBox
@@ -61,6 +66,7 @@ ScrollView {
                 }
 
                 Label {
+                    width: parent.width
                     text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                     font.pointSize: AppTheme.fontSmall
                     wrapMode: Text.Wrap
@@ -470,9 +476,9 @@ ScrollView {
             }
         }
 
-        // Section: Advanced Video Settings
+        // Section: Decoder Settings
         SettingsGroupBox {
-            title: qsTr("Advanced Video")
+            title: qsTr("Decoder Settings")
             width: parent.width - parent.padding * 2
 
             Column {
@@ -576,6 +582,18 @@ ScrollView {
                         }
                     }
                 }
+            }
+        }
+
+        // Section: Video Quality
+        SettingsGroupBox {
+            title: qsTr("Video Quality")
+            width: parent.width - parent.padding * 2
+
+            Column {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: AppTheme.spacingSm
 
                 CheckBox {
                     id: enableHdr
@@ -643,6 +661,18 @@ ScrollView {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
                 }
+            }
+        }
+
+        // Section: Advanced Options
+        SettingsGroupBox {
+            title: qsTr("Advanced Options")
+            width: parent.width - parent.padding * 2
+
+            Column {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: AppTheme.spacingSm
 
                 CheckBox {
                     id: showPerformanceOverlay

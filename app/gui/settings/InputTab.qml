@@ -21,6 +21,12 @@ import SystemProperties 1.0
 ScrollView {
     id: inputTab
 
+    // Reinitialize on language change
+    function onLanguageChanged() {
+        // Input settings don't have combo boxes that need reinitialization
+        // All text is qsTr() based and will update automatically
+    }
+
     ScrollBar.vertical.policy: ScrollBar.AsNeeded
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
