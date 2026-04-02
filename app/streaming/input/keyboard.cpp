@@ -163,10 +163,9 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected open volume control combo");
 #ifdef Q_OS_WIN32
-        // sndvol.exe opens the volume control panel.
-        // On Win10 this is a simple volume slider (matching the taskbar flyout).
-        // On Win11 this opens the Volume Mixer.
-        QProcess::startDetached("sndvol.exe");
+        // Opens the modern Sound settings page with volume slider and device selection.
+        // Works on both Win10 (Settings > System > Sound) and Win11.
+        QProcess::startDetached("explorer.exe", {"ms-settings:sound"});
 #else
         QProcess::startDetached("xdg-open", {"pulse://"});
 #endif
