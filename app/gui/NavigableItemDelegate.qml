@@ -37,55 +37,6 @@ ItemDelegate {
         }
     }
 
-    // CRITICAL: Update keyboardSelectedIndex only on keyboard navigation
-    Keys.onLeftPressed: {
-        if (grid && grid.count > 0) {
-            grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
-            grid.moveCurrentIndexLeft()
-        }
-    }
-    Keys.onRightPressed: {
-        if (grid && grid.count > 0) {
-            grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
-            grid.moveCurrentIndexRight()
-        }
-    }
-    Keys.onDownPressed: {
-        if (grid && grid.count > 0) {
-            grid.keyboardSelectedIndex = Math.min(grid.count - 1, grid.keyboardSelectedIndex + 1)
-            grid.moveCurrentIndexDown()
-        }
-    }
-    Keys.onUpPressed: {
-        if (grid && grid.count > 0) {
-            grid.keyboardSelectedIndex = Math.max(0, grid.keyboardSelectedIndex - 1)
-            grid.moveCurrentIndexUp()
-        }
-    }
-    Keys.onReturnPressed: {
-        clicked()
-    }
-    Keys.onEnterPressed: {
-        clicked()
-    }
-
-    // Common background - shared by all delegates
-    background: Rectangle {
-        id: delegateBackground
-        width: delegateRoot.width
-        height: delegateRoot.height
-        // Use isHovered for hover state, customHighlighted for keyboard/gamepad focus
-        color: delegateRoot.isHovered ? AppTheme.backgroundHover : (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
-        radius: AppTheme.borderRadius
-
-        Behavior on color {
-            ColorAnimation {
-                duration: AppTheme.animationDurationFast
-                easing.type: Easing.OutCubic
-            }
-        }
-    }
-
     // Hover detection MouseArea — only used for enter/leave EVENT detection.
     // The actual cardHovered state is maintained manually via onContainsMouseChanged
     // plus the position-check timer below.
@@ -103,17 +54,12 @@ ItemDelegate {
 
         // Sync cardHovered from MouseArea enter/leave events
         onContainsMouseChanged: {
-            console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                        " onContainsMouseChanged containsMouse=" + containsMouse +
-                        " cardHovered=" + delegateRoot.cardHovered)
             delegateRoot.cardHovered = containsMouse
         }
     }
 
     // Refresh hover when visibility changes (e.g. navigating back to this page)
     onVisibleChanged: {
-        console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                    " onVisibleChanged visible=" + visible)
         if (visible) {
             refreshHoverTimer.start()
         }
@@ -124,8 +70,6 @@ ItemDelegate {
     Connections {
         target: grid
         function onActiveFocusChanged() {
-            console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                        " grid.onActiveFocusChanged activeFocus=" + (grid ? grid.activeFocus : "null"))
             if (grid && grid.activeFocus) {
                 refreshHoverTimer.start()
             }
@@ -135,10 +79,6 @@ ItemDelegate {
     // Also trigger on Component.onCompleted — onVisibleChanged does NOT fire
     // for newly created delegates (they start with visible: true by default).
     Component.onCompleted: {
-        console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                    " Component.onCompleted visible=" + visible +
-                    " x=" + delegateRoot.x + " y=" + delegateRoot.y +
-                    " w=" + delegateRoot.width + " h=" + delegateRoot.height)
         refreshHoverTimer.start()
     }
 
@@ -149,36 +89,16 @@ ItemDelegate {
         id: refreshHoverTimer
         interval: 200
         onTriggered: {
-            if (!delegateRoot.visible) {
-                console.log("[HOVER DBG] cardIndex=" + cardIndex + " timer: not visible, skip")
-                return
-            }
-
-            // Check if cursorHelper is available
-            if (typeof cursorHelper === 'undefined') {
-                console.log("[HOVER DBG] cardIndex=" + cardIndex + " timer: cursorHelper is UNDEFINED!")
-                return
-            }
+            if (!delegateRoot.visible) return
 
             // Get cursor position via C++ helper (QCursor::pos())
             var globalPos = cursorHelper.cursorPos()
-            console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                        " timer: globalPos=(" + globalPos.x + "," + globalPos.y + ")" +
-                        " delegatePos=(" + delegateRoot.x + "," + delegateRoot.y + ")" +
-                        " delegateSize=" + delegateRoot.width + "x" + delegateRoot.height +
-                        " mapToGlobal=" + delegateRoot.mapToGlobal(0, 0).x + "," + delegateRoot.mapToGlobal(0, 0).y)
 
             // Map screen coordinates to local item coordinates
             var localPos = delegateRoot.mapFromGlobal(globalPos.x, globalPos.y)
-            console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                        " localPos=(" + localPos.x + "," + localPos.y + ")")
 
             // Check if cursor is within this delegate's bounds
             var isMouseOver = delegateRoot.contains(localPos)
-
-            console.log("[HOVER DBG] cardIndex=" + cardIndex +
-                        " isMouseOver=" + isMouseOver +
-                        " -> setting cardHovered=" + isMouseOver)
 
             // Update hover state directly (bypasses stale MouseArea.containsMouse)
             delegateRoot.cardHovered = isMouseOver
