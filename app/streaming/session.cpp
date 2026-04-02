@@ -3176,9 +3176,13 @@ void Session::exec()
                         QString ignoreBtn = tr("Ignore");
 
                         // Handle resolution change based on user preferences.
-                        // Note: We handle this regardless of whether the user selected "Auto" or a fixed resolution.
-                        // If fixed, the stream will restart with the same fixed resolution on the new display.
-                        if (!m_Preferences->showResolutionChangeDialog) {
+                        // Only process if detectResolutionChange is enabled.
+                        if (!m_Preferences->detectResolutionChange) {
+                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                        "Ignoring resolution change to %dx%d because detectResolutionChange is disabled",
+                                        currentMode.w, currentMode.h);
+                        }
+                        else if (!m_Preferences->showResolutionChangeDialog) {
                             // User disabled the confirmation dialog — restart automatically
                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                                         "Auto-restarting stream due to resolution change to %dx%d (dialog disabled)",

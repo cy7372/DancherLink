@@ -269,15 +269,51 @@ SettingsGroupBox {
             width: parent.width
             text: qsTr("Automatically adapt to screen resolution changes")
             font.pointSize: 12
-            checked: StreamingPreferences.detectResolutionChange
+            // This option is only valid when using "Auto" resolution (0x0).
+            // If a fixed resolution is selected, we shouldn't prompt the user to change it.
+            enabled: Qt.binding(function() {
+                if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                    return false
+                }
+                return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+            })
+            checked: enabled && StreamingPreferences.detectResolutionChange
             onCheckedChanged: {
-                StreamingPreferences.detectResolutionChange = checked
+                if (enabled) {
+                    StreamingPreferences.detectResolutionChange = checked
+                }
+            }
+
+            // Update enabled state when resolution combo box changes
+            Connections {
+                target: advancedSettings.resolutionComboBox
+                function onCurrentIndexChanged() {
+                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
+                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                            return false
+                        }
+                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+                    })
+                }
+            }
+
+            // Update when resolutionListModel is assigned
+            Connections {
+                target: advancedSettings
+                function onResolutionListModelChanged() {
+                    detectResolutionChangeCheck.enabled = Qt.binding(function() {
+                        if (!advancedSettings.resolutionListModel || !advancedSettings.resolutionComboBox) {
+                            return false
+                        }
+                        return advancedSettings.resolutionListModel.get(advancedSettings.resolutionComboBox.currentIndex).video_width === "0"
+                    })
+                }
             }
 
             ToolTip.delay: 1000
             ToolTip.timeout: 5000
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("Automatically detects when the client display resolution changes and prompts to restart the stream.")
+            ToolTip.text: qsTr("Automatically detects when the client display resolution changes and prompts to restart the stream. Only available when using Auto resolution.")
         }
 
         CheckBox {

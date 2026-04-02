@@ -135,9 +135,9 @@
         <translation>自动适应屏幕分辨率更改</translation>
     </message>
     <message>
-        <location filename="../gui/settings/AdvancedSettings.qml" line="275"/>
-        <source>Automatically detects when the client display resolution changes and prompts to restart the stream.</source>
-        <translation>当客户端显示器分辨率更改时自动检测并提示重启串流。</translation>
+        <location filename="../gui/settings/AdvancedSettings.qml" line="313"/>
+        <source>Automatically detects when the client display resolution changes and prompts to restart the stream. Only available when using Auto resolution.</source>
+        <translation>当客户端显示器分辨率更改时自动检测并提示重启串流。仅在分辨率为"自动"时可用。</translation>
     </message>
     <message>
         <location filename="../gui/settings/AdvancedSettings.qml" line="320"/>
