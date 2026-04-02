@@ -28,6 +28,22 @@ ItemDelegate {
     highlighted: false
     property bool customHighlighted: grid && grid.keyboardSelectedIndex === cardIndex
 
+    // Background highlight for hover and keyboard selection
+    background: Rectangle {
+        id: delegateBackground
+        width: delegateRoot.width
+        height: delegateRoot.height
+        color: delegateRoot.isHovered ? AppTheme.backgroundHover :
+               (delegateRoot.customHighlighted ? AppTheme.backgroundHighlighted : "transparent")
+        radius: AppTheme.borderRadius
+        Behavior on color {
+            ColorAnimation {
+                duration: AppTheme.animationDurationFast
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+
     // Scale animation for hover effect - automatically follows isHovered
     scale: isHovered ? 1.03 : 1.0
     Behavior on scale {
