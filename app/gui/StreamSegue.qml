@@ -17,14 +17,14 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
-    // Fill parent StackView - let StackView handle the layout with footer
-    anchors.fill: parent
+    // Fill the entire window (not just StackView content area) to cover footer area
+    anchors.fill: Window.window
 
-    // Opaque background to hide the previous view and footer
+    // Opaque background to hide the previous view
     Rectangle {
         anchors.fill: parent
         color: "black"
-        z: 1000  // Above footer (Overlay footer has default z=0)
+        z: -100
     }
 
     signal restartRequested()
