@@ -56,17 +56,15 @@ ItemDelegate {
     // Hover detection MouseArea — only used for enter/leave EVENT detection.
     // The actual cardHovered state is maintained manually via onContainsMouseChanged
     // plus the position-check timer below.
+    // CRITICAL: z: 999 ensures this MouseArea is above all child elements
+    // (rightClickMouseArea, buttons, etc.) so hover enter/leave events are
+    // always received. acceptedButtons: Qt.NoButton lets clicks pass through.
     MouseArea {
         id: hoverMouseArea
+        z: 999
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.NoButton
-        propagateComposedEvents: false
-
-        onPressed: function(mouse) { mouse.accepted = true }
-        onReleased: function(mouse) { mouse.accepted = true }
-        onPositionChanged: function(mouse) { mouse.accepted = true }
-        onWheel: function(wheel) { wheel.accepted = true }
 
         // Sync cardHovered from MouseArea enter/leave events
         onContainsMouseChanged: {
