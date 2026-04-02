@@ -3225,12 +3225,21 @@ void Session::exec()
                                         currentMode.w, currentMode.h);
                         }
                         else {
-                            // Auto resolution mode but dialog disabled - restart immediately
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                        "Resolution change to %dx%d - restarting stream immediately (no dialog)",
-                                        currentMode.w, currentMode.h);
-                            m_RestartRequest = true;
-                            interrupt();
+                            // Auto resolution mode but dialog disabled
+                            // Skip restart for 1536x2048 (rotated tablet mode) - this is a special resolution
+                            // that should not trigger auto-restart to avoid disruption
+                            if (currentMode.w == 1536 && currentMode.h == 2048) {
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Ignoring resolution change to %dx%d (rotated tablet mode) - no dialog shown",
+                                            currentMode.w, currentMode.h);
+                            }
+                            else {
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Resolution change to %dx%d - restarting stream immediately (no dialog)",
+                                            currentMode.w, currentMode.h);
+                                m_RestartRequest = true;
+                                interrupt();
+                            }
                         }
                         
                         // Break here to avoid handling this event further down

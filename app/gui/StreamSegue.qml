@@ -16,6 +16,10 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
+    // Ensure StreamSegue fills the entire StackView content area
+    // This is critical to avoid layout issues when ApplicationWindow has a footer
+    anchors.fill: parent
+
     // Opaque background to hide the previous view
     Rectangle {
         anchors.fill: parent

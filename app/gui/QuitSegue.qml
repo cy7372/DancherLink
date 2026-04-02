@@ -13,6 +13,9 @@ Item {
 
     property string stageText : qsTr("Quitting %1...").arg(appName)
 
+    // Ensure QuitSegue fills the entire StackView content area
+    anchors.fill: parent
+
     function quitAppCompleted(error)
     {
         // Display a failed dialog if we got an error
