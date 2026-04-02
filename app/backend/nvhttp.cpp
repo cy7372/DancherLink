@@ -82,7 +82,7 @@ uint16_t NvHTTP::httpsPort()
 }
 
 QVector<int>
-NvHTTP::parseQuad(QString quad)
+NvHTTP::parseQuad(const QString& quad)
 {
     QVector<int> ret;
 

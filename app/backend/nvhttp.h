@@ -209,7 +209,7 @@ public:
 
     static
     QVector<int>
-    parseQuad(QString quad);
+    parseQuad(const QString& quad);
 
     void
     quitApp() override;

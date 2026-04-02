@@ -346,7 +346,6 @@ private:
     int m_MouseEmulationRefCount;
     int m_FlushingWindowEventsRef;
     QStringList m_LaunchWarnings;
-    bool m_ShouldExit;
     bool m_RestartRequest;
     bool m_SuppressResolutionChangePrompt;
     bool m_ResolutionDialogPending;

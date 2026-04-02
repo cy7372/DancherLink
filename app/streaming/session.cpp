@@ -629,20 +629,6 @@ void Session::getDecoderInfo(SDL_Window* window,
         return;
     }
 
-
-#if 0 // See AV1 comment at the top of this function
-    if (chooseDecoder(StreamingPreferences::VDS_FORCE_HARDWARE,
-                      window, VIDEO_FORMAT_AV1_MAIN8, 1920, 1080, 60,
-                      false, false, true, decoder)) {
-        isHardwareAccelerated = decoder->isHardwareAccelerated();
-        isFullScreenOnly = decoder->isAlwaysFullScreen();
-        maxResolution = decoder->getDecoderMaxResolution();
-        delete decoder;
-
-        return;
-    }
-#endif
-
     // If we still didn't find a hardware decoder, try H.264 now.
     // This will fall back to software decoding, so it should always work.
     if (chooseDecoder(StreamingPreferences::VDS_AUTO,
@@ -742,7 +728,6 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_InputHandler(nullptr),
       m_MouseEmulationRefCount(0),
       m_FlushingWindowEventsRef(0),
-      m_ShouldExit(false),
       m_RestartRequest(false),
       m_SuppressResolutionChangePrompt(false),
       m_ResolutionDialogPending(false),
@@ -1135,24 +1120,6 @@ bool Session::initialize(QQuickWindow* qtWindow)
             }
         }
 
-#if 0
-        // TODO: Determine if AV1 is better depending on the decoder
-        if (getDecoderAvailability(testWindow,
-                                   m_Preferences->videoDecoderSelection,
-                                   m_Preferences->enableYUV444 ?
-                                        (m_Preferences->enableHdr ? VIDEO_FORMAT_AV1_HIGH10_444 : VIDEO_FORMAT_AV1_HIGH8_444) :
-                                        (m_Preferences->enableHdr ? VIDEO_FORMAT_AV1_MAIN10 : VIDEO_FORMAT_AV1_MAIN8),
-                                   m_StreamConfig.width,
-                                   m_StreamConfig.height,
-                                   m_StreamConfig.fps) != DecoderAvailability::Hardware) {
-            // Deprioritize AV1 unless we can't hardware decode HEVC and have HDR enabled.
-            // We want to keep AV1 at the top of the list for HDR with software decoding
-            // because dav1d is higher performance than FFmpeg's HEVC software decoder.
-            if (hevcDA == DecoderAvailability::Hardware || !m_Preferences->enableHdr) {
-                m_SupportedVideoFormats.deprioritizeByMask(VIDEO_FORMAT_MASK_AV1);
-            }
-        }
-#else
         // Deprioritize AV1 unless we can't hardware decode HEVC, and have HDR enabled
         // or we're on Windows or a non-x86 Linux/BSD.
         //
@@ -1180,7 +1147,6 @@ bool Session::initialize(QQuickWindow* qtWindow)
             ) {
             m_SupportedVideoFormats.deprioritizeByMask(VIDEO_FORMAT_MASK_AV1);
         }
-#endif
 
 #ifdef Q_OS_DARWIN
         {
@@ -2151,8 +2117,6 @@ void Session::setShouldExit(bool quitHostApp)
     if (quitHostApp) {
         m_Preferences->quitAppAfter = true;
     }
-
-    m_ShouldExit = true;
 }
 
 #ifdef Q_OS_WIN32
