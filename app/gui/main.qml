@@ -535,7 +535,7 @@ ApplicationWindow {
 
     // Network latency indicator - fixed position at bottom center
     // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
-    // Use Item positioned at bottom instead of ApplicationWindow.footer to avoid layout issues
+    // Position footer at bottom using Overlay attached property
     Item {
         id: footerItem
         anchors.bottom: parent.bottom

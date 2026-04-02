@@ -14,12 +14,12 @@ Item {
 
     property string stageText : qsTr("Quitting %1...").arg(appName)
 
-    // Ensure QuitSegue fills the entire window (not just StackView content area)
-    anchors.fill: Window.window
+    // Ensure QuitSegue fills the entire StackView content area
+    anchors.fill: parent
 
-    // Opaque background to hide the previous view
+    // Opaque background covering entire window (including footer area)
     Rectangle {
-        anchors.fill: parent
+        anchors.fill: Window.window
         color: "black"
         z: -100
     }

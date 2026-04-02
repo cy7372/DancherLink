@@ -17,12 +17,12 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
-    // Fill the entire window (not just StackView content area) to cover footer area
-    anchors.fill: Window.window
+    // Fill parent StackView
+    anchors.fill: parent
 
-    // Opaque background to hide the previous view
+    // Opaque background covering entire window (including footer area)
     Rectangle {
-        anchors.fill: parent
+        anchors.fill: Window.window
         color: "black"
         z: -100
     }
