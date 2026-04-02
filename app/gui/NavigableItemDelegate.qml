@@ -9,18 +9,16 @@ ItemDelegate {
     property GridView grid
     property int cardIndex: -1  // Set by delegate
 
-    // Hover state - manually maintained, NOT bound to containsMouse.
-    // MouseArea.containsMouse only updates on enter/leave events, so it stays
-    // false when the mouse was already over a card when the page became visible.
+    // Hover state - tracks whether the card is hovered by mouse
     property bool cardHovered: false
 
     // Hover state from child buttons (set by buttons when hovered)
     property bool childHovered: false
 
-    // Combined hover state - automatic binding, no manual sync needed
+    // Combined hover state
     property bool isHovered: cardHovered || childHovered
 
-    // Disable built-in hover behavior
+    // Disable built-in hover behavior — we handle it ourselves
     hoverEnabled: false
 
     // CRITICAL: Use keyboardSelectedIndex instead of currentItem to avoid
@@ -44,7 +42,7 @@ ItemDelegate {
         }
     }
 
-    // Scale animation for hover effect - automatically follows isHovered
+    // Scale animation for hover effect
     scale: isHovered ? 1.03 : 1.0
     Behavior on scale {
         NumberAnimation {
@@ -53,22 +51,14 @@ ItemDelegate {
         }
     }
 
-    // Hover detection MouseArea — only used for enter/leave EVENT detection.
-    // The actual cardHovered state is maintained manually via onContainsMouseChanged
-    // plus the position-check timer below.
-    // CRITICAL: z: 999 ensures this MouseArea is above all child elements
-    // (rightClickMouseArea, buttons, etc.) so hover enter/leave events are
-    // always received. acceptedButtons: Qt.NoButton lets clicks pass through.
-    MouseArea {
-        id: hoverMouseArea
-        z: 999
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
-
-        // Sync cardHovered from MouseArea enter/leave events
-        onContainsMouseChanged: {
-            delegateRoot.cardHovered = containsMouse
+    // HoverHandler is the correct tool for hover detection.
+    // Unlike MouseArea, HoverHandler does NOT consume any mouse events —
+    // it purely observes. This means clicks, right-clicks, wheel events,
+    // and child MouseAreas all work correctly without interference.
+    HoverHandler {
+        id: hoverHandler
+        onHoveredChanged: {
+            delegateRoot.cardHovered = hovered
         }
     }
 
@@ -80,7 +70,6 @@ ItemDelegate {
     }
 
     // Refresh when the parent grid regains active focus
-    // (e.g. user navigates back from AppView to PcView).
     Connections {
         target: grid
         function onActiveFocusChanged() {
@@ -90,31 +79,25 @@ ItemDelegate {
         }
     }
 
-    // Also trigger on Component.onCompleted — onVisibleChanged does NOT fire
+    // Trigger on Component.onCompleted — onVisibleChanged does NOT fire
     // for newly created delegates (they start with visible: true by default).
     Component.onCompleted: {
         refreshHoverTimer.start()
     }
 
     // Timer-based hover refresh using QCursor::pos() via C++ helper.
-    // This reliably detects if the cursor is over the card even when
-    // MouseArea.containsMouse is stale (e.g. card appeared under cursor).
+    // Handles the case where a card appears under the cursor without
+    // a mouse move event (e.g. page navigation, delegate creation).
     Timer {
         id: refreshHoverTimer
         interval: 200
         onTriggered: {
             if (!delegateRoot.visible) return
 
-            // Get cursor position via C++ helper (QCursor::pos())
             var globalPos = cursorHelper.cursorPos()
-
-            // Map screen coordinates to local item coordinates
             var localPos = delegateRoot.mapFromGlobal(globalPos.x, globalPos.y)
-
-            // Check if cursor is within this delegate's bounds
             var isMouseOver = delegateRoot.contains(localPos)
 
-            // Update hover state directly (bypasses stale MouseArea.containsMouse)
             delegateRoot.cardHovered = isMouseOver
         }
     }
