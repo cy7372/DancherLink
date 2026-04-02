@@ -3235,9 +3235,6 @@ void Session::exec()
                         
                         // Break here to avoid handling this event further down
                         break;
-                        
-                        // Break here to avoid handling this event further down
-                        break;
                     }
                 }
             }
