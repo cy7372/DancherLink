@@ -124,6 +124,7 @@ public:
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(bool quitOnDisplaySleep MEMBER quitOnDisplaySleep NOTIFY quitOnDisplaySleepChanged)
     Q_PROPERTY(bool detectResolutionChange MEMBER detectResolutionChange NOTIFY detectResolutionChangeChanged)
+    Q_PROPERTY(bool showResolutionChangeDialog MEMBER showResolutionChangeDialog NOTIFY showResolutionChangeDialogChanged)
     Q_PROPERTY(bool enableMicrophone MEMBER enableMicrophone NOTIFY enableMicrophoneChanged)
     Q_PROPERTY(QString updateSubscriptionUrl READ getUpdateSubscriptionUrl WRITE setUpdateSubscriptionUrl NOTIFY updateSubscriptionUrlChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
@@ -165,6 +166,7 @@ public:
     bool keepAwake;
     bool quitOnDisplaySleep;
     bool detectResolutionChange;
+    bool showResolutionChangeDialog;
     bool enableMicrophone;
     QString updateSubscriptionUrl;
     int packetSize;
@@ -217,6 +219,7 @@ signals:
     void keepAwakeChanged();
     void quitOnDisplaySleepChanged();
     void detectResolutionChangeChanged();
+    void showResolutionChangeDialogChanged();
     void enableMicrophoneChanged();
     void updateSubscriptionUrlChanged();
     void languageChanged();

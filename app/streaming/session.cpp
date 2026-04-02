@@ -3179,15 +3179,23 @@ void Session::exec()
                         // If the user has selected a specific resolution, we should assume they want to stick with it
                         // even if the host resolution changes.
                         if (isAutoResolutionMode()) {
-                            if (!m_ResolutionDialogPending) {
+                            if (!m_Preferences->showResolutionChangeDialog) {
+                                // User disabled the confirmation dialog — restart automatically
+                                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                            "Auto-restarting stream due to resolution change to %dx%d (dialog disabled)",
+                                            currentMode.w, currentMode.h);
+                                m_RestartRequest = true;
+                                interrupt();
+                            }
+                            else if (!m_ResolutionDialogPending) {
                                 m_ResolutionDialogPending = true;
-                                
+
                                 // Store the window handle for the thread to use
                                 // We set the parent window to ensure the dialog appears on top of the fullscreen game window.
-                                // Although accessing m_Window from another thread is generally risky in SDL, 
+                                // Although accessing m_Window from another thread is generally risky in SDL,
                                 // on Windows, the HWND is thread-safe for parenting Message Boxes.
                                 s_ResolutionDialogParentWindow = m_Window;
-                                
+
                                 ResolutionDialogContext* ctx = new ResolutionDialogContext();
                                 ctx->title = title.toStdString();
                                 ctx->message = message.toStdString();
@@ -3207,7 +3215,7 @@ void Session::exec()
                                     SendMessageA(hwnd, WM_CLOSE, 0, 0);
                                 }
                                 #endif
-                                
+
                                 s_ResolutionDialogParentWindow = m_Window;
                                 ResolutionDialogContext* ctx = new ResolutionDialogContext();
                                 ctx->title = title.toStdString();

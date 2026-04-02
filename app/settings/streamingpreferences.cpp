@@ -53,6 +53,7 @@
 #define SER_KEEPAWAKE "keepawake"
 #define SER_QUITONDISPLAYSLEEP "quitondisplaysleep"
 #define SER_DETECTRESCHANGE "detectresolutionchange"
+#define SER_SHOWRESCHANGEDIALOG "showresolutionchangedialog"
 #define SER_MICROPHONE "microphone"
 #define SER_UPDATE_SUBSCRIPTION_URL "updatesubscriptionurl"
 #define SER_LANGUAGE "language"
@@ -157,6 +158,7 @@ void StreamingPreferences::reload()
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     quitOnDisplaySleep = settings.value(SER_QUITONDISPLAYSLEEP, false).toBool();
     detectResolutionChange = settings.value(SER_DETECTRESCHANGE, false).toBool();
+    showResolutionChangeDialog = settings.value(SER_SHOWRESCHANGEDIALOG, true).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
@@ -364,6 +366,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_KEEPAWAKE, keepAwake);
     settings.setValue(SER_QUITONDISPLAYSLEEP, quitOnDisplaySleep);
     settings.setValue(SER_DETECTRESCHANGE, detectResolutionChange);
+    settings.setValue(SER_SHOWRESCHANGEDIALOG, showResolutionChangeDialog);
     settings.setValue(SER_MICROPHONE, enableMicrophone);
     settings.setValue(SER_UPDATE_SUBSCRIPTION_URL, updateSubscriptionUrl);
 }

@@ -318,5 +318,24 @@ SettingsGroupBox {
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Prompts to quit and reconnect when the client display resolution changes.")
         }
+
+        CheckBox {
+            id: showResolutionChangeDialogCheck
+            width: parent.width
+            text: qsTr("Show confirmation dialog on resolution change")
+            font.pointSize: 12
+            enabled: detectResolutionChangeCheck.enabled && detectResolutionChangeCheck.checked
+            checked: enabled && StreamingPreferences.showResolutionChangeDialog
+            onCheckedChanged: {
+                if (enabled) {
+                    StreamingPreferences.showResolutionChangeDialog = checked
+                }
+            }
+
+            ToolTip.delay: 1000
+            ToolTip.timeout: 5000
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("When unchecked, the stream will restart automatically without prompting.")
+        }
     }
 }

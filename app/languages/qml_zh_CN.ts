@@ -139,6 +139,16 @@
         <source>Prompts to quit and reconnect when the client display resolution changes.</source>
         <translation>当客户端显示器分辨率更改时提示退出并重新连接。</translation>
     </message>
+    <message>
+        <location filename="../gui/settings/AdvancedSettings.qml" line="320"/>
+        <source>Show confirmation dialog on resolution change</source>
+        <translation>分辨率变化时显示确认弹窗</translation>
+    </message>
+    <message>
+        <location filename="../gui/settings/AdvancedSettings.qml" line="333"/>
+        <source>When unchecked, the stream will restart automatically without prompting.</source>
+        <translation>取消勾选时，串流将在分辨率变化后自动重启，不再弹窗提示。</translation>
+    </message>
 </context>
 <context>
     <name>AppModel</name>
