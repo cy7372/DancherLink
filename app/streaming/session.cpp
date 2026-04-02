@@ -3010,7 +3010,14 @@ void Session::exec()
 
         case SDL_WINDOWEVENT:
             // Log all window events for debugging
-            // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Window event: %d", event.window.event);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Window event: %d (SIZE_CHANGED=%d, DISPLAY_CHANGED=%d)",
+                        event.window.event, SDL_WINDOWEVENT_SIZE_CHANGED, SDL_WINDOWEVENT_DISPLAY_CHANGED);
+
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Resolution check: detect=%d, suppress=%d, event=%d",
+                        m_Preferences->detectResolutionChange,
+                        m_SuppressResolutionChangePrompt,
+                        event.window.event);
 
             if (m_Preferences->detectResolutionChange && !m_SuppressResolutionChangePrompt &&
                 (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED
@@ -3049,6 +3056,16 @@ void Session::exec()
                 // If we can't get the display index, we can't check the resolution.
                 // This might happen if the window is minimized or hidden.
                 if (displayIndex >= 0 && SDL_GetDesktopDisplayMode(displayIndex, &currentMode) == 0) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Resolution debug: displayIndex=%d, initial=%dx%d, current=%dx%d",
+                                displayIndex, m_InitialDesktopWidth, m_InitialDesktopHeight,
+                                currentMode.w, currentMode.h);
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Resolution compare: current=%dx%d vs initial=%dx%d, match=%d",
+                                currentMode.w, currentMode.h,
+                                m_InitialDesktopWidth, m_InitialDesktopHeight,
+                                (currentMode.w == m_InitialDesktopWidth && currentMode.h == m_InitialDesktopHeight));
+
                     if (currentMode.w != m_InitialDesktopWidth || currentMode.h != m_InitialDesktopHeight) {
                         m_InitialDesktopWidth = currentMode.w;
                         m_InitialDesktopHeight = currentMode.h;
@@ -3222,6 +3239,13 @@ void Session::exec()
 
                         // Handle resolution change based on user preferences.
                         // Only process if detectResolutionChange is enabled.
+                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                    "Resolution handler: detect=%d, showDialog=%d, pending=%d, stream=%dx%d",
+                                    m_Preferences->detectResolutionChange,
+                                    m_Preferences->showResolutionChangeDialog,
+                                    m_ResolutionChangePending,
+                                    m_StreamConfig.width, m_StreamConfig.height);
+
                         if (!m_Preferences->detectResolutionChange) {
                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                                         "Ignoring resolution change to %dx%d because detectResolutionChange is disabled",
