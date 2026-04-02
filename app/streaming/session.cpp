@@ -1319,7 +1319,10 @@ void Session::processPendingResolutionChange()
 
         // Emit signal to notify StreamSegue that resolution changed during restart
         // This allows StreamSegue to delay its restart and wait for the new debounce
-        emit resolutionChangedDuringRestart(m_PendingResolutionWidth, m_PendingResolutionHeight);
+        // Safety check: ensure window still exists before emitting signal
+        if (m_Window) {
+            emit resolutionChangedDuringRestart(m_PendingResolutionWidth, m_PendingResolutionHeight);
+        }
 
         // Reset the debounce timer with the new resolution
         m_LastResolutionChangeTime = SDL_GetTicks();

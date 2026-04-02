@@ -333,8 +333,10 @@ CenteredGridView {
                 // Pop the old segue
                 stackView.pop(StackView.Immediate)
                 // Wait a bit for the pop to complete, then create a new session
+                // Capture the value before the closure since segue will be destroyed
+                var savedPreviousVisibility = originalPreviousVisibility
                 Qt.callLater(function() {
-                    launchOrResumeSelectedAppWithVisibility(false, originalPreviousVisibility)
+                    launchOrResumeSelectedAppWithVisibility(false, savedPreviousVisibility)
                 })
             })
 

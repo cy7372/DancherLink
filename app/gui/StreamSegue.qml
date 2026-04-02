@@ -17,22 +17,33 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
-    // Ensure StreamSegue fills the entire StackView content area
-    // Use explicit x/y/width/height for more reliable positioning during window transitions
+    // CRITICAL: Use explicit absolute positioning to fill the ENTIRE window
+    // This prevents the bottom gap issue by directly binding to Window dimensions
+    // instead of relying on parent (StackView) which may not account for footer
     x: 0
     y: 0
-    width: parent ? parent.width : 0
-    height: parent ? parent.height : 0
+    width: Window.window ? Window.window.width : 0
+    height: Window.window ? Window.window.height : 0
 
     // Force re-layout when window visibility changes to fix the bottom gap issue
-    // This happens when transitioning from borderless window to fullscreen
     onPreviousVisibilityChanged: {
         Qt.callLater(function() {
             // Reset geometry to force re-layout
             x = 0; y = 0
-            width = parent ? parent.width : 0
-            height = parent ? parent.height : 0
+            width = Window.window ? Window.window.width : 0
+            height = Window.window ? Window.window.height : 0
         })
+    }
+
+    // Also listen to window size changes to stay synchronized
+    Connections {
+        target: Window.window
+        function onWidthChanged() {
+            width = Window.window.width
+        }
+        function onHeightChanged() {
+            height = Window.window.height
+        }
     }
 
     // Opaque background to hide the previous view

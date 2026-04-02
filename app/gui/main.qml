@@ -200,26 +200,10 @@ ApplicationWindow {
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
-
-            // Force footer to hide immediately for StreamSegue/QuitSegue to prevent layout gap
-            if (currentItem && (currentItem.objectName === "StreamSegue" ||
-                currentItem.objectName === "QuitSegue")) {
-                footerItem.shouldBeVisible = false
-            } else {
-                // Recalculate footer visibility for other views
-                footerItem.shouldBeVisible = currentNetworkModel !== null && currentItem &&
-                                             !(currentItem instanceof PcView)
-            }
-
             // Update currentStackItem for Connections target
             updateCurrentStackItem()
             // Also update network model (in case signal was already emitted)
             Qt.callLater(updateCurrentNetworkModel)
-
-            // Force layout recalculation to prevent bottom gap
-            Qt.callLater(function() {
-                stackView.update()
-            })
         }
 
         // It would be better to use TextMetrics here, but it always lays out
@@ -562,16 +546,15 @@ ApplicationWindow {
                                        stackView.currentItem.objectName !== "StreamSegue" &&
                                        stackView.currentItem.objectName !== "QuitSegue"
 
-        // Use PropertyAnimation to smoothly hide/show footer and prevent visual glitches
+        // Bind visibility to shouldBeVisible with explicit height control
+        // This prevents the bottom gap issue during transitions
         visible: shouldBeVisible
         height: visible ? 32 : 0
-        onVisibleChanged: {
-            // Force layout update to prevent gap during transitions
-            if (!visible) {
-                Qt.callLater(function() {
-                    footerItem.height = 0
-                    footerItem.anchors.bottomMargin = 0
-                })
+
+        // Force immediate layout update when visibility changes
+        Behavior on height {
+            NumberAnimation {
+                duration: 0  // Instant change, no animation
             }
         }
 
