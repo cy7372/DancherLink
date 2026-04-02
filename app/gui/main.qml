@@ -535,12 +535,13 @@ ApplicationWindow {
 
     // Network latency indicator - fixed position at bottom center
     // Only shown in App View (not PC View) to avoid confusion when multiple PCs are listed
-    // NOTE: Using Overlay attached property to position outside StackView layout
-    Overlay.footer: Item {
+    // Use Item positioned at bottom instead of ApplicationWindow.footer to avoid layout issues
+    Item {
         id: footerItem
-
-        // Fill the window so we can position at bottom
-        anchors.fill: parent
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 32
 
         // Only show footer in App View, not PC View (to avoid confusion about which PC it represents)
         // Also hide during streaming transitions (StreamSegue/QuitSegue) to avoid layout issues
@@ -553,28 +554,20 @@ ApplicationWindow {
         // Bind visibility to shouldBeVisible
         visible: shouldBeVisible
 
-        // The actual indicator container - positioned at bottom
-        Item {
-            id: footerContent
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 32
-
-            Rectangle {
-                id: networkIndicator
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                height: 24
-                width: networkIndicatorRow.implicitWidth + 16
-                radius: 4
-                color: {
-                    var ms = currentNetworkModel ? currentNetworkModel.networkLatencyMs : -2
-                    if (ms < 0)   return "#555555"      // Unknown (gray)
-                    if (ms < 20)  return "#2E7D32"      // Good (green)
-                    if (ms < 50)  return "#F9A825"      // Fair (yellow)
-                    return "#C62828"                    // Poor (red)
-                }
+        Rectangle {
+            id: networkIndicator
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            height: 24
+            width: networkIndicatorRow.implicitWidth + 16
+            radius: 4
+            color: {
+                var ms = currentNetworkModel ? currentNetworkModel.networkLatencyMs : -2
+                if (ms < 0)   return "#555555"      // Unknown (gray)
+                if (ms < 20)  return "#2E7D32"      // Good (green)
+                if (ms < 50)  return "#F9A825"      // Fair (yellow)
+                return "#C62828"                    // Poor (red)
+            }
 
             Row {
                 id: networkIndicatorRow
@@ -693,7 +686,6 @@ ApplicationWindow {
                 }
             }
         }
-    }
     }
 
     ErrorMessageDialog {
