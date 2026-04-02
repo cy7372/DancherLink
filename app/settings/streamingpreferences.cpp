@@ -157,8 +157,8 @@ void StreamingPreferences::reload()
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     quitOnDisplaySleep = settings.value(SER_QUITONDISPLAYSLEEP, false).toBool();
-    detectResolutionChange = settings.value(SER_DETECTRESCHANGE, false).toBool();
-    showResolutionChangeDialog = settings.value(SER_SHOWRESCHANGEDIALOG, true).toBool();
+    detectResolutionChange = settings.value(SER_DETECTRESCHANGE, true).toBool();
+    showResolutionChangeDialog = settings.value(SER_SHOWRESCHANGEDIALOG, false).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
