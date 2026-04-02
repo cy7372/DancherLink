@@ -325,7 +325,7 @@ QString AppModel::getRunningAppName()
         }
     }
 
-    return nullptr;
+    return QString();
 }
 
 Session* AppModel::createSessionForApp(int appIndex)

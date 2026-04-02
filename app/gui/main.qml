@@ -631,16 +631,13 @@ ApplicationWindow {
                 }
             }
 
-            MouseArea {
-                id: networkIndicatorMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
+            HoverHandler {
+                id: networkIndicatorHover
             }
 
             ToolTip.delay: 500
             ToolTip.timeout: 5000
-            ToolTip.visible: networkIndicatorMouseArea.containsMouse
+            ToolTip.visible: networkIndicatorHover.hovered
             ToolTip.text: {
                 if (!currentNetworkModel || currentNetworkModel.networkLatencyMs < 0) return ""
                 var ms = currentNetworkModel.networkLatencyMs

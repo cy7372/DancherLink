@@ -222,14 +222,12 @@ CenteredGridView {
                     font.bold: true
                 }
 
-                ToolTip.visible: latencyMouseArea.containsMouse && pcGrid.model
+                ToolTip.visible: latencyHover.hovered && pcGrid.model
                 ToolTip.text: pcGrid.model ? pcGrid.model.networkQualityString : ""
                 ToolTip.delay: 500
 
-                MouseArea {
-                    id: latencyMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
+                HoverHandler {
+                    id: latencyHover
                 }
             }
         }
@@ -260,15 +258,12 @@ CenteredGridView {
                 height: !model.online ? 75 : 70
             }
 
-            ToolTip.visible: stateIconMouseArea.containsMouse && stateIcon.visible
+            ToolTip.visible: stateIconHover.hovered && stateIcon.visible
             ToolTip.text: !model.online ? qsTr("PC is offline") : qsTr("PC is not paired")
             ToolTip.delay: 500
 
-            MouseArea {
-                id: stateIconMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton  // Don't intercept clicks
+            HoverHandler {
+                id: stateIconHover
             }
         }
 

@@ -546,14 +546,12 @@ CenteredGridView {
                 }
             }
 
-            ToolTip.visible: latencyMouseArea.containsMouse
+            ToolTip.visible: latencyHover.hovered
             ToolTip.text: qsTr("Network latency to the host PC")
             ToolTip.delay: 500
 
-            MouseArea {
-                id: latencyMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
+            HoverHandler {
+                id: latencyHover
             }
         }
     }
