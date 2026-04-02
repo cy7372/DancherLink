@@ -15,7 +15,6 @@ Item {
                                            qsTr("Starting %1...").arg(appName)
     property bool isResume : false
     property bool quitAfter : false
-    property bool wasRestart : false
 
     // Opaque background to hide the previous view
     Rectangle {
@@ -31,22 +30,17 @@ Item {
     property int previousVisibility: -1
 
     onRestartRequested: {
-        // Mark that this is a restart so onDeactivating skips toolbar restoration
-        wasRestart = true
-
-        // CRITICAL: Capture window state BEFORE any window operations.
-        // We must read visibility first, then call show() methods, because
-        // Window.visibility may be updated asynchronously by Qt.
-        if (Window.window && previousVisibility === -1) {
-            // Only capture if not already set (e.g., from QuitSegue)
-            // This preserves the original pre-stream window state
+        // Save the current window visibility BEFORE showing fullscreen
+        // This ensures we can restore to the correct state after streaming ends
+        if (Window.window) {
             previousVisibility = Window.window.visibility
         }
 
         // Reset the UI state to show we are working
         if (Window.window) {
-            // Show window first, then set fullscreen for the splash screen
             Window.window.show()
+
+            // Always show the splash screen in fullscreen mode
             Window.window.showFullScreen()
         }
     }
@@ -159,26 +153,15 @@ Item {
             // Apply the desired window state based on previous visibility or preferences
             var targetVisibility = Window.Windowed
 
-            // If previousVisibility was explicitly captured (not -1), use it.
-            // This ensures that after a stream restart (e.g., due to resolution change),
-            // we restore to the actual window state before streaming started,
-            // not the user's UI display mode preference.
-            // Only fall back to uiDisplayMode if previousVisibility was never set.
-            if (previousVisibility !== -1) {
-                // Use the captured pre-stream window state
-                if (previousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (previousVisibility === Window.FullScreen) {
-                    targetVisibility = Window.FullScreen
-                }
-                // else: previousVisibility was Windowed or other, keep targetVisibility as Windowed
-            } else {
-                // No explicit capture - fall back to user preference
-                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                    targetVisibility = Window.Maximized
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                    targetVisibility = Window.FullScreen
-                }
+            // Treat -1 (not set) as Windowed
+            if (previousVisibility === Window.Maximized) {
+                targetVisibility = Window.Maximized
+            } else if (previousVisibility === Window.FullScreen) {
+                targetVisibility = Window.FullScreen
+            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                targetVisibility = Window.Maximized
+            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                targetVisibility = Window.FullScreen
             }
 
             // Apply the window state immediately before popping the StackView.
@@ -224,24 +207,20 @@ Item {
 
     function sessionReadyForDeletion()
     {
-        // Drop the reference to the Session object so it can be collected.
-        // We intentionally avoid gc() here because forcing synchronous garbage
-        // collection blocks the JS engine during critical transitions (restart).
-        // Qt's JS engine will naturally collect the orphaned object.
+        // Garbage collect the Session object since it's pretty heavyweight
+        // and keeps other libraries (like SDL_TTF) around until it is deleted.
         session = null
+        gc()
     }
 
     StackView.onDeactivating: {
         // Show the toolbar again when popped off the stack
-        // Skip during restart — the new segue will manage toolbar state
-        if (!wasRestart && Window.window && Window.window.toolBar) {
+        if (Window.window && Window.window.toolBar) {
             Window.window.toolBar.visible = true
         }
 
-        // Re-enable GUI gamepad usage now (skip during restart — new segue manages this)
-        if (!wasRestart) {
-            SdlGamepadKeyNavigation.enable()
-        }
+        // Re-enable GUI gamepad usage now
+        SdlGamepadKeyNavigation.enable()
 
         // Safely disconnect signals only if session still exists
         // Session may be destroyed before this handler runs
@@ -279,17 +258,14 @@ Item {
             }
 
             // Show the splash screen according to user's UI display mode preference
-            // During restart, previousVisibility is already FullScreen — respect that
             if (Window.window) {
-                if (previousVisibility === Window.FullScreen) {
-                    Window.window.showFullScreen()
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
                     Window.window.showMaximized()
                 } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
                     Window.window.showFullScreen()
                 }
             }
-            // For UI_WINDOWED and no explicit fullscreen, keep current window state
+            // For UI_WINDOWED, keep current window state (just hide toolbar)
         })
 
         // Hook up our signals
