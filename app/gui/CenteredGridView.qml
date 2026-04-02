@@ -39,6 +39,6 @@ GridView {
     }
 
     // Use FollowCurve for smoother scrolling on touchpads
-    boundsBehavior: Flickable.FollowCurve
+    boundsBehavior: Flickable.FollowCurve | Flickable.StopAtBounds
 }
 

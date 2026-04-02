@@ -18,8 +18,9 @@ Item {
     anchors.fill: parent
 
     // Opaque background to hide the previous view
+    // Use Window.window as parent to cover the entire window (including footer area)
     Rectangle {
-        anchors.fill: parent
+        anchors.fill: Window.window
         color: "black"
         z: -100
     }
