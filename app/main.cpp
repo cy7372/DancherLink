@@ -66,6 +66,7 @@ namespace {
 #include "streaming/streamutils.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "cursorhelper.h"
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -725,13 +726,6 @@ int main(int argc, char *argv[])
             break;
         }
     }
-
-    // Simple helper to expose QCursor::pos() to QML for hover detection
-    class CursorHelper : public QObject {
-    public:
-        explicit CursorHelper(QObject* parent = nullptr) : QObject(parent) {}
-        Q_INVOKABLE QPointF cursorPos() const { return QCursor::pos(); }
-    };
 
     if (hasGUI) {
         engine.rootContext()->setContextProperty("initialView", initialView);
