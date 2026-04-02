@@ -12,6 +12,11 @@
         <file>gui/settings/GamepadSettings.qml</file>
         <file>gui/settings/UISettings.qml</file>
         <file>gui/settings/AdvancedSettings.qml</file>
+        <file>gui/settings/VideoTab.qml</file>
+        <file>gui/settings/AudioTab.qml</file>
+        <file>gui/settings/InputTab.qml</file>
+        <file>gui/settings/HostTab.qml</file>
+        <file>gui/settings/UITab.qml</file>
         <file>gui/main.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
