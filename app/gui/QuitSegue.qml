@@ -12,6 +12,9 @@ Item {
     property Session nextSession : null
     property string nextAppName : ""
 
+    // Track window visibility to restore after transition
+    property int previousVisibility: -1
+
     property string stageText : qsTr("Quitting %1...").arg(appName)
 
     // Ensure QuitSegue fills the entire StackView content area
@@ -36,10 +39,6 @@ Item {
 
         // If we're supposed to launch another game after this, do so now
         if (error === undefined && nextSession !== null) {
-            // Capture the current visibility BEFORE creating the new segue
-            // so we can restore to this state after streaming ends
-            var currentVisibility = Window.window.visibility
-
             var component = Qt.createComponent("StreamSegue.qml")
             if (component.status !== Component.Ready) {
                 console.error("Failed to create StreamSegue component:", component.errorString())
@@ -47,10 +46,11 @@ Item {
                 stackView.pop()
                 return
             }
+            // Pass the previousVisibility so StreamSegue can restore the correct window state
             var segue = component.createObject(stackView, {
                 "appName": nextAppName,
                 "session": nextSession,
-                "previousVisibility": currentVisibility
+                "previousVisibility": previousVisibility
             })
             if (!segue) {
                 console.error("Failed to create StreamSegue object")
@@ -60,10 +60,20 @@ Item {
             }
             stackView.replace(segue)
 
-            // StreamSegue's onActivated will handle showing fullscreen
-            // We don't need to call showFullScreen() here
+            // StreamSegue is already fullscreen (we captured previousVisibility above)
+            // StreamSegue's onActivated will keep fullscreen, so no need to change state
         }
         else {
+            // No next session - restore window state before popping
+            if (Window.window && previousVisibility !== -1) {
+                if (previousVisibility === Window.Maximized) {
+                    Window.window.showMaximized()
+                } else if (previousVisibility === Window.FullScreen) {
+                    Window.window.showFullScreen()
+                } else {
+                    Window.window.showNormal()
+                }
+            }
             // Exit this view
             stackView.pop()
         }
@@ -72,9 +82,21 @@ Item {
     StackView.onActivated: {
         // Use Qt.callLater to ensure the component is fully attached to the window
         Qt.callLater(function() {
+            // Capture window state before going fullscreen
+            if (Window.window) {
+                previousVisibility = Window.window.visibility
+            }
+
             // Hide the toolbar before we start loading
             if (Window.window && Window.window.toolBar) {
                 Window.window.toolBar.visible = false
+            }
+
+            // CRITICAL: Show fullscreen to cover taskbar during transition
+            // This ensures the transition screen covers the entire screen, even if
+            // the user's windowed mode doesn't cover the taskbar.
+            if (Window.window) {
+                Window.window.showFullScreen()
             }
         })
 

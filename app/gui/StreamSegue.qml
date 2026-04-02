@@ -302,15 +302,12 @@ Item {
                 Window.window.toolBar.visible = false
             }
 
-            // Show the splash screen according to user's UI display mode preference
+            // CRITICAL: Show fullscreen to cover taskbar during transition
+            // This ensures the transition screen covers the entire screen, even if
+            // the user's windowed mode doesn't cover the taskbar.
             if (Window.window) {
-                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                    Window.window.showMaximized()
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                    Window.window.showFullScreen()
-                }
+                Window.window.showFullScreen()
             }
-            // For UI_WINDOWED, keep current window state (just hide toolbar)
         })
 
         // Hook up our signals
