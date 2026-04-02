@@ -17,6 +17,13 @@ Item {
     // Ensure QuitSegue fills the entire StackView content area
     anchors.fill: parent
 
+    // Opaque background to hide the previous view and footer
+    Rectangle {
+        anchors.fill: parent
+        color: "black"
+        z: 1000  // Above footer (Overlay footer has default z=0)
+    }
+
     function quitAppCompleted(error)
     {
         // Display a failed dialog if we got an error

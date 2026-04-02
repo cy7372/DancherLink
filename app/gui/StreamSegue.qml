@@ -17,40 +17,14 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
-    // CRITICAL: Use explicit absolute positioning to fill the ENTIRE window
-    // This prevents the bottom gap issue by directly binding to Window dimensions
-    // instead of relying on parent (StackView) which may not account for footer
-    x: 0
-    y: 0
-    width: Window.window ? Window.window.width : 0
-    height: Window.window ? Window.window.height : 0
+    // Fill parent StackView - let StackView handle the layout with footer
+    anchors.fill: parent
 
-    // Force re-layout when window visibility changes to fix the bottom gap issue
-    onPreviousVisibilityChanged: {
-        Qt.callLater(function() {
-            // Reset geometry to force re-layout
-            x = 0; y = 0
-            width = Window.window ? Window.window.width : 0
-            height = Window.window ? Window.window.height : 0
-        })
-    }
-
-    // Also listen to window size changes to stay synchronized
-    Connections {
-        target: Window.window
-        function onWidthChanged() {
-            width = Window.window.width
-        }
-        function onHeightChanged() {
-            height = Window.window.height
-        }
-    }
-
-    // Opaque background to hide the previous view
+    // Opaque background to hide the previous view and footer
     Rectangle {
         anchors.fill: parent
         color: "black"
-        z: -100
+        z: 1000  // Above footer (Overlay footer has default z=0)
     }
 
     signal restartRequested()
