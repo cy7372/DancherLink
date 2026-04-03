@@ -40,7 +40,9 @@ Item {
         if (session && !cancelRequested) {
             cancelRequested = true
             session.interrupt()
-            // Wait for sessionFinished to pop - SDL window will be hidden by then
+            // Keep the transition screen visible until sessionFinished is received.
+            // This ensures the user sees we're processing their cancel request.
+            // The spinner should continue running to indicate work in progress.
         }
     }
 

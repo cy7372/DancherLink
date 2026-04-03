@@ -2387,7 +2387,8 @@ void Session::interrupt()
     // CRITICAL: Hide the SDL window immediately to prevent it from being visible
     // when the user returns to the Qt UI. This is especially important when the
     // user presses the back button - we want the SDL window to disappear instantly.
-    if (m_Window && !m_RestartRequest) {
+    // We also call SDL_HideWindow in DispatchDeferredCleanup as a safety measure.
+    if (m_Window) {
         SDL_HideWindow(m_Window);
     }
 
@@ -2828,17 +2829,9 @@ void Session::exec()
                              m_InputHandler->setCaptureActive(false);
                          }
 
-                         // Hide window immediately for a cleaner transition
-                         if (m_Window && !m_RestartRequest) {
-                             SDL_HideWindow(m_Window);
-                         }
-
-                         // Post SDL_QUIT to the event queue instead of calling interrupt() directly
-                         // This allows the current frame rendering to complete before cleanup begins,
-                         // preventing deadlocks when the display subsystem is powering down
-                         SDL_Event quitEvent;
-                         quitEvent.type = SDL_QUIT;
-                         SDL_PushEvent(&quitEvent);
+                         // Use the standard interrupt() method to ensure a clean shutdown
+                         // This hides the window, stops the connection, and posts SDL_QUIT
+                         interrupt();
                      }
                 }
 
@@ -2856,15 +2849,9 @@ void Session::exec()
                             m_InputHandler->setCaptureActive(false);
                         }
 
-                        // Hide window immediately for a cleaner transition
-                        if (m_Window && !m_RestartRequest) {
-                            SDL_HideWindow(m_Window);
-                        }
-
-                        // Post SDL_QUIT to stop streaming
-                        SDL_Event quitEvent;
-                        quitEvent.type = SDL_QUIT;
-                        SDL_PushEvent(&quitEvent);
+                        // Use the standard interrupt() method to ensure a clean shutdown
+                        // This hides the window, stops the connection, and posts SDL_QUIT
+                        interrupt();
                     }
                 }
             }
