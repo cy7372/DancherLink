@@ -296,6 +296,13 @@ Item {
         if (cancelRequested) {
             console.log("  User canceled, popping stackView first")
 
+            // CRITICAL: Save session reference and previousVisibility BEFORE popping.
+            // After pop(), stackView.currentItem will be AppView (no session property),
+            // and the StreamSegue properties will be inaccessible.
+            // We need these saved values in the Qt.callLater callback to restore the window.
+            var savedSession = session
+            var savedPreviousVisibility = previousVisibility
+
             // CRITICAL: This is the fundamental fix for the intermittent window restoration issue.
             //
             // Problem analysis:
@@ -306,14 +313,14 @@ Item {
             //
             // Solution:
             // 1. Pop the stack FIRST to return to AppView
-            // 2. Use a Timer to restore the window AFTER the pop completes
-            // 3. The Timer keeps the callback alive even if StreamSegue is being destroyed
-            // 4. Window operations are performed when the Timer fires, ensuring they complete
+            // 2. Use Qt.callLater to restore the window AFTER the pop completes
+            // 3. Save session reference before pop to ensure it's accessible in the callback
+            // 4. Window operations are performed in the callback, ensuring they complete
 
             stackView.pop()
 
-            // Use a Timer to restore the window after the stack pop completes.
-            // 100ms is sufficient for the stack operation to finish.
+            // Use Qt.callLater to restore the window after the stack pop completes.
+            // This ensures the QML stack is stable before we manipulate the window.
             Qt.callLater(function() {
                 console.log("  Qt.callLater: restoring window state after pop")
                 if (!Window.window) {
@@ -322,25 +329,25 @@ Item {
                 }
 
                 // Restore window style first (Windows only)
-                // Use session from the popped item if it still exists
-                var segueItem = stackView.currentItem
-                if (segueItem && segueItem.session) {
-                    console.log("  Qt.callLater: calling session.restoreWindowStyle()")
-                    segueItem.session.restoreWindowStyle()
+                // Use the saved session reference (captured before pop)
+                if (savedSession) {
+                    console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
+                    savedSession.restoreWindowStyle()
                 } else {
-                    console.log("  Qt.callLater: session not available, skipping restoreWindowStyle()")
+                    console.log("  Qt.callLater: savedSession is null, skipping restoreWindowStyle()")
                 }
 
                 // Apply the desired window state based on previous visibility
+                // Use the saved previousVisibility value (captured before pop)
                 var targetVisibility = Window.Windowed
-                if (previousVisibility === Window.Maximized) {
+                if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
-                } else if (previousVisibility === Window.FullScreen) {
+                } else if (savedPreviousVisibility === Window.FullScreen) {
                     targetVisibility = Window.FullScreen
                 }
 
                 console.log("  Qt.callLater: targetVisibility=" + targetVisibility +
-                            " previousVisibility=" + previousVisibility)
+                            " savedPreviousVisibility=" + savedPreviousVisibility)
 
                 if (targetVisibility === Window.Maximized) {
                     Window.window.showMaximized()
@@ -378,8 +385,11 @@ Item {
             stageLabel.visible = true
             hintText.visible = false
 
-            // CRITICAL: Use the same fix as the cancelRequested path.
-            // Pop first, then restore the window in a Qt.callLater callback.
+            // CRITICAL: Save session reference and previousVisibility BEFORE popping.
+            // Same fix as the cancelRequested path.
+            var savedSession = session
+            var savedPreviousVisibility = previousVisibility
+
             stackView.pop()
 
             Qt.callLater(function() {
@@ -390,16 +400,17 @@ Item {
                 }
 
                 // Restore window style first (Windows only)
-                var segueItem = stackView.currentItem
-                if (segueItem && segueItem.session) {
-                    segueItem.session.restoreWindowStyle()
+                // Use the saved session reference (captured before pop)
+                if (savedSession) {
+                    savedSession.restoreWindowStyle()
                 }
 
                 // Apply the desired window state based on previous visibility
+                // Use the saved previousVisibility value (captured before pop)
                 var targetVisibility = Window.Windowed
-                if (previousVisibility === Window.Maximized) {
+                if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
-                } else if (previousVisibility === Window.FullScreen) {
+                } else if (savedPreviousVisibility === Window.FullScreen) {
                     targetVisibility = Window.FullScreen
                 }
 

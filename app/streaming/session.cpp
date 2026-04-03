@@ -2182,8 +2182,14 @@ bool Session::startConnectionAsync()
     // CRITICAL: Check interrupt flag before starting the connection.
     // If interrupt() was called during the HTTP launch/resume request,
     // we should abort before calling LiStartConnection().
+    //
+    // CRITICAL: Call LiStopConnection() to clean up server-side RTSP state.
+    // The HTTP request has completed, so the server has created an RTSP session.
+    // Without calling LiStopConnection(), the next connection attempt will fail
+    // with "RTSP handshake failed" or "Failed to decrypt RTSP response" errors.
     if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting connection");
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting and cleaning up");
+        LiStopConnection();
         return false;
     }
 
@@ -2496,13 +2502,9 @@ void Session::interrupt()
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() complete ======");
 
-    // Note: We don't call LiStopConnection() here because:
-    // 1. It must be called between LiStartConnection() and LiStopConnection()
-    // 2. The cleanup code in DispatchDeferredCleanup will handle it
-    // 3. Calling it here could cause race conditions with the cleanup thread
-    //
-    // LiStopConnection() will be called in DispatchDeferredCleanup regardless
-    // of whether the connection was fully established or not.
+    // Note: LiStopConnection() will be called in:
+    // 1. startConnectionAsync() if interrupt was called during/after HTTP request
+    // 2. DeferredSessionCleanupTask for any remaining cleanup
 }
 
 // =============================================================================
