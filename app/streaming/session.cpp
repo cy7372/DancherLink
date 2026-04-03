@@ -2641,6 +2641,32 @@ void Session::exec()
         m_MicThread->start();
     }
 
+    // CRITICAL: Process ALL pending Qt events (including user input) before creating SDL window.
+    // This is essential for Back key cancellation to work during the transition phase.
+    //
+    // Flow:
+    // 1. User presses Back key during transition screen
+    // 2. Qt queues the key event
+    // 3. QML Keys.onBackPressed handler calls session.interrupt()
+    // 4. interrupt() sets m_InterruptCalled = 1 and pushes SDL_QUIT
+    // 5. We process events here to ensure the interrupt() call is processed
+    // 6. We check m_InterruptCalled and skip SDL window creation
+    //
+    // We use AllEvents (not ExcludeUserInputEvents) to ensure Back key events are processed.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Processing pending Qt events (including user input) before SDL window creation");
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    QCoreApplication::sendPostedEvents();
+
+    // Re-check interrupt flag after processing Qt events
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called via QML Back key handler, skipping to cleanup");
+        delete m_InputHandler;
+        m_InputHandler = nullptr;
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+        return;
+    }
+
     // Pump the Qt event loop one last time before we create our SDL window
     // This is sometimes necessary for the QML code to process any signals
     // we've emitted from the async connection thread.
