@@ -7,6 +7,7 @@ import "."
 import SdlGamepadKeyNavigation 1.0
 import Session 1.0
 import StreamingPreferences 1.0
+import AutoUpdateChecker 1.0
 
 Item {
     objectName: "StreamSegue"
@@ -28,13 +29,15 @@ Item {
         z: -100
     }
 
-    // CRITICAL: Intercept back key to prevent user from navigating back during launch
-    // Allowing back navigation during stream initialization can cause crashes because
-    // the session object may be in an incomplete state
+    // CRITICAL: Intercept back key to cancel streaming and return to previous view
+    // This allows user to cancel the stream launch during initialization
     focus: true
     Keys.onBackPressed: {
-        console.log("StreamSegue: Back pressed ignored - waiting for stream to start")
-        // Ignore back press during stream initialization
+        console.log("StreamSegue: Back pressed - canceling stream")
+        if (session) {
+            session.interrupt()
+        }
+        stackView.pop()
     }
 
     signal restartRequested()
@@ -222,6 +225,12 @@ Item {
         else {
             // No error, just pop back
             restoreWindowState()
+
+            // CRITICAL: Check for updates after stream session ends normally
+            // This ensures users are notified of new versions after they finish gaming
+            console.log("Stream session ended - checking for updates")
+            AutoUpdateChecker.start(false)
+
             stackView.pop()
         }
     }

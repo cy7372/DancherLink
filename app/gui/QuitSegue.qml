@@ -4,6 +4,7 @@ import QtQuick.Window 2.15
 
 import ComputerManager 1.0
 import Session 1.0
+import AutoUpdateChecker 1.0
 
 Item {
     objectName: "QuitSegue"
@@ -74,6 +75,12 @@ Item {
                     Window.window.showNormal()
                 }
             }
+
+            // CRITICAL: Check for updates after user manually quits streaming
+            // This ensures users are notified of new versions after they finish gaming
+            console.log("Stream session ended - checking for updates")
+            AutoUpdateChecker.start(false)
+
             // Exit this view
             stackView.pop()
         }
