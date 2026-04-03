@@ -2182,35 +2182,18 @@ bool Session::startConnectionAsync()
     // CRITICAL: Check interrupt flag before starting the connection.
     // If interrupt() was called during the HTTP launch/resume request,
     // we should abort before calling LiStartConnection().
-    //
-    // CRITICAL: Call LiStopConnection() to clean up server-side RTSP state.
-    // The HTTP request has completed, so the server has created an RTSP session.
-    // Without calling LiStopConnection(), the next connection attempt will fail
-    // with "RTSP handshake failed" or "Failed to decrypt RTSP response" errors.
-    //
-    // CRITICAL: Also call quitApp() to notify the server to clean up the RTSP session.
-    // LiStopConnection() only cleans up client-side state. The server may still have
-    // the RTSP session active, which causes decryption errors on the next connection.
     if (m_InterruptCalled.load()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting and cleaning up");
 
         // Call LiStopConnection() to clean up client-side state
         LiStopConnection();
 
-        // CRITICAL: Call quitApp() to clean up server-side RTSP session state.
-        // This is necessary because the HTTP resume/launch request has already
-        // created an RTSP session on the server with an active encryption context.
-        // Without calling quitApp(), the server's AES-GCM sequence numbers will
-        // be out of sync with the client on the next connection attempt, causing
-        // "Failed to decrypt RTSP response" errors.
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling quitApp() to clean up server-side RTSP session");
-        try {
-            NvHTTP http(m_Computer);
-            http.quitApp();
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() completed successfully");
-        } catch (const std::exception& e) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() failed: %s", e.what());
-        }
+        // NOTE: We intentionally do NOT call quitApp() here because:
+        // 1. The user has explicitly requested to cancel the connection
+        // 2. quitApp() can timeout (up to 30s) if the server is unresponsive
+        // 3. The server will eventually clean up the RTSP session on its own
+        //
+        // This provides a faster, more responsive cancellation experience.
 
         return false;
     }
@@ -2221,44 +2204,20 @@ bool Session::startConnectionAsync()
 
     // CRITICAL: Check interrupt flag after LiStartConnection.
     // If interrupt() was called during LiStartConnection initialization,
-    // we need to clean up both client and server state.
+    // we need to clean up client state.
     if (m_InterruptCalled.load()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
 
         // Call LiStopConnection() to clean up client-side state
         LiStopConnection();
 
-        // CRITICAL: Call quitApp() to clean up server-side RTSP session state.
-        // LiStartConnection() may have already started the RTSP handshake,
-        // which creates an encryption context on the server. We must call
-        // quitApp() to ensure the server cleans up this state.
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling quitApp() to clean up server-side RTSP session after LiStartConnection");
-        try {
-            NvHTTP http(m_Computer);
-            http.quitApp();
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() completed successfully");
-        } catch (const std::exception& e) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() failed: %s", e.what());
-        }
+        // NOTE: We intentionally do NOT call quitApp() here for the same reasons
+        // as above - faster cancellation is preferred over waiting for server cleanup.
 
         return false;
     }
 
     if (err != 0) {
-        // CRITICAL: LiStartConnection() failed, possibly due to RTSP handshake failure.
-        // The server may have created an RTSP session with encryption context before
-        // the failure occurred. We must call quitApp() to ensure the server cleans up
-        // this state, otherwise the next connection attempt will fail with
-        // "Failed to decrypt RTSP response" errors.
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStartConnection() failed (error: %d), calling quitApp() to clean up server state", err);
-        try {
-            NvHTTP http(m_Computer);
-            http.quitApp();
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() completed successfully after LiStartConnection failure");
-        } catch (const std::exception& e) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "  quitApp() failed: %s", e.what());
-        }
-
         // We already displayed an error dialog in the stage failure listener.
         return false;
     }
