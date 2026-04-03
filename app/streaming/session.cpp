@@ -2413,18 +2413,22 @@ void Session::start()
 void Session::interrupt()
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() called ======");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Session object: %p", this);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_Window = %p", m_Window);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled (before) = %d", m_InterruptCalled.load());
 
     // Set the interrupt flag atomically to prevent duplicate processing
     // This ensures the interrupt logic is only executed once per session
     bool expected = false;
     if (!m_InterruptCalled.compare_exchange_strong(expected, true)) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "interrupt() already called, ignoring duplicate");
+                    "  interrupt() already called, ignoring duplicate");
         return;
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled (after) = %d", m_InterruptCalled.load());
 
     // Interrupt any pending connection attempt immediately
     // This is critical to stop the connection thread if it's still running
@@ -2649,9 +2653,11 @@ void Session::exec()
             SDL_SetWindowFullscreen(m_Window, 0);
         }
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Reusing shared window, calling SDL_ShowWindow");
         SDL_ShowWindow(m_Window);
     }
     else {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Creating new SDL window");
         m_Window = SDL_CreateWindow(windowName.c_str(),
                                     x,
                                     y,
@@ -2868,6 +2874,8 @@ void Session::exec()
         m_InitialDesktopWidth = initialMode.w;
         m_InitialDesktopHeight = initialMode.h;
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== Entering SDL event loop ======");
 
     for (;;) {
 #if SDL_VERSION_ATLEAST(2, 0, 18) && !defined(STEAM_LINK)

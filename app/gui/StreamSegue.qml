@@ -45,9 +45,13 @@ Item {
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
+            console.log("====== Back key pressed, calling session.interrupt() ======")
+            console.log("  session object:", session)
+            console.log("  cancelRequested:", cancelRequested)
             // Use interrupt() to immediately stop the session
             // This works regardless of whether connection is established or not
             session.interrupt()
+            console.log("====== session.interrupt() completed ======")
             // Keep the transition screen visible until sessionFinished is received.
         }
     }
@@ -228,6 +232,12 @@ Item {
 
     function sessionFinished(portTestResult)
     {
+        console.log("====== sessionFinished() called ======")
+        console.log("  cancelRequested:", cancelRequested)
+        console.log("  portTestResult:", portTestResult)
+        console.log("  errorDialog.text:", errorDialog.text)
+        console.log("  waitingForResolutionDebouncing:", waitingForResolutionDebouncing)
+
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
         }
@@ -243,6 +253,7 @@ Item {
 
         // User canceled via back key - just restore and return
         if (cancelRequested) {
+            console.log("  User canceled, restoring and popping stackView")
             restoreWindowState()
             stackView.pop()
             return
