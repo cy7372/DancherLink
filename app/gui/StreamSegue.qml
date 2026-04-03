@@ -31,6 +31,40 @@ Item {
     }
 
     // =============================================================================
+    // Component Lifecycle
+    // =============================================================================
+    Component.onCompleted: {
+        // CRITICAL: Connect signals IMMEDIATELY when component is created.
+        // This is earlier than StackView.onActivated and eliminates the race condition
+        // where user presses Back button before signals are connected.
+        //
+        // The session object is already assigned by AppView.createStreamSegue() before
+        // createObject() returns, so session is guaranteed to be valid here.
+        if (session) {
+            console.log("StreamSegue: Component.onCompleted - connecting signals early")
+            session.stageStarting.connect(stageStarting)
+            session.stageFailed.connect(stageFailed)
+            session.connectionStarted.connect(connectionStarted)
+            session.displayLaunchError.connect(displayLaunchError)
+            session.quitStarting.connect(quitStarting)
+            session.sessionFinished.connect(sessionFinished)
+            session.sessionRestartRequested.connect(restartRequested)
+            session.resolutionChangedDuringRestart.connect(function(width, height) {
+                console.log("Resolution changed to " + width + "x" + height +
+                            " during restart - restarting debounce timer")
+                waitingForResolutionDebouncing = true
+                debounceResolutionWidth = width
+                debounceResolutionHeight = height
+                resolutionDebounceTimer.restart()
+            })
+            session.hostReady.connect(hostReady)
+            session.readyForDeletion.connect(sessionReadyForDeletion)
+        } else {
+            console.error("StreamSegue: session is null in Component.onCompleted")
+        }
+    }
+
+    // =============================================================================
     // Cancellation Management
     // =============================================================================
     // Unified method to request session cancellation. This is the single entry point
@@ -596,35 +630,14 @@ Item {
     }
 
     StackView.onActivated: {
-        // CRITICAL: Check if session exists before connecting signals
+        // Signals are already connected in Component.onCompleted.
+        // Just verify session exists before proceeding.
         if (!session) {
             console.error("StreamSegue: session is null in onActivated, cannot proceed")
             return
         }
 
-        // CRITICAL: Connect signals FIRST before anything else
-        // This ensures sessionFinished handler is connected even if user presses
-        // Back button immediately. The fast-path cancellation in session.start()
-        // can emit sessionFinished synchronously, so we must be ready.
-        session.stageStarting.connect(stageStarting)
-        session.stageFailed.connect(stageFailed)
-        session.connectionStarted.connect(connectionStarted)
-        session.displayLaunchError.connect(displayLaunchError)
-        session.quitStarting.connect(quitStarting)
-        session.sessionFinished.connect(sessionFinished)
-        session.sessionRestartRequested.connect(restartRequested)
-        session.resolutionChangedDuringRestart.connect(function(width, height) {
-            // New resolution detected during restart - restart debounce timer
-            // This ensures we always use the LATEST resolution after changes stop
-            console.log("Resolution changed to " + width + "x" + height +
-                        " during restart - restarting debounce timer")
-            waitingForResolutionDebouncing = true
-            debounceResolutionWidth = width
-            debounceResolutionHeight = height
-            resolutionDebounceTimer.restart()
-        })
-        session.hostReady.connect(hostReady)
-        session.readyForDeletion.connect(sessionReadyForDeletion)
+        console.log("StreamSegue: StackView.onActivated - signals already connected, proceeding with initialization")
 
         // Use Qt.callLater to ensure the component is fully attached to the window
         // before we try to access Window.window. StackView.onActivated can fire
