@@ -6,7 +6,7 @@
 #define RTSP_RETRY_DELAY_MS 500
 
 static int currentSeqNumber;
-static char rtspTargetUrl[256];
+char rtspTargetUrl[256];  // Non-static to allow access from Connection.c for early cleanup
 static char* sessionIdString;
 static bool hasSessionId;
 static int rtspClientVersion;

@@ -128,6 +128,7 @@ bool isControlDataInTransit(void);
 
 int performRtspHandshake(PSERVER_INFORMATION serverInfo);
 void cleanupRtspSession(void);
+extern char rtspTargetUrl[256];  // For early cancellation cleanup
 
 void initializeVideoDepacketizer(int pktSize);
 void destroyVideoDepacketizer(void);
