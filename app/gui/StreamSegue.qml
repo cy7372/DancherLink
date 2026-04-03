@@ -33,10 +33,11 @@ Item {
     // This allows user to cancel the stream launch during initialization
     focus: true
     Keys.onBackPressed: {
-        console.log("StreamSegue: Back pressed - canceling stream")
+        console.log("StreamSegue: Back pressed - canceling stream and returning")
         if (session) {
             session.interrupt()
         }
+        // Pop back to the previous view (AppView or PcView)
         stackView.pop()
     }
 
@@ -337,12 +338,9 @@ Item {
             // Session may be destroyed already
         }
 
-        // CRITICAL: Clean up the session when user navigates back during transition
-        // This prevents crashes from dangling session references
-        if (session) {
-            console.log("StreamSegue deactivating - cleaning up session")
-            session.interrupt()
-        }
+        // Note: session.interrupt() is called in Keys.onBackPressed when user presses back,
+        // or by sessionFinished()/quitAppCompleted() flow when streaming ends normally.
+        // No need to call it here as it may be called twice.
     }
 
     StackView.onActivated: {
