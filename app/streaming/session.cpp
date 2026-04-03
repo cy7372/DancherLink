@@ -2198,11 +2198,14 @@ bool Session::startConnectionAsync()
 
     // CRITICAL: Check interrupt flag again after LiStartConnection.
     // If interrupt() was called during LiStartConnection initialization,
-    // we should abort before emitting connectionStarted().
+    // we should abort and clean up the partial connection state.
     if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called after LiStartConnection, aborting");
-        // Interrupt the connection we just started
-        LiInterruptConnection();
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called after LiStartConnection, aborting and cleaning up");
+        // CRITICAL: Call LiStopConnection() to clean up the partial connection state.
+        // This is necessary because LiStartConnection() may have already established
+        // some RTSP state before the interrupt. Without this cleanup, the next
+        // connection attempt will fail with "RTSP handshake failed".
+        LiStopConnection();
         return false;
     }
 

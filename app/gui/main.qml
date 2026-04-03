@@ -170,12 +170,18 @@ ApplicationWindow {
 
     function goBack() {
         // CRITICAL: If the current page is StreamSegue, we need to interrupt
-        // the streaming session before popping the stack.
+        // the streaming session. The stackView.pop() will be called in
+        // StreamSegue.sessionFinished() after the interrupt completes.
         if (stackView.currentItem && stackView.currentItem.objectName === "StreamSegue") {
             console.log("goBack(): StreamSegue detected, calling session.interrupt()")
             if (stackView.currentItem.session && !stackView.currentItem.cancelRequested) {
                 stackView.currentItem.cancelRequested = true
                 stackView.currentItem.session.interrupt()
+                // Do NOT pop here! StreamSegue.sessionFinished() will handle it
+                return
+            } else if (stackView.currentItem.cancelRequested) {
+                // Already cancelling, just wait for sessionFinished to pop
+                console.log("goBack(): Already cancelling, waiting for sessionFinished")
                 return
             }
         }
