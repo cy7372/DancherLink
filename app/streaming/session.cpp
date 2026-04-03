@@ -2381,10 +2381,8 @@ void Session::start()
 
 void Session::interrupt()
 {
-    // Stop any connection in progress
-    LiInterruptConnection();
-
-    // Inject a quit event to our SDL event loop
+    // Inject a quit event to our SDL event loop.
+    // Using SDL_QUIT (native event) for consistency and simplicity.
     SDL_Event event;
     event.type = SDL_QUIT;
     event.quit.timestamp = SDL_GetTicks();
