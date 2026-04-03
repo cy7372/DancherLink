@@ -20,16 +20,7 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
     case KeyComboQuit:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected quit key combo");
-
-        // Request the session to exit
-        Session::get()->setShouldExit(false);
-
-        // Push a user event to wake up the main loop
-        SDL_Event event;
-        event.type = SDL_USEREVENT;
-        event.user.code = SDL_CODE_SESSION_EXIT;
-        event.user.timestamp = SDL_GetTicks();
-        SDL_PushEvent(&event);
+        Session::get()->requestSessionExit();
         break;
 
     case KeyComboUngrabInput:

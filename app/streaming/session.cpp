@@ -2390,6 +2390,34 @@ void Session::interrupt()
 }
 
 // =============================================================================
+// Session::requestSessionExit() - Unified Session Exit Request
+// =============================================================================
+// This is the unified method for requesting a graceful session exit.
+// It is used by:
+// - Ctrl+Alt+Shift+Q keyboard combo
+// - Start+Select+L1+R1 gamepad combo
+// - Monitor power off / laptop lid close (via interrupt() -> this function)
+//
+// This sets quitAppAfter=false (local disconnect only) and posts a
+// SDL_CODE_SESSION_EXIT event to trigger the cleanup flow.
+// =============================================================================
+void Session::requestSessionExit()
+{
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "requestSessionExit() called");
+
+    // Request session exit without quitting the host app.
+    // This means the game will continue running on the host.
+    setShouldExit(false);
+
+    // Push a user event to wake up the main loop and trigger cleanup.
+    SDL_Event event;
+    event.type = SDL_USEREVENT;
+    event.user.code = SDL_CODE_SESSION_EXIT;
+    event.user.timestamp = SDL_GetTicks();
+    SDL_PushEvent(&event);
+}
+
+// =============================================================================
 // Session::cancelInitialization() - Fast Path for Initialization Cancellation
 // =============================================================================
 // Called when the user cancels during the loading/initialization phase,
@@ -2849,9 +2877,8 @@ void Session::exec()
                              m_InputHandler->setCaptureActive(false);
                          }
 
-                         // Use the standard interrupt() method to ensure a clean shutdown
-                         // This hides the window, stops the connection, and posts SDL_QUIT
-                         interrupt();
+                         // Use unified session exit request
+                         requestSessionExit();
                      }
                 }
 
@@ -2869,9 +2896,8 @@ void Session::exec()
                             m_InputHandler->setCaptureActive(false);
                         }
 
-                        // Use the standard interrupt() method to ensure a clean shutdown
-                        // This hides the window, stops the connection, and posts SDL_QUIT
-                        interrupt();
+                        // Use unified session exit request
+                        requestSessionExit();
                     }
                 }
             }
