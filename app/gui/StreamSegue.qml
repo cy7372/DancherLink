@@ -314,6 +314,10 @@ Item {
         console.log("  portTestResult:", portTestResult)
         console.log("  errorDialog.text:", errorDialog.text)
         console.log("  waitingForResolutionDebouncing:", waitingForResolutionDebouncing)
+        console.log("  session:", session)
+        console.log("  Window.window:", Window.window)
+        console.log("  Window.window.visible:", Window.window ? Window.window.visible : "null")
+        console.log("  Window.window.visibility:", Window.window ? Window.window.visibility : "null")
 
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
@@ -331,6 +335,8 @@ Item {
         // User canceled via back key - just restore and return
         if (cancelRequested) {
             console.log("  User canceled, popping stackView first")
+            console.log("  Before pop: stackView.depth =", stackView.depth)
+            console.log("  Before pop: savedPreviousVisibility =", previousVisibility)
 
             // CRITICAL: Save session reference and previousVisibility BEFORE popping.
             // After pop(), stackView.currentItem will be AppView (no session property),
@@ -359,10 +365,15 @@ Item {
             // This ensures the QML stack is stable before we manipulate the window.
             Qt.callLater(function() {
                 console.log("  Qt.callLater: restoring window state after pop")
+                console.log("  Qt.callLater: Window.window exists:", !!Window.window)
+                console.log("  Qt.callLater: savedSession exists:", !!savedSession)
+                console.log("  Qt.callLater: stackView.depth =", stackView.depth)
+                console.log("  Qt.callLater: stackView.currentItem:", stackView.currentItem ? stackView.currentItem.objectName : "null")
 
                 // CRITICAL: Check if Window.window exists and is valid
                 if (!Window.window) {
                     console.log("  Qt.callLater: Window.window is null, aborting")
+                    console.error("  ERROR: Window.window is null! This may cause the app to appear to have exited.")
                     return
                 }
 
