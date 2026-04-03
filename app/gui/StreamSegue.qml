@@ -47,6 +47,7 @@ Item {
         console.log("  focus:", focus)
         console.log("  Item.visible:", visible)
 
+        // Guard: Check if session exists and hasn't already requested cancellation
         if (session && !cancelRequested) {
             cancelRequested = true
             console.log("====== Calling session.requestCancel() ======")
@@ -324,6 +325,8 @@ Item {
             // This ensures the QML stack is stable before we manipulate the window.
             Qt.callLater(function() {
                 console.log("  Qt.callLater: restoring window state after pop")
+
+                // CRITICAL: Check if Window.window exists and is valid
                 if (!Window.window) {
                     console.log("  Qt.callLater: Window.window is null, aborting")
                     return
@@ -350,17 +353,30 @@ Item {
                 console.log("  Qt.callLater: targetVisibility=" + targetVisibility +
                             " savedPreviousVisibility=" + savedPreviousVisibility)
 
-                if (targetVisibility === Window.Maximized) {
-                    Window.window.showMaximized()
-                } else if (targetVisibility === Window.FullScreen) {
-                    Window.window.showFullScreen()
-                } else {
-                    Window.window.showNormal()
-                }
+                // CRITICAL: Check window state before applying changes
+                // Window may have been destroyed or hidden by the user
+                try {
+                    if (targetVisibility === Window.Maximized) {
+                        Window.window.showMaximized()
+                    } else if (targetVisibility === Window.FullScreen) {
+                        Window.window.showFullScreen()
+                    } else {
+                        Window.window.showNormal()
+                    }
 
-                // CRITICAL: Explicitly raise and activate the window
-                Window.window.raise()
-                Window.window.requestActivate()
+                    // CRITICAL: Explicitly raise and activate the window
+                    Window.window.raise()
+                    Window.window.requestActivate()
+                } catch (e) {
+                    console.log("  Qt.callLater: Exception during window restoration:", e)
+                    // Window may have been destroyed, attempt fallback
+                    try {
+                        Window.window.showNormal()
+                        Window.window.raise()
+                    } catch (e2) {
+                        console.log("  Qt.callLater: Fallback also failed:", e2)
+                    }
+                }
 
                 console.log("  Qt.callLater: window restoration complete")
             })
@@ -395,6 +411,8 @@ Item {
 
             Qt.callLater(function() {
                 console.log("  Qt.callLater (normal exit): restoring window state after pop")
+
+                // CRITICAL: Check if Window.window exists and is valid
                 if (!Window.window) {
                     console.log("  Qt.callLater (normal exit): Window.window is null")
                     return
@@ -415,16 +433,27 @@ Item {
                     targetVisibility = Window.FullScreen
                 }
 
-                if (targetVisibility === Window.Maximized) {
-                    Window.window.showMaximized()
-                } else if (targetVisibility === Window.FullScreen) {
-                    Window.window.showFullScreen()
-                } else {
-                    Window.window.showNormal()
-                }
+                // CRITICAL: Check window state before applying changes
+                try {
+                    if (targetVisibility === Window.Maximized) {
+                        Window.window.showMaximized()
+                    } else if (targetVisibility === Window.FullScreen) {
+                        Window.window.showFullScreen()
+                    } else {
+                        Window.window.showNormal()
+                    }
 
-                Window.window.raise()
-                Window.window.requestActivate()
+                    Window.window.raise()
+                    Window.window.requestActivate()
+                } catch (e) {
+                    console.log("  Qt.callLater (normal exit): Exception during window restoration:", e)
+                    try {
+                        Window.window.showNormal()
+                        Window.window.raise()
+                    } catch (e2) {
+                        console.log("  Qt.callLater (normal exit): Fallback failed:", e2)
+                    }
+                }
 
                 console.log("  Qt.callLater (normal exit): window restoration complete")
 
@@ -465,23 +494,35 @@ Item {
 
             console.log("  restoreWindowState(): targetVisibility=" + targetVisibility)
 
-            if (targetVisibility === Window.Maximized) {
-                console.log("  restoreWindowState(): calling showMaximized()")
-                Window.window.showMaximized()
-            } else if (targetVisibility === Window.FullScreen) {
-                console.log("  restoreWindowState(): calling showFullScreen()")
-                Window.window.showFullScreen()
-            } else {
-                console.log("  restoreWindowState(): calling showNormal()")
-                Window.window.showNormal()
-            }
+            // CRITICAL: Use try-catch to handle potential window destruction
+            try {
+                if (targetVisibility === Window.Maximized) {
+                    console.log("  restoreWindowState(): calling showMaximized()")
+                    Window.window.showMaximized()
+                } else if (targetVisibility === Window.FullScreen) {
+                    console.log("  restoreWindowState(): calling showFullScreen()")
+                    Window.window.showFullScreen()
+                } else {
+                    console.log("  restoreWindowState(): calling showNormal()")
+                    Window.window.showNormal()
+                }
 
-            // CRITICAL: Explicitly raise and activate the window to ensure it's visible
-            // This is necessary because stackView.pop() may happen before the window
-            // has a chance to be shown
-            console.log("  restoreWindowState(): calling raise() and requestActivate()")
-            Window.window.raise()
-            Window.window.requestActivate()
+                // CRITICAL: Explicitly raise and activate the window to ensure it's visible
+                // This is necessary because stackView.pop() may happen before the window
+                // has a chance to be shown
+                console.log("  restoreWindowState(): calling raise() and requestActivate()")
+                Window.window.raise()
+                Window.window.requestActivate()
+            } catch (e) {
+                console.log("  restoreWindowState(): Exception during window restoration:", e)
+                // Fallback: try to show normal
+                try {
+                    Window.window.showNormal()
+                    Window.window.raise()
+                } catch (e2) {
+                    console.log("  restoreWindowState(): Fallback failed:", e2)
+                }
+            }
         } else {
             console.log("  restoreWindowState(): window is minimized, skipping restoration")
         }
@@ -555,6 +596,12 @@ Item {
     }
 
     StackView.onActivated: {
+        // CRITICAL: Check if session exists before connecting signals
+        if (!session) {
+            console.error("StreamSegue: session is null in onActivated, cannot proceed")
+            return
+        }
+
         // CRITICAL: Connect signals FIRST before anything else
         // This ensures sessionFinished handler is connected even if user presses
         // Back button immediately. The fast-path cancellation in session.start()
@@ -592,7 +639,7 @@ Item {
             // This ensures the transition screen covers the entire screen, even if
             // the user's windowed mode doesn't cover the taskbar.
             // Note: previousVisibility is passed from AppView, so we don't capture it here
-            if (Window.window) {
+            if (Window.window && Window.window.visible) {
                 Window.window.showFullScreen()
             }
         })
