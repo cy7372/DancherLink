@@ -2699,11 +2699,17 @@ void Session::exec()
     if (m_Preferences->quitOnDisplaySleep) {
         // Enable system events to catch power broadcast messages
         SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-        
+
         SDL_SysWMinfo info;
         SDL_VERSION(&info.version);
         if (SDL_GetWindowWMInfo(m_Window, &info)) {
             hPowerNotify = RegisterPowerSettingNotification(info.info.win.window, &GUID_MONITOR_POWER_ON, DEVICE_NOTIFY_WINDOW_HANDLE);
+
+            // Also register for lid switch notifications on laptops
+            // GUID_LIDSWITCH_STATE_CHANGE is defined in WinNT.h
+            static const GUID GUID_LIDSWITCH_STATE_CHANGE =
+                { 0xBA3E0F4D, 0xB817, 0x4094, { 0xA2, 0xD1, 0xD5, 0x63, 0x79, 0xE6, 0xA0, 0xF3 } };
+            RegisterPowerSettingNotification(info.info.win.window, &GUID_LIDSWITCH_STATE_CHANGE, DEVICE_NOTIFY_WINDOW_HANDLE);
         }
     }
 #endif
@@ -2813,6 +2819,8 @@ void Session::exec()
                 event.syswm.msg->msg.win.msg == WM_POWERBROADCAST &&
                 event.syswm.msg->msg.win.wParam == PBT_POWERSETTINGCHANGE) {
                 POWERBROADCAST_SETTING* pbs = (POWERBROADCAST_SETTING*)event.syswm.msg->msg.win.lParam;
+
+                // Check for monitor power off
                 if (pbs->PowerSetting == GUID_MONITOR_POWER_ON && pbs->DataLength == sizeof(DWORD)) {
                      DWORD monitorStatus = *(DWORD*)pbs->Data;
                      if (monitorStatus == 0) { // Monitor Off
@@ -2830,6 +2838,27 @@ void Session::exec()
                          quitEvent.type = SDL_QUIT;
                          SDL_PushEvent(&quitEvent);
                      }
+                }
+
+                // Check for laptop lid close (GUID_LIDSWITCH_STATE_CHANGE)
+                // Data: 0 = Lid Closed, 1 = Lid Open
+                static const GUID GUID_LIDSWITCH_STATE_CHANGE =
+                    { 0xBA3E0F4D, 0xB817, 0x4094, { 0xA2, 0xD1, 0xD5, 0x63, 0x79, 0xE6, 0xA0, 0xF3 } };
+                if (pbs->PowerSetting == GUID_LIDSWITCH_STATE_CHANGE && pbs->DataLength == sizeof(DWORD)) {
+                    DWORD lidStatus = *(DWORD*)pbs->Data;
+                    if (lidStatus == 0) { // Lid Closed
+                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Laptop lid closed, quitting stream");
+
+                        // Stop input handler first
+                        if (m_InputHandler) {
+                            m_InputHandler->setCaptureActive(false);
+                        }
+
+                        // Post SDL_QUIT to stop streaming
+                        SDL_Event quitEvent;
+                        quitEvent.type = SDL_QUIT;
+                        SDL_PushEvent(&quitEvent);
+                    }
                 }
             }
             
