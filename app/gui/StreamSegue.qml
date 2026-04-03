@@ -42,24 +42,32 @@ Item {
     property bool cancelRequested: false
 
     focus: true
-    Keys.onBackPressed: {
-        console.log("====== Back key pressed handler invoked ======")
-        console.log("  session:", session)
-        console.log("  cancelRequested:", cancelRequested)
-        console.log("  focus:", focus)
-        console.log("  Item.visible:", visible)
-        if (session && !cancelRequested) {
-            cancelRequested = true
-            console.log("====== Back key pressed, calling session.interrupt() ======")
-            console.log("  session object:", session)
+
+    // Handle multiple "back" key types for cross-platform support:
+    // - Key_Back: Android TV / webOS physical back button
+    // - Key_Escape: Windows/Linux desktop Escape key
+    // - Key_Backspace: Some keyboards have backspace as "back"
+    Keys.onPressed: {
+        if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
+            console.log("====== Back/Esc key pressed handler invoked ======")
+            console.log("  key:", event.key)
+            console.log("  session:", session)
             console.log("  cancelRequested:", cancelRequested)
-            // Use interrupt() to immediately stop the session
-            // This works regardless of whether connection is established or not
-            session.interrupt()
-            console.log("====== session.interrupt() completed ======")
-            // Keep the transition screen visible until sessionFinished is received.
-        } else {
-            console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
+            console.log("  focus:", focus)
+            console.log("  Item.visible:", visible)
+            if (session && !cancelRequested) {
+                cancelRequested = true
+                console.log("====== Back key pressed, calling session.interrupt() ======")
+                console.log("  session object:", session)
+                console.log("  cancelRequested:", cancelRequested)
+                // Use interrupt() to immediately stop the session
+                // This works regardless of whether connection is established or not
+                session.interrupt()
+                console.log("====== session.interrupt() completed ======")
+                // Keep the transition screen visible until sessionFinished is received.
+            } else {
+                console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
+            }
         }
     }
 
