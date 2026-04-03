@@ -31,14 +31,18 @@ Item {
 
     // CRITICAL: Intercept back key to cancel streaming and return to previous view
     // This allows user to cancel the stream launch during initialization
+    // IMPORTANT: Do NOT pop immediately - wait for sessionFinished to ensure SDL
+    // window is properly hidden/cleanup before returning to the Qt UI
+    property bool cancelRequested: false
+
     focus: true
     Keys.onBackPressed: {
-        console.log("StreamSegue: Back pressed - canceling stream and returning")
-        if (session) {
+        console.log("StreamSegue: Back pressed - canceling stream")
+        if (session && !cancelRequested) {
+            cancelRequested = true
             session.interrupt()
+            // Wait for sessionFinished to pop - this ensures SDL window is hidden first
         }
-        // Pop back to the previous view (AppView or PcView)
-        stackView.pop()
     }
 
     signal restartRequested()
@@ -208,6 +212,15 @@ Item {
 
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
+
+        // CRITICAL: Check if user requested cancellation via back key
+        // In this case, skip error dialogs and just return to previous view
+        if (cancelRequested) {
+            console.log("Stream was canceled by user - returning to previous view")
+            restoreWindowState()
+            stackView.pop()
+            return
+        }
 
         if (quitAfter && !errorDialog.text) {
             // If this was a CLI launch without errors, exit now
