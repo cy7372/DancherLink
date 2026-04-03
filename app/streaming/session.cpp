@@ -2194,6 +2194,11 @@ bool Session::startConnectionAsync()
 #endif
 
     emit connectionStarted();
+
+    // Mark that connection has been started - used to determine whether
+    // to use interrupt() or requestSessionExit() for power events
+    m_ConnectionStartedEmitted = true;
+
     return true;
 }
 
@@ -2381,6 +2386,12 @@ void Session::start()
 
 void Session::interrupt()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "interrupt() called");
+
+    // Interrupt any pending connection attempt immediately
+    // This is critical to stop the connection thread if it's still running
+    LiInterruptConnection();
+
     // Inject a quit event to our SDL event loop.
     // Using SDL_QUIT (native event) for consistency and simplicity.
     SDL_Event event;
@@ -2885,8 +2896,16 @@ void Session::exec()
                              m_InputHandler->setCaptureActive(false);
                          }
 
-                         // Use unified session exit request
-                         requestSessionExit();
+                         // Use interrupt() before connection is established (transition screen phase)
+                         // to ensure the connection attempt is cancelled immediately.
+                         // Use requestSessionExit() after connection is established for graceful shutdown.
+                         if (!m_ConnectionStartedEmitted) {
+                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "In transition phase, using interrupt()");
+                             interrupt();
+                         } else {
+                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Connection established, using requestSessionExit()");
+                             requestSessionExit();
+                         }
                      }
                 }
 
@@ -2904,8 +2923,16 @@ void Session::exec()
                             m_InputHandler->setCaptureActive(false);
                         }
 
-                        // Use unified session exit request
-                        requestSessionExit();
+                        // Use interrupt() before connection is established (transition screen phase)
+                        // to ensure the connection attempt is cancelled immediately.
+                        // Use requestSessionExit() after connection is established for graceful shutdown.
+                        if (!m_ConnectionStartedEmitted) {
+                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "In transition phase, using interrupt()");
+                            interrupt();
+                        } else {
+                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Connection established, using requestSessionExit()");
+                            requestSessionExit();
+                        }
                     }
                 }
             }

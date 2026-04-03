@@ -45,16 +45,9 @@ Item {
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Use fast cancellation if connection hasn't been established yet
-            // After connectionStarted(), we should use graceful exit to notify the host
-            if (connectionEstablished) {
-                // Connection is already running - use graceful session exit
-                // This will notify the host to quit the game/app
-                session.requestSessionExit()
-            } else {
-                // Still in initialization phase - use fast cancellation
-                session.cancelInitialization()
-            }
+            // Use interrupt() to immediately stop the SDL event loop
+            // This works regardless of whether connection is established or not
+            session.interrupt()
             // Keep the transition screen visible until sessionFinished is received.
         }
     }

@@ -371,6 +371,11 @@ private:
     bool m_AsyncConnectionSuccess;
     int m_PortTestResults;
 
+    // Track if connectionStarted() has been emitted - used to determine
+    // whether to use interrupt() (before connection) or requestSessionExit() (after connection)
+    // for power events (monitor off, lid close) during streaming session
+    bool m_ConnectionStartedEmitted = false;
+
     int m_ActiveVideoFormat;
     int m_ActiveVideoWidth;
     int m_ActiveVideoHeight;
