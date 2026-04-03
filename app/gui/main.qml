@@ -169,6 +169,17 @@ ApplicationWindow {
     }
 
     function goBack() {
+        // CRITICAL: If the current page is StreamSegue, we need to interrupt
+        // the streaming session before popping the stack.
+        if (stackView.currentItem && stackView.currentItem.objectName === "StreamSegue") {
+            console.log("goBack(): StreamSegue detected, calling session.interrupt()")
+            if (stackView.currentItem.session && !stackView.currentItem.cancelRequested) {
+                stackView.currentItem.cancelRequested = true
+                stackView.currentItem.session.interrupt()
+                return
+            }
+        }
+
         if (clearOnBack) {
             // Pop all items except the first one
             stackView.pop(null)
