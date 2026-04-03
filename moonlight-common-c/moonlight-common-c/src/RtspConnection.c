@@ -435,6 +435,13 @@ static bool transactRtspMessageTcp(PRTSP_MESSAGE request, PRTSP_MESSAGE response
     for (;;) {
         struct pollfd pfd;
 
+        // Check for connection interruption before polling
+        if (ConnectionInterrupted) {
+            Limelog("RTSP request interrupted by user\n");
+            *error = -1;
+            goto Exit;
+        }
+
         if (offset >= responseBufferSize) {
             responseBufferSize = offset + 16384;
             responseBuffer = extendBuffer(responseBuffer, responseBufferSize);
@@ -446,7 +453,9 @@ static bool transactRtspMessageTcp(PRTSP_MESSAGE request, PRTSP_MESSAGE response
 
         pfd.fd = sock;
         pfd.events = POLLIN;
-        err = pollSockets(&pfd, 1, RTSP_RECEIVE_TIMEOUT_SEC * 1000);
+        // Use shorter timeout when interrupted to allow faster cleanup
+        int timeoutMs = ConnectionInterrupted ? 1000 : RTSP_RECEIVE_TIMEOUT_SEC * 1000;
+        err = pollSockets(&pfd, 1, timeoutMs);
         if (err == 0) {
             *error = ETIMEDOUT;
             Limelog("RTSP request timed out\n");
