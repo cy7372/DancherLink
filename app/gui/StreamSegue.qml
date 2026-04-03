@@ -45,7 +45,7 @@ Item {
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Use interrupt() to immediately stop the SDL event loop
+            // Use interrupt() to immediately stop the session
             // This works regardless of whether connection is established or not
             session.interrupt()
             // Keep the transition screen visible until sessionFinished is received.

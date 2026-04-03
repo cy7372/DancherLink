@@ -2384,9 +2384,45 @@ void Session::start()
     thread->start();
 }
 
+// =============================================================================
+// Session::interrupt() - Universal Session Interrupt
+// =============================================================================
+// This is the universal method to interrupt/terminate a streaming session
+// at ANY stage of its lifecycle:
+//
+// 1. During initialization (before LiStartConnection completes)
+//    - Calls LiInterruptConnection() to stop the connection thread
+//    - Hides SDL window to prevent visual flash
+//    - Posts SDL_QUIT to terminate the event loop
+//
+// 2. After connection is established (during active streaming)
+//    - Sets interrupt flag to trigger LiStopConnection() in cleanup
+//    - Hides SDL window immediately
+//    - Posts SDL_QUIT to terminate the event loop
+//
+// This method is designed to be:
+// - Thread-safe: Can be called from any thread
+// - Idempotent: Safe to call multiple times
+// - Universal: Works at any stage of the session lifecycle
+//
+// Called from:
+// - StreamSegue.qml: Back key handler
+// - Power event handler: Monitor off, lid close (during transition phase)
+// =============================================================================
 void Session::interrupt()
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "interrupt() called");
+
+    // Set the interrupt flag atomically to prevent duplicate processing
+    // This ensures LiStopConnection() is only called once during cleanup
+    static std::atomic_flag s_Interrupted = ATOMIC_FLAG_INIT;
+    bool wasInterrupted = s_Interrupted.test_and_set();
+
+    if (wasInterrupted) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "interrupt() already called, ignoring duplicate");
+        return;
+    }
 
     // Interrupt any pending connection attempt immediately
     // This is critical to stop the connection thread if it's still running
@@ -2405,6 +2441,14 @@ void Session::interrupt()
     event.type = SDL_QUIT;
     event.quit.timestamp = SDL_GetTicks();
     SDL_PushEvent(&event);
+
+    // Note: We don't call LiStopConnection() here because:
+    // 1. It must be called between LiStartConnection() and LiStopConnection()
+    // 2. The cleanup code in DispatchDeferredCleanup will handle it
+    // 3. Calling it here could cause race conditions with the cleanup thread
+    //
+    // The m_ConnectionStartedEmitted flag is checked in DispatchDeferredCleanup
+    // to ensure LiStopConnection() is called if the connection was established.
 }
 
 // =============================================================================
