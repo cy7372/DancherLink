@@ -2392,6 +2392,13 @@ void Session::interrupt()
     // This is critical to stop the connection thread if it's still running
     LiInterruptConnection();
 
+    // Hide the SDL window immediately if it exists
+    // This prevents the window from briefly appearing when the user cancels
+    // during the transition phase (e.g., pressing Back during "Resuming...")
+    if (m_Window) {
+        SDL_HideWindow(m_Window);
+    }
+
     // Inject a quit event to our SDL event loop.
     // Using SDL_QUIT (native event) for consistency and simplicity.
     SDL_Event event;
