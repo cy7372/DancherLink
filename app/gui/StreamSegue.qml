@@ -17,6 +17,7 @@ Item {
                                            qsTr("Starting %1...").arg(appName)
     property bool isResume : false
     property bool quitAfter : false
+    property bool connectionEstablished : false
 
     // Fill parent StackView
     anchors.fill: parent
@@ -48,9 +49,9 @@ Item {
 
         if (session && !cancelRequested) {
             cancelRequested = true
-            console.log("====== Calling session.interrupt() ======")
-            session.interrupt()
-            console.log("====== session.interrupt() completed ======")
+            console.log("====== Calling session.requestCancel() ======")
+            session.requestCancel()
+            console.log("====== session.requestCancel() completed ======")
             // Keep the transition screen visible until sessionFinished is received.
         } else {
             console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)

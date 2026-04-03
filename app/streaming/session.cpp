@@ -225,6 +225,13 @@ void Session::clStageStarting(int stage)
 
 void Session::clStageFailed(int stage, int errorCode)
 {
+    // If the connection was interrupted by the user, don't show an error dialog.
+    // The interruption was intentional, so treat it as a cancellation rather than a failure.
+    if (s_ActiveSession && s_ActiveSession->m_InterruptCalled.load()) {
+        SDL_Log("Stage failed during user-initiated interruption, treating as cancellation\n");
+        return;
+    }
+
     // Perform the port test now, while we're on the async connection thread and not blocking the UI.
     unsigned int portFlags = LiGetPortFlagsFromStage(stage);
     s_ActiveSession->m_PortTestResults = LiTestClientConnectivity(CONN_TEST_SERVER, 443, portFlags);
@@ -2459,55 +2466,72 @@ void Session::start()
 // - StreamSegue.qml: Back key handler
 // - Power event handler: Monitor off, lid close (during transition phase)
 // =============================================================================
-void Session::interrupt()
+// =============================================================================
+// Session::requestCancel() - Unified Cancellation Request
+// =============================================================================
+// This is the unified method for requesting session cancellation.
+// It automatically chooses the appropriate cancellation strategy based on
+// the current connection state:
+//
+// - Before connection established: Fast interruption via LiInterruptConnection()
+// - After connection established: Graceful exit via requestSessionExit()
+//
+// This function should be called by:
+// - Back key / Esc key in QML
+// - Power events (monitor off, lid close)
+// - Any user-initiated cancellation request
+// =============================================================================
+void Session::requestCancel()
 {
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() called ======");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() called ======");
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Session object: %p", this);
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_Window = %p", m_Window);
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled (before) = %d", m_InterruptCalled.load());
 
-    // Set the interrupt flag atomically to prevent duplicate processing
-    // This ensures the interrupt logic is only executed once per session
-    bool expected = false;
-    if (!m_InterruptCalled.compare_exchange_strong(expected, true)) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "  interrupt() already called, ignoring duplicate");
-        return;
-    }
+    if (!m_ConnectionStartedEmitted) {
+        // Fast path: Connection not yet established, interrupt immediately
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection not established, using fast interruption");
 
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled (after) = %d", m_InterruptCalled.load());
+        // Set the interrupt flag atomically to prevent duplicate processing
+        bool expected = false;
+        if (!m_InterruptCalled.compare_exchange_strong(expected, true)) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  requestCancel() already called, ignoring duplicate");
+            return;
+        }
 
-    // Interrupt any pending connection attempt immediately
-    // This is critical to stop the connection thread if it's still running
-    // Note: LiInterruptConnection() is safe to call even after connection is established
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiInterruptConnection()");
-    LiInterruptConnection();
+        // Interrupt any pending connection attempt immediately
+        LiInterruptConnection();
 
-    // Hide the SDL window immediately if it exists
-    // This prevents the window from briefly appearing when the user cancels
-    // during the transition phase (e.g., pressing Back during "Resuming...")
-    if (m_Window) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding SDL window");
-        SDL_HideWindow(m_Window);
+        // Hide the SDL window immediately if it exists
+        if (m_Window) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding SDL window");
+            SDL_HideWindow(m_Window);
+        }
+
+        // Inject a quit event to our SDL event loop
+        SDL_Event event;
+        event.type = SDL_QUIT;
+        event.quit.timestamp = SDL_GetTicks();
+        SDL_PushEvent(&event);
+
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (fast path) ======");
     } else {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  SDL window not yet created");
+        // Graceful path: Connection established, use graceful exit
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection established, using graceful exit");
+        requestSessionExit();
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (graceful path) ======");
     }
+}
 
-    // Inject a quit event to our SDL event loop.
-    // Using SDL_QUIT (native event) for consistency and simplicity.
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Pushing SDL_QUIT event");
-    SDL_Event event;
-    event.type = SDL_QUIT;
-    event.quit.timestamp = SDL_GetTicks();
-    SDL_PushEvent(&event);
-
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() complete ======");
-
-    // Note: LiStopConnection() will be called in:
-    // 1. startConnectionAsync() if interrupt was called during/after HTTP request
-    // 2. DeferredSessionCleanupTask for any remaining cleanup
+// =============================================================================
+// Session::interrupt() - Deprecated: Use requestCancel() instead
+// =============================================================================
+// Legacy function kept for backward compatibility.
+// New code should use requestCancel() for all cancellation requests.
+// =============================================================================
+void Session::interrupt()
+{
+    requestCancel();
 }
 
 // =============================================================================
@@ -2539,41 +2563,14 @@ void Session::requestSessionExit()
 }
 
 // =============================================================================
-// Session::cancelInitialization() - Fast Path for Initialization Cancellation
+// Session::cancelInitialization() - Deprecated: Use requestCancel() instead
 // =============================================================================
-// Called when the user cancels during the loading/initialization phase,
-// before the stream has fully started. This is a fast path that:
-// 1. Immediately interrupts the connection (LiInterruptConnection)
-// 2. Stops input handling
-// 3. Triggers the unified cleanup flow via SDL_CODE_SESSION_EXIT event
-//
-// Compared to requestSessionExit(), this method:
-// - Uses LiInterruptConnection() for immediate network termination
-// - Still goes through DispatchDeferredCleanup for proper resource cleanup
-// - Ensures consistent cleanup (audio, mic, power notifications, etc.)
+// Legacy function kept for backward compatibility.
+// New code should use requestCancel() for all cancellation requests.
 // =============================================================================
 void Session::cancelInitialization()
 {
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "cancelInitialization() called");
-
-    // Stop any connection in progress (immediate network interruption)
-    LiInterruptConnection();
-
-    // Stop input handler to prevent further input processing
-    if (m_InputHandler) {
-        m_InputHandler->setCaptureActive(false);
-    }
-
-    // Set the exit flag (consistent with requestSessionExit)
-    setShouldExit(false);
-
-    // Push a user event to trigger the unified cleanup flow
-    // This ensures we go through DispatchDeferredCleanup for proper resource cleanup
-    SDL_Event event;
-    event.type = SDL_USEREVENT;
-    event.user.code = SDL_CODE_SESSION_EXIT;
-    event.user.timestamp = SDL_GetTicks();
-    SDL_PushEvent(&event);
+    requestCancel();
 }
 
 // -----------------------------------------------------------------------------
@@ -3136,23 +3133,16 @@ void Session::exec()
                 if (pbs->PowerSetting == GUID_MONITOR_POWER_ON && pbs->DataLength == sizeof(DWORD)) {
                      DWORD monitorStatus = *(DWORD*)pbs->Data;
                      if (monitorStatus == 0) { // Monitor Off
-                         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Monitor powered off, quitting stream");
+                         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Monitor powered off, requesting cancel");
 
                          // Stop input handler first to prevent processing input during cleanup
                          if (m_InputHandler) {
                              m_InputHandler->setCaptureActive(false);
                          }
 
-                         // Use interrupt() before connection is established (transition screen phase)
-                         // to ensure the connection attempt is cancelled immediately.
-                         // Use requestSessionExit() after connection is established for graceful shutdown.
-                         if (!m_ConnectionStartedEmitted) {
-                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "In transition phase, using interrupt()");
-                             interrupt();
-                         } else {
-                             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Connection established, using requestSessionExit()");
-                             requestSessionExit();
-                         }
+                         // Use unified requestCancel() which automatically chooses
+                         // fast interruption or graceful exit based on connection state
+                         requestCancel();
                      }
                 }
 
@@ -3163,23 +3153,16 @@ void Session::exec()
                 if (pbs->PowerSetting == GUID_LIDSWITCH_STATE_CHANGE && pbs->DataLength == sizeof(DWORD)) {
                     DWORD lidStatus = *(DWORD*)pbs->Data;
                     if (lidStatus == 0) { // Lid Closed
-                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Laptop lid closed, quitting stream");
+                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Laptop lid closed, requesting cancel");
 
                         // Stop input handler first
                         if (m_InputHandler) {
                             m_InputHandler->setCaptureActive(false);
                         }
 
-                        // Use interrupt() before connection is established (transition screen phase)
-                        // to ensure the connection attempt is cancelled immediately.
-                        // Use requestSessionExit() after connection is established for graceful shutdown.
-                        if (!m_ConnectionStartedEmitted) {
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "In transition phase, using interrupt()");
-                            interrupt();
-                        } else {
-                            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Connection established, using requestSessionExit()");
-                            requestSessionExit();
-                        }
+                        // Use unified requestCancel() which automatically chooses
+                        // fast interruption or graceful exit based on connection state
+                        requestCancel();
                     }
                 }
             }
