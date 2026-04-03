@@ -31,8 +31,8 @@ Item {
 
     // CRITICAL: Intercept back key to cancel streaming and return to previous view
     // This allows user to cancel the stream launch during initialization
-    // IMPORTANT: Do NOT pop immediately - wait for sessionFinished to ensure SDL
-    // window is properly hidden/cleanup before returning to the Qt UI
+    // IMPORTANT: We must wait for sessionFinished to ensure SDL window is properly cleanup
+    // The UI will show "Quitting..." text to indicate the cancellation is in progress
     property bool cancelRequested: false
 
     focus: true
@@ -40,6 +40,9 @@ Item {
         console.log("StreamSegue: Back pressed - canceling stream")
         if (session && !cancelRequested) {
             cancelRequested = true
+            // Update the UI to show we're quitting
+            stageText = qsTr("Quitting %1...").arg(appName)
+            // Interrupt the connection - this will eventually trigger sessionFinished
             session.interrupt()
             // Wait for sessionFinished to pop - this ensures SDL window is hidden first
         }
@@ -254,6 +257,9 @@ Item {
             return
         }
 
+        console.log("restoreWindowState: previousVisibility =", previousVisibility,
+                    ", Window.visibility =", Window.window.visibility)
+
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
         if (Window.window.visibility !== Window.Minimized) {
@@ -265,15 +271,29 @@ Item {
             // Apply the desired window state based on previous visibility or preferences
             var targetVisibility = Window.Windowed
 
-            // Treat -1 (not set) as Windowed
+            // CRITICAL: previousVisibility takes priority over uiDisplayMode
+            // This ensures we restore to the state BEFORE streaming started
             if (previousVisibility === Window.Maximized) {
                 targetVisibility = Window.Maximized
+                console.log("restoreWindowState: Restoring to Maximized (from previousVisibility)")
             } else if (previousVisibility === Window.FullScreen) {
                 targetVisibility = Window.FullScreen
-            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                targetVisibility = Window.Maximized
-            } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                targetVisibility = Window.FullScreen
+                console.log("restoreWindowState: Restoring to FullScreen (from previousVisibility)")
+            } else if (previousVisibility === Window.Windowed || previousVisibility !== -1) {
+                // previousVisibility is Windowed or explicitly set to something else
+                targetVisibility = Window.Windowed
+                console.log("restoreWindowState: Restoring to Windowed (from previousVisibility:", previousVisibility, ")")
+            } else {
+                // previousVisibility is -1 (not set), fall back to preferences
+                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
+                    targetVisibility = Window.Maximized
+                    console.log("restoreWindowState: Restoring to Maximized (from preferences)")
+                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
+                    targetVisibility = Window.FullScreen
+                    console.log("restoreWindowState: Restoring to FullScreen (from preferences)")
+                } else {
+                    console.log("restoreWindowState: Restoring to Windowed (default)")
+                }
             }
 
             // Apply the window state immediately before popping the StackView.
@@ -361,11 +381,12 @@ Item {
         // before we try to access Window.window. StackView.onActivated can fire
         // before the component is in the window hierarchy.
         Qt.callLater(function() {
-            // Capture the window state immediately to record the user's pre-stream
-            // window state before any potential modifications by Qt or the streaming session.
-            // Only capture if not explicitly passed in (e.g., from QuitSegue).
+            // CRITICAL: Capture window state BEFORE going fullscreen for transition
+            // This must happen before showFullScreen() to record the correct pre-stream state
+            // Only capture if not explicitly passed in from AppView (e.g., -1 means not set)
             if (previousVisibility === -1 && Window.window) {
                 previousVisibility = Window.window.visibility
+                console.log("StreamSegue: Captured previousVisibility:", previousVisibility)
             }
 
             // Hide the toolbar before we start loading
