@@ -2384,15 +2384,12 @@ void Session::interrupt()
     // Stop any connection in progress
     LiInterruptConnection();
 
-    // If we're restarting, we don't want to fully quit the SDL loop,
-    // just break out of the current wait/poll.
-    // However, the current structure relies on SDL_QUIT to exit the loop.
-    // Let's modify the loop exit condition or handle SDL_QUIT differently for restart.
-
-    // Actually, looking at the loop, SDL_QUIT jumps to DispatchDeferredCleanup.
-    // If we want to restart, we probably want to exit the loop, cleanup, and then
-    // have the caller (StartStream::Launcher) handle the restart.
-    // So sending SDL_QUIT is likely correct for breaking the loop.
+    // CRITICAL: Hide the SDL window immediately to prevent it from being visible
+    // when the user returns to the Qt UI. This is especially important when the
+    // user presses the back button - we want the SDL window to disappear instantly.
+    if (m_Window && !m_RestartRequest) {
+        SDL_HideWindow(m_Window);
+    }
 
     // Inject a quit event to our SDL event loop
     SDL_Event event;
@@ -2831,6 +2828,11 @@ void Session::exec()
                              m_InputHandler->setCaptureActive(false);
                          }
 
+                         // Hide window immediately for a cleaner transition
+                         if (m_Window && !m_RestartRequest) {
+                             SDL_HideWindow(m_Window);
+                         }
+
                          // Post SDL_QUIT to the event queue instead of calling interrupt() directly
                          // This allows the current frame rendering to complete before cleanup begins,
                          // preventing deadlocks when the display subsystem is powering down
@@ -2852,6 +2854,11 @@ void Session::exec()
                         // Stop input handler first
                         if (m_InputHandler) {
                             m_InputHandler->setCaptureActive(false);
+                        }
+
+                        // Hide window immediately for a cleaner transition
+                        if (m_Window && !m_RestartRequest) {
+                            SDL_HideWindow(m_Window);
                         }
 
                         // Post SDL_QUIT to stop streaming
