@@ -1762,6 +1762,13 @@ private:
         }
 
         // Finish cleanup of the connection state
+        // CRITICAL: Add a small delay to ensure LiInterruptConnection() has time
+        // to complete if it was called. This prevents "RTSP handshake failed" errors
+        // on the next connection attempt after an interrupt.
+        if (m_Session && m_Session->m_InterruptCalled.load()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Waiting for interrupt cleanup to complete...");
+            SDL_Delay(100);
+        }
         LiStopConnection();
 
         // End the session log
@@ -1769,7 +1776,11 @@ private:
 
         // Give the window manager and graphics driver a moment to cleanup resources
         // before we potentially create a new window and D3D device in the next session.
-        // SDL_Delay(200);
+        // After interrupt, we need additional delay to ensure network sockets are released
+        if (m_Session && m_Session->m_InterruptCalled.load()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Post-LiStopConnection cleanup delay...");
+            SDL_Delay(200);
+        }
 
         // Perform a best-effort app quit
         if (shouldQuit && m_Session) {

@@ -279,20 +279,10 @@ Item {
         // User canceled via back key - just restore and return
         if (cancelRequested) {
             console.log("  User canceled, restoring and popping stackView")
-            // CRITICAL: Ensure Qt window is visible before restoring state
-            // This handles the case where the window was hidden by C++ code
-            // before the interrupt() was processed
-            if (Window.window) {
-                // First, restore window style (remove tool window style)
-                if (session) {
-                    session.restoreWindowStyle()
-                }
-                // Force window to be visible and in a known state
-                Window.window.visibility = Window.Windowed
-                Window.window.showNormal()
-                Window.window.requestActivate()
-                Window.window.raise()
-            }
+            // CRITICAL: Use restoreWindowState() to properly restore the previous
+            // window state (maximized, fullscreen, or windowed) instead of hardcoding
+            // Windowed mode.
+            restoreWindowState()
             // Pop the stack to return to the app view
             stackView.pop()
             return
