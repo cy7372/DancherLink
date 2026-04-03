@@ -182,6 +182,9 @@ Item {
 
     function connectionStarted()
     {
+        console.log("====== connectionStarted() called ======")
+        console.log("  connectionEstablished:", connectionEstablished)
+
         // Mark that the connection was successfully established
         // This affects how we handle cancellation (fast vs graceful shutdown)
         connectionEstablished = true
@@ -192,13 +195,20 @@ Item {
         stageLabel.visible = false
         hintText.visible = false
 
-        // Hide the window now that streaming has begun.
-        // Note: The Qt window is set to WS_EX_TOOLWINDOW style in Session::startConnectionAsync()
-        // before this signal is emitted. This prevents Windows from restoring the hidden window
-        // when the user presses keys during streaming. The style is restored after streaming ends.
-        if (Window.window) {
-            Window.window.hide()
-        }
+        // CRITICAL: Do NOT hide the window here!
+        // The Qt window must remain visible (and focused) until Session::exec() completes.
+        // If we hide the window now, QML loses focus and Keys.onBackPressed won't work.
+        //
+        // The window will be hidden in Session::exec() after the SDL window is created,
+        // which happens AFTER we've processed any pending interrupt() calls.
+        //
+        // Previous behavior (buggy):
+        // - Hide window here -> QML loses focus -> Back key ignored -> SDL window created anyway
+        //
+        // New behavior (fixed):
+        // - Keep window visible -> QML retains focus -> Back key works -> interrupt() sets flag
+        // - Session::exec() checks interrupt flag before creating SDL window
+        console.log("  Keeping Qt window visible to allow Back key cancellation")
     }
 
     function displayLaunchError(text)

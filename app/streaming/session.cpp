@@ -2902,6 +2902,22 @@ void Session::exec()
     // Start audio quality monitoring
     AudioQualityMonitor::instance()->start();
 
+    // CRITICAL: Hide the Qt window NOW, after SDL window is created and configured.
+    // This ensures QML retains focus until we reach the SDL event loop,
+    // allowing Keys.onBackPressed to work during the transition phase.
+    //
+    // Previous behavior (buggy):
+    // - connectionStarted() hides Qt window -> QML loses focus -> Back key ignored
+    //
+    // New behavior (fixed):
+    // - connectionStarted() keeps Qt window visible -> QML retains focus
+    // - User can press Back to interrupt() before SDL window creation
+    // - SDL window created + configured -> NOW we hide Qt window -> event loop starts
+    if (m_QtWindow) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding Qt window after SDL window configuration");
+        m_QtWindow->hide();
+    }
+
 #ifdef Q_OS_WIN32
     HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
