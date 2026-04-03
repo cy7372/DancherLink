@@ -199,6 +199,13 @@ Item {
 
     function quitStarting()
     {
+        // Update text before creating QuitSegue for smooth transition
+        // In case StreamSegue is briefly visible during the replace operation
+        stageText = qsTr("Quitting %1...").arg(appName)
+        stageSpinner.visible = true
+        stageLabel.visible = true
+        hintText.visible = false
+
         // Avoid the push transition animation
         var component = Qt.createComponent("QuitSegue.qml")
         if (component.status !== Component.Ready) {
@@ -246,11 +253,19 @@ Item {
             Qt.quit()
         }
         else if (errorDialog.text) {
+            // Update text to show exiting state, then restore and show error
+            stageText = qsTr("Quitting %1...").arg(appName)
             restoreWindowState()
             errorDialogTimer.start()
         }
         else {
-            // Normal exit - check for updates and return to previous view
+            // Normal exit - update text to show exiting state for a smooth transition
+            // User sees: "Starting..." → "Quitting..." → back to main view
+            stageText = qsTr("Quitting %1...").arg(appName)
+            stageSpinner.visible = true
+            stageLabel.visible = true
+            hintText.visible = false
+
             restoreWindowState()
             AutoUpdateChecker.start(false)
             stackView.pop()
