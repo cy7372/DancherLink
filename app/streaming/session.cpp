@@ -2185,15 +2185,11 @@ bool Session::startConnectionAsync()
     if (m_InterruptCalled.load()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting and cleaning up");
 
-        // Call LiStopConnection() to clean up client-side state
+        // Call LiStopConnection() to clean up client-side state.
+        // This will now send RTSP TEARDOWN to properly notify the server
+        // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
+        // RTSP response" errors on subsequent connection attempts.
         LiStopConnection();
-
-        // NOTE: We intentionally do NOT call quitApp() here because:
-        // 1. The user has explicitly requested to cancel the connection
-        // 2. quitApp() can timeout (up to 30s) if the server is unresponsive
-        // 3. The server will eventually clean up the RTSP session on its own
-        //
-        // This provides a faster, more responsive cancellation experience.
 
         return false;
     }
@@ -2208,11 +2204,11 @@ bool Session::startConnectionAsync()
     if (m_InterruptCalled.load()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
 
-        // Call LiStopConnection() to clean up client-side state
+        // Call LiStopConnection() to clean up client-side state.
+        // This will now send RTSP TEARDOWN to properly notify the server
+        // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
+        // RTSP response" errors on subsequent connection attempts.
         LiStopConnection();
-
-        // NOTE: We intentionally do NOT call quitApp() here for the same reasons
-        // as above - faster cancellation is preferred over waiting for server cleanup.
 
         return false;
     }

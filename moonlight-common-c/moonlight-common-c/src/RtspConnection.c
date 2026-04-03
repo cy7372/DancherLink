@@ -621,6 +621,74 @@ static bool playStream(PRTSP_MESSAGE response, char* target, int* error) {
     return ret;
 }
 
+// Send RTSP TEARDOWN request to cleanly terminate session
+static bool requestTeardown(int* error) {
+    RTSP_MESSAGE request;
+    bool ret;
+
+    *error = -1;
+
+    ret = initializeRtspRequest(&request, "TEARDOWN", rtspTargetUrl);
+    if (ret) {
+        if (hasSessionId) {
+            if (!addOption(&request, "Session", sessionIdString)) {
+                ret = false;
+                goto FreeMessage;
+            }
+        }
+        // Send TEARDOWN and ignore response (server may have already cleaned up)
+        ret = transactRtspMessage(&request, NULL, false, error);
+
+    FreeMessage:
+        freeMessage(&request);
+    }
+
+    return ret;
+}
+
+// Cleanup RTSP session resources - called from LiStopConnection
+void cleanupRtspSession(void) {
+    int error;
+
+    Limelog("Sending RTSP TEARDOWN to clean up server session...");
+
+    // Send TEARDOWN to notify server to clean up
+    // We use a short timeout and ignore failures since this is best-effort cleanup
+    if (!requestTeardown(&error)) {
+        Limelog("RTSP TEARDOWN failed: %d (server may have already cleaned up)\n", error);
+    } else {
+        Limelog("RTSP TEARDOWN sent successfully\n");
+    }
+
+    // Cleanup local RTSP state
+    if (useEnet) {
+        if (peer != NULL) {
+            enet_peer_disconnect_now(peer, 0);
+            peer = NULL;
+        }
+
+        if (client != NULL) {
+            enet_host_destroy(client);
+            client = NULL;
+        }
+    }
+
+    if (sessionIdString != NULL) {
+        free(sessionIdString);
+        sessionIdString = NULL;
+    }
+
+    if (encryptionCtx != NULL) {
+        PltDestroyCryptoContext(encryptionCtx);
+        encryptionCtx = NULL;
+    }
+
+    if (decryptionCtx != NULL) {
+        PltDestroyCryptoContext(decryptionCtx);
+        decryptionCtx = NULL;
+    }
+}
+
 // Send RTSP ANNOUNCE message
 static bool sendVideoAnnounce(PRTSP_MESSAGE response, int* error) {
     RTSP_MESSAGE request;

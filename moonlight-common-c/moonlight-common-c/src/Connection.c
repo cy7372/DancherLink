@@ -116,7 +116,8 @@ void LiStopConnection(void) {
         Limelog("done\n");
     }
     if (stage == STAGE_RTSP_HANDSHAKE) {
-        // Nothing to do
+        // Clean up RTSP session to notify server and reset sequence numbers
+        cleanupRtspSession();
         stage--;
     }
     if (stage == STAGE_AUDIO_STREAM_INIT) {
