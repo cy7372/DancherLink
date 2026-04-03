@@ -2421,30 +2421,38 @@ void Session::requestSessionExit()
 // Session::cancelInitialization() - Fast Path for Initialization Cancellation
 // =============================================================================
 // Called when the user cancels during the loading/initialization phase,
-// before the stream has fully started. This is a fast path that skips the
-// full cleanup流程 because:
-// - The decoder was never created
-// - LiStartConnection() was never called
-// - The SDL window may not even exist yet
+// before the stream has fully started. This is a fast path that:
+// 1. Immediately interrupts the connection (LiInterruptConnection)
+// 2. Stops input handling
+// 3. Triggers the unified cleanup flow via SDL_CODE_SESSION_EXIT event
 //
-// This provides immediate feedback to the user without waiting for timeouts.
+// Compared to requestSessionExit(), this method:
+// - Uses LiInterruptConnection() for immediate network termination
+// - Still goes through DispatchDeferredCleanup for proper resource cleanup
+// - Ensures consistent cleanup (audio, mic, power notifications, etc.)
 // =============================================================================
 void Session::cancelInitialization()
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "cancelInitialization() called");
 
-    // Stop any connection in progress
+    // Stop any connection in progress (immediate network interruption)
     LiInterruptConnection();
 
-    // Delete input handler if it was created
-    delete m_InputHandler;
-    m_InputHandler = nullptr;
+    // Stop input handler to prevent further input processing
+    if (m_InputHandler) {
+        m_InputHandler->setCaptureActive(false);
+    }
 
-    // Quit SDL video subsystem to clean up any partial initialization
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    // Set the exit flag (consistent with requestSessionExit)
+    setShouldExit(false);
 
-    // Start cleanup task to emit sessionFinished and allow a new session to start
-    QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+    // Push a user event to trigger the unified cleanup flow
+    // This ensures we go through DispatchDeferredCleanup for proper resource cleanup
+    SDL_Event event;
+    event.type = SDL_USEREVENT;
+    event.user.code = SDL_CODE_SESSION_EXIT;
+    event.user.timestamp = SDL_GetTicks();
+    SDL_PushEvent(&event);
 }
 
 // -----------------------------------------------------------------------------
