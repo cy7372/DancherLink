@@ -376,6 +376,10 @@ private:
     // for power events (monitor off, lid close) during streaming session
     bool m_ConnectionStartedEmitted = false;
 
+    // Track if interrupt() has been called for this session - used to prevent
+    // duplicate interrupt processing. Reset in destructor for session reuse.
+    std::atomic<bool> m_InterruptCalled{false};
+
     int m_ActiveVideoFormat;
     int m_ActiveVideoWidth;
     int m_ActiveVideoHeight;

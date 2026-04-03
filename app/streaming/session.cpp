@@ -2396,13 +2396,14 @@ void Session::start()
 //    - Posts SDL_QUIT to terminate the event loop
 //
 // 2. After connection is established (during active streaming)
-//    - Sets interrupt flag to trigger LiStopConnection() in cleanup
+//    - Calls LiInterruptConnection() (no-op if connection already established)
 //    - Hides SDL window immediately
 //    - Posts SDL_QUIT to terminate the event loop
+//    - LiStopConnection() will be called in DispatchDeferredCleanup
 //
 // This method is designed to be:
 // - Thread-safe: Can be called from any thread
-// - Idempotent: Safe to call multiple times
+// - Idempotent: Safe to call multiple times (uses atomic flag)
 // - Universal: Works at any stage of the session lifecycle
 //
 // Called from:
@@ -2411,14 +2412,15 @@ void Session::start()
 // =============================================================================
 void Session::interrupt()
 {
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "interrupt() called");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() called ======");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_Window = %p", m_Window);
 
     // Set the interrupt flag atomically to prevent duplicate processing
-    // This ensures LiStopConnection() is only called once during cleanup
-    static std::atomic_flag s_Interrupted = ATOMIC_FLAG_INIT;
-    bool wasInterrupted = s_Interrupted.test_and_set();
-
-    if (wasInterrupted) {
+    // This ensures the interrupt logic is only executed once per session
+    bool expected = false;
+    if (!m_InterruptCalled.compare_exchange_strong(expected, true)) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "interrupt() already called, ignoring duplicate");
         return;
@@ -2426,29 +2428,37 @@ void Session::interrupt()
 
     // Interrupt any pending connection attempt immediately
     // This is critical to stop the connection thread if it's still running
+    // Note: LiInterruptConnection() is safe to call even after connection is established
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiInterruptConnection()");
     LiInterruptConnection();
 
     // Hide the SDL window immediately if it exists
     // This prevents the window from briefly appearing when the user cancels
     // during the transition phase (e.g., pressing Back during "Resuming...")
     if (m_Window) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding SDL window");
         SDL_HideWindow(m_Window);
+    } else {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  SDL window not yet created");
     }
 
     // Inject a quit event to our SDL event loop.
     // Using SDL_QUIT (native event) for consistency and simplicity.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Pushing SDL_QUIT event");
     SDL_Event event;
     event.type = SDL_QUIT;
     event.quit.timestamp = SDL_GetTicks();
     SDL_PushEvent(&event);
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== interrupt() complete ======");
 
     // Note: We don't call LiStopConnection() here because:
     // 1. It must be called between LiStartConnection() and LiStopConnection()
     // 2. The cleanup code in DispatchDeferredCleanup will handle it
     // 3. Calling it here could cause race conditions with the cleanup thread
     //
-    // The m_ConnectionStartedEmitted flag is checked in DispatchDeferredCleanup
-    // to ensure LiStopConnection() is called if the connection was established.
+    // LiStopConnection() will be called in DispatchDeferredCleanup regardless
+    // of whether the connection was fully established or not.
 }
 
 // =============================================================================
@@ -2529,8 +2539,25 @@ void Session::cancelInitialization()
 // -----------------------------------------------------------------------------
 void Session::exec()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== Session::exec() started ======");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled = %d", m_InterruptCalled.load());
+
+    // CRITICAL: Check if interrupt() was called before we entered exec().
+    // If so, the user has already requested to cancel the session.
+    // We should skip window display and go straight to cleanup.
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called before exec(), skipping to cleanup");
+        delete m_InputHandler;
+        m_InputHandler = nullptr;
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+        return;
+    }
+
     // If the connection failed, clean up and abort the connection.
     if (!m_AsyncConnectionSuccess) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection failed, cleaning up...");
         delete m_InputHandler;
         m_InputHandler = nullptr;
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
@@ -2925,8 +2952,8 @@ void Session::exec()
 #endif
         switch (event.type) {
         case SDL_QUIT:
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "Quit event received");
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== SDL_QUIT event received ======");
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Proceeding to DispatchDeferredCleanup");
             goto DispatchDeferredCleanup;
 
 #ifdef Q_OS_WIN32
