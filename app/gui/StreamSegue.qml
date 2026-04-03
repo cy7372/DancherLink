@@ -45,9 +45,16 @@ Item {
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Use fast cancellation - we're still in the initialization phase
-            // and the full SDL streaming loop hasn't started yet.
-            session.cancelInitialization()
+            // Use fast cancellation if connection hasn't been established yet
+            // After connectionStarted(), we should use graceful exit to notify the host
+            if (connectionEstablished) {
+                // Connection is already running - use graceful session exit
+                // This will notify the host to quit the game/app
+                session.requestSessionExit()
+            } else {
+                // Still in initialization phase - use fast cancellation
+                session.cancelInitialization()
+            }
             // Keep the transition screen visible until sessionFinished is received.
         }
     }
