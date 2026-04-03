@@ -2932,16 +2932,32 @@ void Session::exec()
     // This ensures QML retains focus until we reach the SDL event loop,
     // allowing Keys.onBackPressed to work during the transition phase.
     //
+    // CRITICAL: Check m_InterruptCalled BEFORE hiding the Qt window.
+    // If interrupt() was called while we were creating the SDL window,
+    // we should NOT hide the Qt window - we need it visible for the user to see
+    // the cancellation result and return to the main UI.
+    //
     // Previous behavior (buggy):
     // - connectionStarted() hides Qt window -> QML loses focus -> Back key ignored
+    // - Even if interrupt() was called, Qt window was hidden -> window disappeared
     //
     // New behavior (fixed):
     // - connectionStarted() keeps Qt window visible -> QML retains focus
     // - User can press Back to interrupt() before SDL window creation
-    // - SDL window created + configured -> NOW we hide Qt window -> event loop starts
+    // - SDL window created + configured -> check interrupt flag -> skip hide if canceled
     if (m_QtWindow) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding Qt window after SDL window configuration");
-        m_QtWindow->hide();
+        if (m_InterruptCalled.load()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called, skipping Qt window hide to allow proper restoration");
+            // CRITICAL: Explicitly show the Qt window to ensure it's visible
+            // This handles the race condition where interrupt() was called just as
+            // we were about to hide the window
+            QMetaObject::invokeMethod(m_QtWindow, "showNormal", Qt::QueuedConnection);
+            QMetaObject::invokeMethod(m_QtWindow, "requestActivate", Qt::QueuedConnection);
+            QMetaObject::invokeMethod(m_QtWindow, "raise", Qt::QueuedConnection);
+        } else {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Hiding Qt window after SDL window configuration");
+            m_QtWindow->hide();
+        }
     }
 
 #ifdef Q_OS_WIN32

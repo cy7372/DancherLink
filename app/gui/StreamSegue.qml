@@ -46,7 +46,6 @@ Item {
     // Handle multiple "back" key types for cross-platform support:
     // - Key_Back: Android TV / webOS physical back button
     // - Key_Escape: Windows/Linux desktop Escape key
-    // - Key_Backspace: Some keyboards have backspace as "back"
     Keys.onPressed: {
         if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
             console.log("====== Back/Esc key pressed handler invoked ======")
@@ -57,6 +56,7 @@ Item {
             console.log("  Item.visible:", visible)
             if (session && !cancelRequested) {
                 cancelRequested = true
+                event.accepted = true  // CRITICAL: Accept the event to prevent propagation
                 console.log("====== Back key pressed, calling session.interrupt() ======")
                 console.log("  session object:", session)
                 console.log("  cancelRequested:", cancelRequested)
@@ -279,7 +279,21 @@ Item {
         // User canceled via back key - just restore and return
         if (cancelRequested) {
             console.log("  User canceled, restoring and popping stackView")
-            restoreWindowState()
+            // CRITICAL: Ensure Qt window is visible before restoring state
+            // This handles the case where the window was hidden by C++ code
+            // before the interrupt() was processed
+            if (Window.window) {
+                // First, restore window style (remove tool window style)
+                if (session) {
+                    session.restoreWindowStyle()
+                }
+                // Force window to be visible and in a known state
+                Window.window.visibility = Window.Windowed
+                Window.window.showNormal()
+                Window.window.requestActivate()
+                Window.window.raise()
+            }
+            // Pop the stack to return to the app view
             stackView.pop()
             return
         }
