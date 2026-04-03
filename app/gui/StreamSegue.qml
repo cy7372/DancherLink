@@ -555,25 +555,10 @@ Item {
     }
 
     StackView.onActivated: {
-        // Use Qt.callLater to ensure the component is fully attached to the window
-        // before we try to access Window.window. StackView.onActivated can fire
-        // before the component is in the window hierarchy.
-        Qt.callLater(function() {
-            // Hide the toolbar before we start loading
-            if (Window.window && Window.window.toolBar) {
-                Window.window.toolBar.visible = false
-            }
-
-            // CRITICAL: Show fullscreen to cover taskbar during transition
-            // This ensures the transition screen covers the entire screen, even if
-            // the user's windowed mode doesn't cover the taskbar.
-            // Note: previousVisibility is passed from AppView, so we don't capture it here
-            if (Window.window) {
-                Window.window.showFullScreen()
-            }
-        })
-
-        // Hook up our signals
+        // CRITICAL: Connect signals FIRST before anything else
+        // This ensures sessionFinished handler is connected even if user presses
+        // Back button immediately. The fast-path cancellation in session.start()
+        // can emit sessionFinished synchronously, so we must be ready.
         session.stageStarting.connect(stageStarting)
         session.stageFailed.connect(stageFailed)
         session.connectionStarted.connect(connectionStarted)
@@ -593,6 +578,24 @@ Item {
         })
         session.hostReady.connect(hostReady)
         session.readyForDeletion.connect(sessionReadyForDeletion)
+
+        // Use Qt.callLater to ensure the component is fully attached to the window
+        // before we try to access Window.window. StackView.onActivated can fire
+        // before the component is in the window hierarchy.
+        Qt.callLater(function() {
+            // Hide the toolbar before we start loading
+            if (Window.window && Window.window.toolBar) {
+                Window.window.toolBar.visible = false
+            }
+
+            // CRITICAL: Show fullscreen to cover taskbar during transition
+            // This ensures the transition screen covers the entire screen, even if
+            // the user's windowed mode doesn't cover the taskbar.
+            // Note: previousVisibility is passed from AppView, so we don't capture it here
+            if (Window.window) {
+                Window.window.showFullScreen()
+            }
+        })
 
         // Kick off the stream
         spinnerTimer.start()
