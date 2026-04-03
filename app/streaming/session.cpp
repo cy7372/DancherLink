@@ -2391,6 +2391,36 @@ void Session::interrupt()
     SDL_PushEvent(&event);
 }
 
+// =============================================================================
+// Session::cancelInitialization() - Fast Path for Initialization Cancellation
+// =============================================================================
+// Called when the user cancels during the loading/initialization phase,
+// before the stream has fully started. This is a fast path that skips the
+// full cleanup流程 because:
+// - The decoder was never created
+// - LiStartConnection() was never called
+// - The SDL window may not even exist yet
+//
+// This provides immediate feedback to the user without waiting for timeouts.
+// =============================================================================
+void Session::cancelInitialization()
+{
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "cancelInitialization() called");
+
+    // Stop any connection in progress
+    LiInterruptConnection();
+
+    // Delete input handler if it was created
+    delete m_InputHandler;
+    m_InputHandler = nullptr;
+
+    // Quit SDL video subsystem to clean up any partial initialization
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+
+    // Start cleanup task to emit sessionFinished and allow a new session to start
+    QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+}
+
 // -----------------------------------------------------------------------------
 // Session::exec() - Main Session Loop
 // -----------------------------------------------------------------------------

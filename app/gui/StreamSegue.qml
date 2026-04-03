@@ -31,15 +31,29 @@ Item {
 
     // CRITICAL: Intercept back key to cancel streaming and return to previous view
     // This allows user to cancel the stream launch during initialization.
-    // We wait for sessionFinished to ensure SDL window is properly cleaned up
+    //
+    // We use different cancellation paths depending on the stream state:
+    // - Before connectionStarted: Use cancelInitialization() for fast cancellation
+    //   (skips full cleanup since decoder/connection were never started)
+    // - After connectionStarted: Use interrupt() for graceful shutdown
+    //   (proper cleanup of decoder, connection, and SDL window)
+    //
+    // We wait for sessionFinished to ensure SDL is properly cleaned up
     // before returning to the Qt UI (prevents SDL window visible after pop).
     property bool cancelRequested: false
+    property bool connectionEstablished: false
 
     focus: true
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
-            session.interrupt()
+            if (connectionEstablished) {
+                // Stream was successfully started - use graceful shutdown
+                session.interrupt()
+            } else {
+                // Still in initialization phase - use fast cancellation
+                session.cancelInitialization()
+            }
             // Keep the transition screen visible until sessionFinished is received.
         }
     }
@@ -163,6 +177,10 @@ Item {
 
     function connectionStarted()
     {
+        // Mark that the connection was successfully established
+        // This affects how we handle cancellation (fast vs graceful shutdown)
+        connectionEstablished = true
+
         // Hide the UI contents so the user doesn't
         // see them briefly when we pop off the StackView
         stageSpinner.visible = false
