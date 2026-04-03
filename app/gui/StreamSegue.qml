@@ -29,6 +29,34 @@ Item {
         z: -100
     }
 
+    // =============================================================================
+    // Cancellation Management
+    // =============================================================================
+    // Unified method to request session cancellation. This is the single entry point
+    // for all cancellation requests (Esc key, Back button, Qt back button).
+    //
+    // Usage:
+    // - Keys.onPressed: call requestCancel() directly
+    // - main.qml goBack(): call stackView.currentItem.requestCancel()
+    // =============================================================================
+    function requestCancel() {
+        console.log("====== requestCancel() called ======")
+        console.log("  session:", session)
+        console.log("  cancelRequested:", cancelRequested)
+        console.log("  focus:", focus)
+        console.log("  Item.visible:", visible)
+
+        if (session && !cancelRequested) {
+            cancelRequested = true
+            console.log("====== Calling session.interrupt() ======")
+            session.interrupt()
+            console.log("====== session.interrupt() completed ======")
+            // Keep the transition screen visible until sessionFinished is received.
+        } else {
+            console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
+        }
+    }
+
     // CRITICAL: Intercept back key to cancel streaming during initialization.
     // This only works during the loading phase before the stream starts.
     // Once streaming begins, the SDL window covers the screen and Qt window is hidden,
@@ -50,21 +78,9 @@ Item {
         if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
             console.log("====== Back/Esc key pressed handler invoked ======")
             console.log("  key:", event.key)
-            console.log("  session:", session)
-            console.log("  cancelRequested:", cancelRequested)
-            console.log("  focus:", focus)
-            console.log("  Item.visible:", visible)
             if (session && !cancelRequested) {
-                cancelRequested = true
                 event.accepted = true  // CRITICAL: Accept the event to prevent propagation
-                console.log("====== Back key pressed, calling session.interrupt() ======")
-                console.log("  session object:", session)
-                console.log("  cancelRequested:", cancelRequested)
-                // Use interrupt() to immediately stop the session
-                // This works regardless of whether connection is established or not
-                session.interrupt()
-                console.log("====== session.interrupt() completed ======")
-                // Keep the transition screen visible until sessionFinished is received.
+                requestCancel()
             } else {
                 console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
             }
@@ -278,13 +294,69 @@ Item {
 
         // User canceled via back key - just restore and return
         if (cancelRequested) {
-            console.log("  User canceled, restoring and popping stackView")
-            // CRITICAL: Use restoreWindowState() to properly restore the previous
-            // window state (maximized, fullscreen, or windowed) instead of hardcoding
-            // Windowed mode.
-            restoreWindowState()
-            // Pop the stack to return to the app view
+            console.log("  User canceled, popping stackView first")
+
+            // CRITICAL: This is the fundamental fix for the intermittent window restoration issue.
+            //
+            // Problem analysis:
+            // When stackView.pop() is called, the StreamSegue component is marked for destruction.
+            // However, window operations like showNormal()/showMaximized() are asynchronous - they
+            // require the Qt event loop to process them. If the component is destroyed before the
+            // event loop processes these operations, the window may not be properly restored.
+            //
+            // Solution:
+            // 1. Pop the stack FIRST to return to AppView
+            // 2. Use a Timer to restore the window AFTER the pop completes
+            // 3. The Timer keeps the callback alive even if StreamSegue is being destroyed
+            // 4. Window operations are performed when the Timer fires, ensuring they complete
+
             stackView.pop()
+
+            // Use a Timer to restore the window after the stack pop completes.
+            // 100ms is sufficient for the stack operation to finish.
+            Qt.callLater(function() {
+                console.log("  Qt.callLater: restoring window state after pop")
+                if (!Window.window) {
+                    console.log("  Qt.callLater: Window.window is null, aborting")
+                    return
+                }
+
+                // Restore window style first (Windows only)
+                // Use session from the popped item if it still exists
+                var segueItem = stackView.currentItem
+                if (segueItem && segueItem.session) {
+                    console.log("  Qt.callLater: calling session.restoreWindowStyle()")
+                    segueItem.session.restoreWindowStyle()
+                } else {
+                    console.log("  Qt.callLater: session not available, skipping restoreWindowStyle()")
+                }
+
+                // Apply the desired window state based on previous visibility
+                var targetVisibility = Window.Windowed
+                if (previousVisibility === Window.Maximized) {
+                    targetVisibility = Window.Maximized
+                } else if (previousVisibility === Window.FullScreen) {
+                    targetVisibility = Window.FullScreen
+                }
+
+                console.log("  Qt.callLater: targetVisibility=" + targetVisibility +
+                            " previousVisibility=" + previousVisibility)
+
+                if (targetVisibility === Window.Maximized) {
+                    Window.window.showMaximized()
+                } else if (targetVisibility === Window.FullScreen) {
+                    Window.window.showFullScreen()
+                } else {
+                    Window.window.showNormal()
+                }
+
+                // CRITICAL: Explicitly raise and activate the window
+                Window.window.raise()
+                Window.window.requestActivate()
+
+                console.log("  Qt.callLater: window restoration complete")
+            })
+
             return
         }
 
@@ -306,16 +378,60 @@ Item {
             stageLabel.visible = true
             hintText.visible = false
 
-            restoreWindowState()
-            AutoUpdateChecker.start(false)
+            // CRITICAL: Use the same fix as the cancelRequested path.
+            // Pop first, then restore the window in a Qt.callLater callback.
             stackView.pop()
+
+            Qt.callLater(function() {
+                console.log("  Qt.callLater (normal exit): restoring window state after pop")
+                if (!Window.window) {
+                    console.log("  Qt.callLater (normal exit): Window.window is null")
+                    return
+                }
+
+                // Restore window style first (Windows only)
+                var segueItem = stackView.currentItem
+                if (segueItem && segueItem.session) {
+                    segueItem.session.restoreWindowStyle()
+                }
+
+                // Apply the desired window state based on previous visibility
+                var targetVisibility = Window.Windowed
+                if (previousVisibility === Window.Maximized) {
+                    targetVisibility = Window.Maximized
+                } else if (previousVisibility === Window.FullScreen) {
+                    targetVisibility = Window.FullScreen
+                }
+
+                if (targetVisibility === Window.Maximized) {
+                    Window.window.showMaximized()
+                } else if (targetVisibility === Window.FullScreen) {
+                    Window.window.showFullScreen()
+                } else {
+                    Window.window.showNormal()
+                }
+
+                Window.window.raise()
+                Window.window.requestActivate()
+
+                console.log("  Qt.callLater (normal exit): window restoration complete")
+
+                // Start auto-update check after window is restored
+                AutoUpdateChecker.start(false)
+            })
+
+            return
         }
     }
 
     function restoreWindowState() {
         if (!Window.window) {
+            console.log("  restoreWindowState(): Window.window is null, returning")
             return
         }
+
+        console.log("  restoreWindowState(): current visibility=" + Window.window.visibility +
+                    " previousVisibility=" + previousVisibility)
 
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
@@ -335,13 +451,27 @@ Item {
             }
             // For Windowed or -1 (not set), default to Windowed
 
+            console.log("  restoreWindowState(): targetVisibility=" + targetVisibility)
+
             if (targetVisibility === Window.Maximized) {
+                console.log("  restoreWindowState(): calling showMaximized()")
                 Window.window.showMaximized()
             } else if (targetVisibility === Window.FullScreen) {
+                console.log("  restoreWindowState(): calling showFullScreen()")
                 Window.window.showFullScreen()
             } else {
+                console.log("  restoreWindowState(): calling showNormal()")
                 Window.window.showNormal()
             }
+
+            // CRITICAL: Explicitly raise and activate the window to ensure it's visible
+            // This is necessary because stackView.pop() may happen before the window
+            // has a chance to be shown
+            console.log("  restoreWindowState(): calling raise() and requestActivate()")
+            Window.window.raise()
+            Window.window.requestActivate()
+        } else {
+            console.log("  restoreWindowState(): window is minimized, skipping restoration")
         }
     }
 
