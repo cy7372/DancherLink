@@ -2544,8 +2544,10 @@ void Session::cancelInitialization()
 void Session::exec()
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== Session::exec() started ======");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Session object: %p", this);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled = %d", m_InterruptCalled.load());
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
 
     // CRITICAL: Check if interrupt() was called before we entered exec().
     // If so, the user has already requested to cancel the session.
@@ -2966,8 +2968,7 @@ void Session::exec()
 
 #ifdef Q_OS_WIN32
         case SDL_SYSWMEVENT:
-            if (m_Preferences->quitOnDisplaySleep &&
-                event.syswm.msg->msg.win.msg == WM_POWERBROADCAST &&
+            if (event.syswm.msg->msg.win.msg == WM_POWERBROADCAST &&
                 event.syswm.msg->msg.win.wParam == PBT_POWERSETTINGCHANGE) {
                 POWERBROADCAST_SETTING* pbs = (POWERBROADCAST_SETTING*)event.syswm.msg->msg.win.lParam;
 

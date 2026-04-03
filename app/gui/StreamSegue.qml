@@ -43,6 +43,11 @@ Item {
 
     focus: true
     Keys.onBackPressed: {
+        console.log("====== Back key pressed handler invoked ======")
+        console.log("  session:", session)
+        console.log("  cancelRequested:", cancelRequested)
+        console.log("  focus:", focus)
+        console.log("  Item.visible:", visible)
         if (session && !cancelRequested) {
             cancelRequested = true
             console.log("====== Back key pressed, calling session.interrupt() ======")
@@ -53,6 +58,8 @@ Item {
             session.interrupt()
             console.log("====== session.interrupt() completed ======")
             // Keep the transition screen visible until sessionFinished is received.
+        } else {
+            console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
         }
     }
 
