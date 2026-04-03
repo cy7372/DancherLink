@@ -29,31 +29,25 @@ Item {
         z: -100
     }
 
-    // CRITICAL: Intercept back key to cancel streaming and return to previous view
-    // This allows user to cancel the stream launch during initialization.
+    // CRITICAL: Intercept back key to cancel streaming during initialization.
+    // This only works during the loading phase before the stream starts.
+    // Once streaming begins, the SDL window covers the screen and Qt window is hidden,
+    // so the user can no longer interact with this QML interface.
     //
-    // We use different cancellation paths depending on the stream state:
-    // - Before connectionStarted: Use cancelInitialization() for fast cancellation
-    //   (skips full cleanup since decoder/connection were never started)
-    // - After connectionStarted: Use interrupt() for graceful shutdown
-    //   (proper cleanup of decoder, connection, and SDL window)
-    //
-    // We wait for sessionFinished to ensure SDL is properly cleaned up
-    // before returning to the Qt UI (prevents SDL window visible after pop).
+    // After connectionStarted(), this back key handler won't be reachable by the user.
+    // The only way to exit streaming is via:
+    // - Ctrl+Alt+Shift+Q hotkey
+    // - Monitor power off / laptop lid close (if enabled in settings)
+    // - Game-side quit
     property bool cancelRequested: false
-    property bool connectionEstablished: false
 
     focus: true
     Keys.onBackPressed: {
         if (session && !cancelRequested) {
             cancelRequested = true
-            if (connectionEstablished) {
-                // Stream was successfully started - use graceful shutdown
-                session.interrupt()
-            } else {
-                // Still in initialization phase - use fast cancellation
-                session.cancelInitialization()
-            }
+            // Use fast cancellation - we're still in the initialization phase
+            // and the full SDL streaming loop hasn't started yet.
+            session.cancelInitialization()
             // Keep the transition screen visible until sessionFinished is received.
         }
     }
