@@ -2571,6 +2571,63 @@ void Session::exec()
         return;
     }
 
+    // CRITICAL: Process pending SDL events before creating the window.
+    // This ensures that any interrupt requests (e.g., from power events like
+    // monitor off or lid close) that occurred during the async connection phase
+    // are processed before we create and show the SDL window.
+    SDL_Event pendingEvent;
+    while (SDL_PollEvent(&pendingEvent)) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Processing pending event: %d", pendingEvent.type);
+
+        // Check for power events that should interrupt the session
+#ifdef Q_OS_WIN32
+        if (pendingEvent.type == SDL_SYSWMEVENT &&
+            pendingEvent.syswm.msg->msg.win.msg == WM_POWERBROADCAST &&
+            pendingEvent.syswm.msg->msg.win.wParam == PBT_POWERSETTINGCHANGE) {
+            POWERBROADCAST_SETTING* pbs = (POWERBROADCAST_SETTING*)pendingEvent.syswm.msg->msg.win.lParam;
+
+            // Check for monitor off
+            if (pbs->PowerSetting == GUID_MONITOR_POWER_ON && pbs->DataLength == sizeof(DWORD)) {
+                DWORD monitorStatus = *(DWORD*)pbs->Data;
+                if (monitorStatus == 0) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Monitor powered off detected during exec() preamble");
+                    // Release the interrupt check - will be handled by interrupt() call below
+                }
+            }
+
+            // Check for lid close
+            static const GUID GUID_LIDSWITCH_STATE_CHANGE =
+                { 0xBA3E0F4D, 0xB817, 0x4094, { 0xA2, 0xD1, 0xD5, 0x63, 0x79, 0xE6, 0xA0, 0xF3 } };
+            if (pbs->PowerSetting == GUID_LIDSWITCH_STATE_CHANGE && pbs->DataLength == sizeof(DWORD)) {
+                DWORD lidStatus = *(DWORD*)pbs->Data;
+                if (lidStatus == 0) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Laptop lid closed detected during exec() preamble");
+                }
+            }
+        }
+#endif
+
+        // Check for SDL_QUIT event (may be pushed by interrupt())
+        if (pendingEvent.type == SDL_QUIT) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  SDL_QUIT event detected during exec() preamble, skipping to cleanup");
+            delete m_InputHandler;
+            m_InputHandler = nullptr;
+            SDL_QuitSubSystem(SDL_INIT_VIDEO);
+            QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+            return;
+        }
+    }
+
+    // Re-check interrupt flag after processing pending events
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during async connection, skipping to cleanup");
+        delete m_InputHandler;
+        m_InputHandler = nullptr;
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+        return;
+    }
+
     if (m_Preferences->enableMicrophone) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Starting microphone stream");
@@ -3792,15 +3849,15 @@ DispatchDeferredCleanup:
 #endif
 
     // Flush any pending resolution dialog results or other events with allocated data to prevent memory leaks
-    SDL_Event pendingEvent;
+    SDL_Event flushEvent;
     int eventsFlushed = 0;
-    while (SDL_PeepEvents(&pendingEvent, 1, SDL_GETEVENT, SDL_USEREVENT, SDL_USEREVENT) == 1) {
-        if (pendingEvent.user.code == SDL_CODE_RESOLUTION_DIALOG_RESULT) {
-            ResolutionDialogContext* ctx = (ResolutionDialogContext*)pendingEvent.user.data2;
+    while (SDL_PeepEvents(&flushEvent, 1, SDL_GETEVENT, SDL_USEREVENT, SDL_USEREVENT) == 1) {
+        if (flushEvent.user.code == SDL_CODE_RESOLUTION_DIALOG_RESULT) {
+            ResolutionDialogContext* ctx = (ResolutionDialogContext*)flushEvent.user.data2;
             delete ctx;
         }
-        else if (pendingEvent.user.code == SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS) {
-            void* state = pendingEvent.user.data2;
+        else if (flushEvent.user.code == SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS) {
+            void* state = flushEvent.user.data2;
             SDL_free(state);
         }
 
