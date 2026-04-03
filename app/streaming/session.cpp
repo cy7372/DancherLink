@@ -2193,10 +2193,16 @@ bool Session::startConnectionAsync()
     }
 #endif
 
-    emit connectionStarted();
-
-    // Mark that connection has been started - used to determine whether
-    // to use interrupt() or requestSessionExit() for power events
+    // CRITICAL: Do NOT emit connectionStarted() here!
+    // This function runs in a background thread (AsyncConnectionStartThread).
+    // If we emit here, the signal will be delivered to QML before Session::exec()
+    // starts, and the QML window may lose focus before the user can press Back.
+    //
+    // Instead, we emit connectionStarted() at the START of Session::exec(),
+    // which runs on the main thread and ensures QML retains focus for
+    // Back key cancellation during the transition phase.
+    //
+    // We only set the flag here to indicate that the connection is ready.
     m_ConnectionStartedEmitted = true;
 
     return true;
@@ -2548,6 +2554,27 @@ void Session::exec()
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_AsyncConnectionSuccess = %d", m_AsyncConnectionSuccess);
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled = %d", m_InterruptCalled.load());
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
+
+    // CRITICAL: Emit connectionStarted() NOW, at the start of exec(), not in the async thread.
+    // This ensures QML retains focus for Back key cancellation during the transition phase.
+    //
+    // Flow:
+    // 1. exec() starts on main thread
+    // 2. Emit connectionStarted() -> QML hides UI contents but keeps window visible
+    // 3. User presses Back key -> Qt queues key event
+    // 4. QML Keys.onBackPressed handler calls session.interrupt()
+    // 5. interrupt() sets m_InterruptCalled = 1 and pushes SDL_QUIT
+    // 6. processEvents(AllEvents) processes the interrupt
+    // 7. We check m_InterruptCalled and skip SDL window creation
+    //
+    // If we emitted in the async thread (old behavior), QML would lose focus before
+    // the user could press Back, and the key event would be ignored.
+    if (!m_ConnectionStartedEmitted) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Emitting connectionStarted() from exec()");
+        emit connectionStarted();
+    } else {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  connectionStarted() already emitted in async thread");
+    }
 
     // CRITICAL: Check if interrupt() was called before we entered exec().
     // If so, the user has already requested to cancel the session.
