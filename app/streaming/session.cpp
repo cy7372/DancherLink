@@ -2067,6 +2067,14 @@ public:
 // Called in a non-main thread
 bool Session::startConnectionAsync()
 {
+    // CRITICAL: Check interrupt flag at the start of connection attempt.
+    // If interrupt() was called while we were in exec() preamble, we should
+    // abort the connection immediately rather than proceeding with launch.
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called, aborting connection attempt");
+        return false;
+    }
+
     // The UI should have ensured the old game was already quit
     // if we decide to stream a different game.
     Q_ASSERT(m_Computer->currentGameId == 0 ||
@@ -2160,12 +2168,30 @@ bool Session::startConnectionAsync()
                                                                          false);
     }
 
+    // CRITICAL: Check interrupt flag before starting the connection.
+    // If interrupt() was called during the HTTP launch/resume request,
+    // we should abort before calling LiStartConnection().
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting connection");
+        return false;
+    }
+
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 nullptr, 0, nullptr, 0);
     if (err != 0) {
         // We already displayed an error dialog in the stage failure
         // listener.
+        return false;
+    }
+
+    // CRITICAL: Check interrupt flag again after LiStartConnection.
+    // If interrupt() was called during LiStartConnection initialization,
+    // we should abort before emitting connectionStarted().
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called after LiStartConnection, aborting");
+        // Interrupt the connection we just started
+        LiInterruptConnection();
         return false;
     }
 
