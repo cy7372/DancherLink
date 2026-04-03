@@ -28,6 +28,15 @@ Item {
         z: -100
     }
 
+    // CRITICAL: Intercept back key to prevent user from navigating back during launch
+    // Allowing back navigation during stream initialization can cause crashes because
+    // the session object may be in an incomplete state
+    focus: true
+    Keys.onBackPressed: {
+        console.log("StreamSegue: Back pressed ignored - waiting for stream to start")
+        // Ignore back press during stream initialization
+    }
+
     signal restartRequested()
 
     // Property to track if we're waiting for resolution change debounce during restart
@@ -317,6 +326,13 @@ Item {
             if (session && session.readyForDeletion) session.readyForDeletion.disconnect(sessionReadyForDeletion)
         } catch (e) {
             // Session may be destroyed already
+        }
+
+        // CRITICAL: Clean up the session when user navigates back during transition
+        // This prevents crashes from dangling session references
+        if (session) {
+            console.log("StreamSegue deactivating - cleaning up session")
+            session.interrupt()
         }
     }
 
