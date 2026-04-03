@@ -23,9 +23,9 @@ Item {
     anchors.fill: parent
 
     // Opaque background to hide the previous view
-    // Use Window.window as parent to cover the entire window (including footer area)
+    // Use parent (StackView) instead of Window.window to avoid anchor conflicts
     Rectangle {
-        anchors.fill: Window.window
+        anchors.fill: parent
         color: "black"
         z: -100
     }
