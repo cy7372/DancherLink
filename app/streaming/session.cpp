@@ -2384,14 +2384,6 @@ void Session::interrupt()
     // Stop any connection in progress
     LiInterruptConnection();
 
-    // CRITICAL: Hide the SDL window immediately to prevent it from being visible
-    // when the user returns to the Qt UI. This is especially important when the
-    // user presses the back button - we want the SDL window to disappear instantly.
-    // We also call SDL_HideWindow in DispatchDeferredCleanup as a safety measure.
-    if (m_Window) {
-        SDL_HideWindow(m_Window);
-    }
-
     // Inject a quit event to our SDL event loop
     SDL_Event event;
     event.type = SDL_QUIT;

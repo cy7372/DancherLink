@@ -41,8 +41,6 @@ Item {
             cancelRequested = true
             session.interrupt()
             // Keep the transition screen visible until sessionFinished is received.
-            // This ensures the user sees we're processing their cancel request.
-            // The spinner should continue running to indicate work in progress.
         }
     }
 
