@@ -29,6 +29,34 @@ Item {
         z: -100
     }
 
+    function restoreWindowState() {
+        if (!Window.window) {
+            return
+        }
+
+        // We only do this if the window isn't minimized, to avoid restoring
+        // a window that the user explicitly minimized during the stream.
+        if (Window.window.visibility !== Window.Minimized) {
+            // Apply the desired window state based on previous visibility
+            var targetVisibility = Window.Windowed
+
+            if (previousVisibility === Window.Maximized) {
+                targetVisibility = Window.Maximized
+            } else if (previousVisibility === Window.FullScreen) {
+                targetVisibility = Window.FullScreen
+            }
+            // For Windowed or -1 (not set), default to Windowed
+
+            if (targetVisibility === Window.Maximized) {
+                Window.window.showMaximized()
+            } else if (targetVisibility === Window.FullScreen) {
+                Window.window.showFullScreen()
+            } else {
+                Window.window.showNormal()
+            }
+        }
+    }
+
     function quitAppCompleted(error)
     {
         // Display a failed dialog if we got an error
@@ -66,15 +94,7 @@ Item {
         }
         else {
             // No next session - restore window state before popping
-            if (Window.window && previousVisibility !== -1) {
-                if (previousVisibility === Window.Maximized) {
-                    Window.window.showMaximized()
-                } else if (previousVisibility === Window.FullScreen) {
-                    Window.window.showFullScreen()
-                } else {
-                    Window.window.showNormal()
-                }
-            }
+            restoreWindowState()
 
             // CRITICAL: Check for updates after user manually quits streaming
             // This ensures users are notified of new versions after they finish gaming

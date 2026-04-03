@@ -30,21 +30,17 @@ Item {
     }
 
     // CRITICAL: Intercept back key to cancel streaming and return to previous view
-    // This allows user to cancel the stream launch during initialization
-    // IMPORTANT: We must wait for sessionFinished to ensure SDL window is properly cleanup
-    // The UI will show "Quitting..." text to indicate the cancellation is in progress
+    // This allows user to cancel the stream launch during initialization.
+    // We wait for sessionFinished to ensure SDL window is properly cleaned up
+    // before returning to the Qt UI (prevents SDL window visible after pop).
     property bool cancelRequested: false
 
     focus: true
     Keys.onBackPressed: {
-        console.log("StreamSegue: Back pressed - canceling stream")
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Update the UI to show we're quitting
-            stageText = qsTr("Quitting %1...").arg(appName)
-            // Interrupt the connection - this will eventually trigger sessionFinished
             session.interrupt()
-            // Wait for sessionFinished to pop - this ensures SDL window is hidden first
+            // Wait for sessionFinished to pop - SDL window will be hidden by then
         }
     }
 
@@ -116,8 +112,21 @@ Item {
 
     signal delayedRestartRequested(int width, int height)
 
-    // Use -1 as default to indicate "not explicitly set"
-    // When explicitly passed (e.g., from QuitSegue), this won't be overwritten
+    // =============================================================================
+    // Window State Management
+    // =============================================================================
+    // previousVisibility tracks the window state BEFORE streaming started.
+    // This is used to restore the correct window state when streaming ends.
+    //
+    // Capture flow:
+    // 1. AppView captures Window.visibility before creating StreamSegue
+    // 2. AppView passes previousVisibility to StreamSegue via createObject()
+    // 3. StreamSegue uses previousVisibility in restoreWindowState() to restore
+    //
+    // Fallback logic (if previousVisibility is -1):
+    // - Use StreamingPreferences.uiDisplayMode
+    // - Default to Windowed mode
+    // =============================================================================
     property int previousVisibility: -1
 
     onRestartRequested: {
@@ -205,49 +214,33 @@ Item {
         }
 
         // Check if we're waiting for resolution debounce
-        // If so, stay on the transition screen and wait for the debounce timer
         if (waitingForResolutionDebouncing) {
-            console.log("Session finished but waiting for resolution debounce - staying on transition screen")
-            // Re-enable gamepad for the transition screen
             SdlGamepadKeyNavigation.enable()
             return
         }
 
-        // Re-enable GUI gamepad usage now
+        // Re-enable GUI gamepad usage
         SdlGamepadKeyNavigation.enable()
 
-        // CRITICAL: Check if user requested cancellation via back key
-        // In this case, skip error dialogs and just return to previous view
+        // User canceled via back key - just restore and return
         if (cancelRequested) {
-            console.log("Stream was canceled by user - returning to previous view")
             restoreWindowState()
             stackView.pop()
             return
         }
 
+        // CLI launch without errors - exit now
         if (quitAfter && !errorDialog.text) {
-            // If this was a CLI launch without errors, exit now
             Qt.quit()
         }
         else if (errorDialog.text) {
-            // Restore window state and show the Qt window again after streaming
-            // Do NOT call window.show() before restoreWindowState() - the restore
-            // function handles showing the window itself.
             restoreWindowState()
-
-            // Brief delay to let the layout engine settle before showing the dialog,
-            // avoiding rendering glitches when the window reappears after streaming.
             errorDialogTimer.start()
         }
         else {
-            // No error, just pop back
+            // Normal exit - check for updates and return to previous view
             restoreWindowState()
-
-            // CRITICAL: Check for updates after stream session ends normally
-            // This ensures users are notified of new versions after they finish gaming
-            console.log("Stream session ended - checking for updates")
             AutoUpdateChecker.start(false)
-
             stackView.pop()
         }
     }
@@ -257,9 +250,6 @@ Item {
             return
         }
 
-        console.log("restoreWindowState: previousVisibility =", previousVisibility,
-                    ", Window.visibility =", Window.window.visibility)
-
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
         if (Window.window.visibility !== Window.Minimized) {
@@ -268,37 +258,16 @@ Item {
                 session.restoreWindowStyle()
             }
 
-            // Apply the desired window state based on previous visibility or preferences
+            // Apply the desired window state based on previous visibility
             var targetVisibility = Window.Windowed
 
-            // CRITICAL: previousVisibility takes priority over uiDisplayMode
-            // This ensures we restore to the state BEFORE streaming started
             if (previousVisibility === Window.Maximized) {
                 targetVisibility = Window.Maximized
-                console.log("restoreWindowState: Restoring to Maximized (from previousVisibility)")
             } else if (previousVisibility === Window.FullScreen) {
                 targetVisibility = Window.FullScreen
-                console.log("restoreWindowState: Restoring to FullScreen (from previousVisibility)")
-            } else if (previousVisibility === Window.Windowed || previousVisibility !== -1) {
-                // previousVisibility is Windowed or explicitly set to something else
-                targetVisibility = Window.Windowed
-                console.log("restoreWindowState: Restoring to Windowed (from previousVisibility:", previousVisibility, ")")
-            } else {
-                // previousVisibility is -1 (not set), fall back to preferences
-                if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_MAXIMIZED) {
-                    targetVisibility = Window.Maximized
-                    console.log("restoreWindowState: Restoring to Maximized (from preferences)")
-                } else if (StreamingPreferences.uiDisplayMode === StreamingPreferences.UI_FULLSCREEN) {
-                    targetVisibility = Window.FullScreen
-                    console.log("restoreWindowState: Restoring to FullScreen (from preferences)")
-                } else {
-                    console.log("restoreWindowState: Restoring to Windowed (default)")
-                }
             }
+            // For Windowed or -1 (not set), default to Windowed
 
-            // Apply the window state immediately before popping the StackView.
-            // This ensures the window state is applied in the correct order
-            // and avoids conflicts with Qt's window management after pop().
             if (targetVisibility === Window.Maximized) {
                 Window.window.showMaximized()
             } else if (targetVisibility === Window.FullScreen) {
@@ -381,14 +350,6 @@ Item {
         // before we try to access Window.window. StackView.onActivated can fire
         // before the component is in the window hierarchy.
         Qt.callLater(function() {
-            // CRITICAL: Capture window state BEFORE going fullscreen for transition
-            // This must happen before showFullScreen() to record the correct pre-stream state
-            // Only capture if not explicitly passed in from AppView (e.g., -1 means not set)
-            if (previousVisibility === -1 && Window.window) {
-                previousVisibility = Window.window.visibility
-                console.log("StreamSegue: Captured previousVisibility:", previousVisibility)
-            }
-
             // Hide the toolbar before we start loading
             if (Window.window && Window.window.toolBar) {
                 Window.window.toolBar.visible = false
@@ -397,6 +358,7 @@ Item {
             // CRITICAL: Show fullscreen to cover taskbar during transition
             // This ensures the transition screen covers the entire screen, even if
             // the user's windowed mode doesn't cover the taskbar.
+            // Note: previousVisibility is passed from AppView, so we don't capture it here
             if (Window.window) {
                 Window.window.showFullScreen()
             }
