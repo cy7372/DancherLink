@@ -2437,6 +2437,12 @@ void Session::setQtWindowToolStyle(bool toolStyle)
         return;
     }
 
+    // Additional validation: check if window is still valid
+    BOOL isValidWindow = IsWindow(hwnd);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "setQtWindowToolStyle: hwnd=%p, isValidWindow=%d, toolStyle=%d",
+                hwnd, isValidWindow, toolStyle);
+
     // Use ITaskbarList to control taskbar presence - more reliable than WS_EX_TOOLWINDOW
     // This approach doesn't change the window style, just controls taskbar visibility
     ITaskbarList* pTaskbarList = nullptr;
@@ -2453,9 +2459,14 @@ void Session::setQtWindowToolStyle(bool toolStyle)
                             "Removed Qt window from taskbar via ITaskbarList");
             } else {
                 // Add back to taskbar
-                pTaskbarList->AddTab(hwnd);
+                hr = pTaskbarList->AddTab(hwnd);
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                            "Added Qt window back to taskbar via ITaskbarList");
+                            "Added Qt window back to taskbar via ITaskbarList, hr=0x%08X", hr);
+
+                // Also ensure window is visible on screen
+                SetForegroundWindow(hwnd);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Called SetForegroundWindow to bring window to front");
             }
         } else {
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,

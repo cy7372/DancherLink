@@ -377,6 +377,11 @@ Item {
                     return
                 }
 
+                // CRITICAL: Log window state BEFORE restoration
+                console.log("  Qt.callLater: BEFORE restore - visible:", Window.window.visible,
+                            "visibility:", Window.window.visibility,
+                            "height:", Window.window.height, "width:", Window.window.width)
+
                 // Restore window style first (Windows only)
                 // Use the saved session reference (captured before pop)
                 if (savedSession) {
@@ -402,25 +407,47 @@ Item {
                 // Window may have been destroyed or hidden by the user
                 try {
                     if (targetVisibility === Window.Maximized) {
+                        console.log("  Qt.callLater: calling showMaximized()")
                         Window.window.showMaximized()
                     } else if (targetVisibility === Window.FullScreen) {
+                        console.log("  Qt.callLater: calling showFullScreen()")
                         Window.window.showFullScreen()
                     } else {
+                        console.log("  Qt.callLater: calling showNormal()")
                         Window.window.showNormal()
                     }
 
                     // CRITICAL: Explicitly raise and activate the window
+                    console.log("  Qt.callLater: calling raise() and requestActivate()")
                     Window.window.raise()
                     Window.window.requestActivate()
                 } catch (e) {
                     console.log("  Qt.callLater: Exception during window restoration:", e)
                     // Window may have been destroyed, attempt fallback
                     try {
+                        console.log("  Qt.callLater: fallback showNormal()")
                         Window.window.showNormal()
                         Window.window.raise()
                     } catch (e2) {
                         console.log("  Qt.callLater: Fallback also failed:", e2)
                     }
+                }
+
+                // CRITICAL: Log window state AFTER restoration
+                console.log("  Qt.callLater: AFTER restore - visible:", Window.window.visible,
+                            "visibility:", Window.window.visibility,
+                            "height:", Window.window.height, "width:", Window.window.width)
+
+                // CRITICAL: Force window to be visible if it's still hidden after restoration
+                // This handles edge cases where showMaximized()/showNormal() doesn't make the window visible
+                if (!Window.window.visible) {
+                    console.log("  Qt.callLater: WARNING - Window is still hidden after restoration!")
+                    console.log("  Qt.callLater: Forcing window visibility...")
+                    Window.window.visible = true
+                    Window.window.raise()
+                    Window.window.requestActivate()
+                    console.log("  Qt.callLater: After force visible - visible:", Window.window.visible,
+                                "visibility:", Window.window.visibility)
                 }
 
                 console.log("  Qt.callLater: window restoration complete")
@@ -481,10 +508,13 @@ Item {
                 // CRITICAL: Check window state before applying changes
                 try {
                     if (targetVisibility === Window.Maximized) {
+                        console.log("  Qt.callLater (normal exit): calling showMaximized()")
                         Window.window.showMaximized()
                     } else if (targetVisibility === Window.FullScreen) {
+                        console.log("  Qt.callLater (normal exit): calling showFullScreen()")
                         Window.window.showFullScreen()
                     } else {
+                        console.log("  Qt.callLater (normal exit): calling showNormal()")
                         Window.window.showNormal()
                     }
 
@@ -498,6 +528,18 @@ Item {
                     } catch (e2) {
                         console.log("  Qt.callLater (normal exit): Fallback failed:", e2)
                     }
+                }
+
+                // CRITICAL: Log window state AFTER restoration
+                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
+                            "visibility:", Window.window.visibility)
+
+                // CRITICAL: Force window to be visible if it's still hidden after restoration
+                if (!Window.window.visible) {
+                    console.log("  Qt.callLater (normal exit): WARNING - Window is still hidden, forcing visible")
+                    Window.window.visible = true
+                    Window.window.raise()
+                    Window.window.requestActivate()
                 }
 
                 console.log("  Qt.callLater (normal exit): window restoration complete")
@@ -663,8 +705,15 @@ Item {
             // This ensures the transition screen covers the entire screen, even if
             // the user's windowed mode doesn't cover the taskbar.
             // Note: previousVisibility is passed from AppView, so we don't capture it here
-            if (Window.window && Window.window.visible) {
+            // CRITICAL: Only call showFullScreen() if window is visible and valid
+            // This prevents calling showFullScreen() on a window that's being restored
+            if (Window.window && Window.window.visible && Window.window.enabled) {
+                console.log("StreamSegue: Setting window to fullscreen for transition")
                 Window.window.showFullScreen()
+            } else {
+                console.log("StreamSegue: Skipping fullscreen transition - window state:",
+                            "visible=" + (Window.window ? Window.window.visible : "null"),
+                            "enabled=" + (Window.window ? Window.window.enabled : "null"))
             }
         })
 
