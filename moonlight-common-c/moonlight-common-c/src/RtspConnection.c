@@ -702,15 +702,10 @@ void cleanupRtspSession(void) {
         decryptionCtx = NULL;
     }
 
-    // FIX: Close RTSP socket to ensure server cleans up session state.
-    // Without this, the server may think the client is still connected
-    // and reuse the old encryption context, causing "Failed to decrypt
-    // RTSP response" errors on subsequent connections.
-    if (sock != INVALID_SOCKET) {
-        Limelog("Closing RTSP socket...\n");
-        closeSocket(sock);
-        sock = INVALID_SOCKET;
-    }
+    // Reset socket state (will be re-created on next connection attempt)
+    // NB: transactRtspMessageTcp() already closes the socket after each transaction,
+    // so sock should already be INVALID_SOCKET here in most cases.
+    sock = INVALID_SOCKET;
 }
 
 // Send RTSP ANNOUNCE message
@@ -1031,6 +1026,21 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
     controlStreamId = APP_VERSION_AT_LEAST(7, 1, 431) ? "streamid=control/13/0" : "streamid=control/1/0";
     AudioEncryptionEnabled = false;
     encryptedRtspEnabled = serverInfo->rtspSessionUrl && strstr(serverInfo->rtspSessionUrl, "rtspenc://");
+
+    // FIX: Destroy any existing crypto contexts from a previous failed connection
+    // attempt. This prevents "Failed to decrypt RTSP response" errors when the
+    // server reuses the same encryption context after an early cancellation.
+    // Reset encryption sequence number to ensure fresh IV for new connection.
+    encryptionSequenceNumber = 0;
+    if (encryptionCtx != NULL) {
+        PltDestroyCryptoContext(encryptionCtx);
+        encryptionCtx = NULL;
+    }
+    if (decryptionCtx != NULL) {
+        PltDestroyCryptoContext(decryptionCtx);
+        decryptionCtx = NULL;
+    }
+
     encryptionCtx = PltCreateCryptoContext();
     decryptionCtx = PltCreateCryptoContext();
 
