@@ -458,7 +458,58 @@ Item {
         else if (errorDialog.text) {
             // Update text to show exiting state, then restore and show error
             stageText = qsTr("Quitting %1...").arg(appName)
-            restoreWindowState()
+
+            // CRITICAL: Save session reference and previousVisibility BEFORE popping.
+            // Same fix as the cancelRequested path. Without this, the StreamSegue page
+            // remains on the stack but session is null, so user cannot exit by pressing back.
+            var savedSession = session
+            var savedPreviousVisibility = previousVisibility
+
+            stackView.pop()
+
+            Qt.callLater(function() {
+                console.log("  Qt.callLater (error exit): restoring window state after pop")
+
+                if (!Window.window) {
+                    console.log("  Qt.callLater (error exit): Window.window is null")
+                    return
+                }
+
+                // Restore window style first (Windows only)
+                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
+                    try {
+                        savedSession.restoreWindowStyle()
+                    } catch (e) {
+                        console.log("  Qt.callLater (error exit): savedSession.restoreWindowStyle() failed:", e)
+                    }
+                }
+
+                // Apply the desired window state based on previous visibility
+                var targetVisibility = Window.Windowed
+                if (savedPreviousVisibility === Window.Maximized) {
+                    targetVisibility = Window.Maximized
+                } else if (savedPreviousVisibility === Window.FullScreen) {
+                    targetVisibility = Window.FullScreen
+                }
+
+                try {
+                    if (targetVisibility === Window.Maximized) {
+                        console.log("  Qt.callLater (error exit): calling showMaximized()")
+                        Window.window.showMaximized()
+                    } else if (targetVisibility === Window.FullScreen) {
+                        console.log("  Qt.callLater (error exit): calling showFullScreen()")
+                        Window.window.showFullScreen()
+                    } else {
+                        console.log("  Qt.callLater (error exit): calling showNormal()")
+                        Window.window.showNormal()
+                    }
+                    Window.window.raise()
+                    Window.window.requestActivate()
+                } catch (e) {
+                    console.log("  Qt.callLater (error exit): Exception during window restoration:", e)
+                }
+            })
+
             errorDialogTimer.start()
         }
         else {
