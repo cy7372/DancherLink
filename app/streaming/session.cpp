@@ -2561,6 +2561,15 @@ void Session::requestCancel()
         // calling LiStopConnection() in DeferredSessionCleanupTask would crash.
         m_LiStopConnectionCalled.store(true);
 
+        // CRITICAL: Clear currentGameId on the computer object. This ensures that
+        // when the user retries, we use "launch" instead of "resume" because the
+        // /cancel API will exit the running app on the server. Without this, the
+        // next launch attempt would fail with 503 "No running app to resume".
+        if (m_Computer) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Clearing currentGameId to enable launch on retry");
+            m_Computer->currentGameId = 0;
+        }
+
         // CRITICAL: Interrupt LiStartConnection() FIRST before calling /cancel API.
         // LiInterruptConnection() sets an atomic flag that causes LiStartConnection()
         // to fail fast with RTSP_ERROR_INTERRUPTED, rather than continuing to run
