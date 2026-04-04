@@ -2712,7 +2712,12 @@ void Session::exec()
 
     // Check if interrupt was called before exec - skip to cleanup
     if (shouldAbortConnection()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  shouldAbortConnection() returned true, skipping to cleanup");
         cleanupBeforeConnection();
+        // CRITICAL: Use DeferredSessionCleanupTask to emit sessionFinished() after cleanup.
+        // This ensures consistent cleanup flow and proper window restoration in QML.
+        // Do NOT emit sessionFinished() here directly.
+        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
     }
 
@@ -2720,6 +2725,10 @@ void Session::exec()
     if (!m_AsyncConnectionSuccess) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection failed, cleaning up...");
         cleanupBeforeConnection();
+        // CRITICAL: Use DeferredSessionCleanupTask to emit sessionFinished() after cleanup.
+        // This ensures consistent cleanup flow and proper window restoration in QML.
+        // Do NOT emit sessionFinished() here directly.
+        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
     }
 
@@ -2762,7 +2771,10 @@ void Session::exec()
         // Check for SDL_QUIT event (may be pushed by interrupt())
         if (pendingEvent.type == SDL_QUIT) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  SDL_QUIT event detected during exec() preamble, skipping to cleanup");
+            // CRITICAL: DeferredSessionCleanupTask will emit sessionFinished() after cleanup.
+            // Do NOT emit sessionFinished() here, as it would be emitted twice.
             cleanupBeforeConnection();
+            QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
             return;
         }
     }
@@ -2773,6 +2785,8 @@ void Session::exec()
         delete m_InputHandler;
         m_InputHandler = nullptr;
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        // CRITICAL: DeferredSessionCleanupTask will emit sessionFinished() after cleanup.
+        // Do NOT emit sessionFinished() here, as it would be emitted twice.
         QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
     }
@@ -2799,6 +2813,8 @@ void Session::exec()
     if (shouldAbortConnection()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() called via QML Back key, skipping to cleanup");
         cleanupBeforeConnection();
+        // CRITICAL: Emit sessionFinished() to notify QML that the session has ended.
+        emit sessionFinished(m_PortTestResults);
         return;
     }
 
