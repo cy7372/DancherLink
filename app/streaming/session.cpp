@@ -2629,10 +2629,10 @@ void Session::requestCancel()
         // CRITICAL: Set cancellation cooldown timestamp.
         // This prevents the user from reconnecting too quickly after cancellation,
         // giving the server time to clean up its RTSP session state.
-        // Cooldown period: 10 seconds (conservative cleanup time for GFE/Sunshine)
+        // Cooldown period: 6 seconds (balanced cleanup time for GFE/Sunshine)
         if (m_Computer) {
-            m_Computer->cancelCooldownUntil = SDL_GetTicks() + 10000;
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Set cancellation cooldown for 10 seconds (until tick %u)", (Uint32)m_Computer->cancelCooldownUntil);
+            m_Computer->cancelCooldownUntil = SDL_GetTicks() + 6000;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Set cancellation cooldown for 6 seconds (until tick %u)", (Uint32)m_Computer->cancelCooldownUntil);
         }
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (fast path) ======");
