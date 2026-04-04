@@ -459,16 +459,15 @@ Item {
             // Update text to show exiting state, then restore and show error
             stageText = qsTr("Quitting %1...").arg(appName)
 
-            // CRITICAL: Save session reference and previousVisibility BEFORE popping.
-            // Same fix as the cancelRequested path. Without this, the StreamSegue page
-            // remains on the stack but session is null, so user cannot exit by pressing back.
+            // CRITICAL: Save session reference and previousVisibility for window restoration.
+            // We cannot pop() here because we need errorDialog to be shown first.
+            // The stackView.pop() will be called in errorDialog.onClosed() after user dismisses the dialog.
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
-            stackView.pop()
-
+            // Use Qt.callLater to restore window before showing the error dialog
             Qt.callLater(function() {
-                console.log("  Qt.callLater (error exit): restoring window state after pop")
+                console.log("  Qt.callLater (error exit): restoring window state")
 
                 if (!Window.window) {
                     console.log("  Qt.callLater (error exit): Window.window is null")
@@ -508,9 +507,10 @@ Item {
                 } catch (e) {
                     console.log("  Qt.callLater (error exit): Exception during window restoration:", e)
                 }
-            })
 
-            errorDialogTimer.start()
+                // Now start the timer to show the error dialog after window is restored
+                errorDialogTimer.start()
+            })
         }
         else {
             // Normal exit - update text to show exiting state for a smooth transition
