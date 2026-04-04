@@ -405,10 +405,12 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
+                // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen) {
+                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                    // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                     targetVisibility = Window.FullScreen
                 }
 
@@ -495,10 +497,13 @@ Item {
                 }
 
                 // Apply the desired window state based on previous visibility
+                // Use the saved previousVisibility value (captured before pop)
+                // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen) {
+                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                    // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                     targetVisibility = Window.FullScreen
                 }
 
@@ -563,10 +568,12 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
+                // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen) {
+                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                    // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                     targetVisibility = Window.FullScreen
                 }
 
@@ -635,7 +642,8 @@ Item {
 
             if (previousVisibility === Window.Maximized) {
                 targetVisibility = Window.Maximized
-            } else if (previousVisibility === Window.FullScreen) {
+            } else if (previousVisibility === Window.FullScreen || previousVisibility === 4) {
+                // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                 targetVisibility = Window.FullScreen
             }
             // For Windowed or -1 (not set), default to Windowed
