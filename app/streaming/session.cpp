@@ -1799,6 +1799,9 @@ private:
 
     void run() override
     {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== DeferredSessionCleanupTask::run() START ======");
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_Session: %p", m_Session.data());
+
         if (!m_Session) {
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "DeferredSessionCleanupTask: m_Session is null");
             return;
@@ -1806,6 +1809,8 @@ private:
 
         // Cache this early because m_Session might be destroyed after we emit sessionFinished
         bool restartRequest = m_Session->m_RestartRequest;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  restartRequest: %d", restartRequest);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled: %d", m_Session->m_InterruptCalled.load());
 
         // Only quit the running app if our session terminated gracefully
         bool shouldQuit =
@@ -1837,11 +1842,14 @@ private:
         // CRITICAL: Add a small delay to ensure LiInterruptConnection() has time
         // to complete if it was called. This prevents "RTSP handshake failed" errors
         // on the next connection attempt after an interrupt.
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  About to call LiStopConnection()...");
         if (m_Session && m_Session->m_InterruptCalled.load()) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Waiting for interrupt cleanup to complete...");
             SDL_Delay(100);
         }
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiStopConnection() NOW...");
         LiStopConnection();
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() returned.");
 
         // End the session log
         LogManager::instance()->endSessionLog();
@@ -1877,6 +1885,7 @@ private:
         if (restartRequest && m_Session) {
             emit m_Session->sessionRestartRequested();
         }
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== DeferredSessionCleanupTask::run() END ======");
     }
 
     QPointer<Session> m_Session;
