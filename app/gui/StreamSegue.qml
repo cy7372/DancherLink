@@ -84,8 +84,13 @@ Item {
         // Guard: Check if session exists and hasn't already requested cancellation
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Record the cancel timestamp for reconnect cooldown
+            // Record the cancel timestamp for reconnect cooldown.
+            // CRITICAL: Update both local property AND parent AppView for persistence.
             lastCancelTime = Date.now()
+            if (stackView && stackView.parent && stackView.parent.lastCancelTime !== undefined) {
+                stackView.parent.lastCancelTime = lastCancelTime
+                console.log("  Updated parent.lastCancelTime to", lastCancelTime)
+            }
             console.log("====== Calling session.requestCancel() ======")
             session.requestCancel()
             console.log("====== session.requestCancel() completed ======")

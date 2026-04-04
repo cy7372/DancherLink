@@ -2548,6 +2548,21 @@ void Session::requestCancel()
         // calling LiStopConnection() in DeferredSessionCleanupTask would crash.
         m_LiStopConnectionCalled.store(true);
 
+        // CRITICAL: Call /cancel API to clean up server-side pending session.
+        // This prevents the server from reusing the old session with an incremented
+        // AES-GCM IV counter, which causes "Failed to decrypt RTSP response" errors.
+        // This is the ROOT FIX for the RTSP session reuse bug.
+        if (m_Computer && m_Computer->activeHttpsPort > 0) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling /cancel API to clean up server pending session...");
+            try {
+                NvHTTP http(m_Computer);
+                http.cancelPendingSession();
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call completed");
+            } catch (const std::exception& e) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call failed (non-fatal): %s", e.what());
+            }
+        }
+
         // Release mouse capture to prevent input hijacking
         if (m_InputHandler) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Releasing mouse capture");

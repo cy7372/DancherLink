@@ -27,6 +27,12 @@ CenteredGridView {
     // only highlight when using keyboard/gamepad navigation.
     property int keyboardSelectedIndex: -1
 
+    // CRITICAL: Track last manual cancel timestamp for reconnect cooldown.
+    // This is a persistent property that survives StreamSegue being popped.
+    // Updated by StreamSegue.qml when user presses Back/Esc to cancel.
+    property int lastCancelTime: 0
+    readonly property int reconnectCooldownMs: 5000  // 5 second cooldown
+
     id: appGrid
     focus: true
     activeFocusOnTab: true
@@ -288,17 +294,18 @@ CenteredGridView {
         // not the state captured during the stream (which may be fullscreen).
         function createStreamSegue(runningId, previousVisibility)
         {
-            // CRITICAL: Check reconnect cooldown if the previous session was manually canceled.
+            // CRITICAL: Check reconnect cooldown if the user recently canceled a session.
             // This prevents hitting the server-side session reuse bug (foundation-sunshine)
             // which occurs when reconnecting within 10s of canceling.
-            if (stackView.currentItem && stackView.currentItem.objectName === "StreamSegue") {
-                var timeSinceCancel = Date.now() - stackView.currentItem.lastCancelTime
-                if (timeSinceCancel < stackView.currentItem.reconnectCooldownMs && timeSinceCancel > 0) {
-                    var remainingMs = stackView.currentItem.reconnectCooldownMs - timeSinceCancel
+            // NOTE: We use appGrid.lastCancelTime which persists after StreamSegue is popped.
+            if (appGrid.lastCancelTime > 0) {
+                var timeSinceCancel = Date.now() - appGrid.lastCancelTime
+                if (timeSinceCancel < appGrid.reconnectCooldownMs && timeSinceCancel > 0) {
+                    var remainingMs = appGrid.reconnectCooldownMs - timeSinceCancel
                     console.log("Reconnect cooldown active - " + remainingMs + "ms remaining")
 
                     // Show a non-intrusive toast notification
-                    var cooldownToast = Qt.createQmlObject('import QtQuick.Controls 2.15; ToolTip {}', stackView, '')
+                    var cooldownToast = Qt.createQmlObject('import QtQuick.Controls 2.15; ToolTip {}', appGrid, '')
                     cooldownToast.text = qsTr("Please wait %1 seconds before reconnecting").arg(Math.ceil(remainingMs / 1000))
                     cooldownToast.timeout = 2000
                     cooldownToast.visible = true

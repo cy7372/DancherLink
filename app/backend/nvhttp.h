@@ -136,6 +136,9 @@ public:
     quitApp() = 0;
 
     virtual void
+    cancelPendingSession() = 0;
+
+    virtual void
     startApp(QString verb,
              bool isGfe,
              int appId,
@@ -213,6 +216,9 @@ public:
 
     void
     quitApp() override;
+
+    void
+    cancelPendingSession() override;
 
     void
     startApp(QString verb,

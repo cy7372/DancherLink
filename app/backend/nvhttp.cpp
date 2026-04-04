@@ -17,6 +17,7 @@
 #define LAUNCH_TIMEOUT_MS 120000
 #define RESUME_TIMEOUT_MS 30000
 #define QUIT_TIMEOUT_MS 30000
+#define CANCEL_TIMEOUT_MS 2000  // Fast cancel for session cleanup
 
 NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, QNetworkAccessManager* nam) :
     m_Nam(nam ? nam : new QNetworkAccessManager(this)),
@@ -255,6 +256,23 @@ NvHTTP::quitApp()
         // that they can't kill someone else's stream.
         throw GfeHttpResponseException(599, "");
     }
+}
+
+// Fast cancel API - used for cleaning up pending session after user cancellation
+// This is a lighter version of quitApp() with shorter timeout and no game state check
+void
+NvHTTP::cancelPendingSession()
+{
+    QString response =
+            openConnectionToString(m_BaseUrlHttps,
+                                   "cancel",
+                                   nullptr,
+                                   CANCEL_TIMEOUT_MS);
+
+    qInfo() << "Cancel pending session response:" << response;
+
+    // Don't throw - failure is acceptable here as the server may have already
+    // cleaned up the session, or the session may not exist
 }
 
 QVector<NvDisplayMode>
