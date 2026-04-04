@@ -217,7 +217,10 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
                                     (uint8_t*)(encryptedMessage + 1), decryptedMessageLen,
                                     (uint8_t*)decryptedMessage, &decryptedMessageLen);
         if (!success) {
-            Limelog("Failed to decrypt RTSP response\n");
+            // FIX: Log detailed debug info for decryption failures to help diagnose
+            // server session reuse issues after early cancellation
+            Limelog("Failed to decrypt RTSP response (seq=%u, iv[0-3]=%02x%02x%02x%02x, iv[10-11]=%c%c)\n",
+                    seq, iv[0], iv[1], iv[2], iv[3], iv[10], iv[11]);
             free(decryptedMessage);
             return false;
         }
