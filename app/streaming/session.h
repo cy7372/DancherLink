@@ -381,6 +381,10 @@ private:
     // duplicate interrupt processing. Reset in destructor for session reuse.
     std::atomic<bool> m_InterruptCalled{false};
 
+    // Track if LiStopConnection() has been called - used to prevent duplicate
+    // RTSP TEARDOWN requests which waste network round trips and server resources.
+    std::atomic<bool> m_LiStopConnectionCalled{false};
+
     int m_ActiveVideoFormat;
     int m_ActiveVideoWidth;
     int m_ActiveVideoHeight;
