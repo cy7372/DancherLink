@@ -2581,6 +2581,12 @@ void Session::requestCancel()
             return;
         }
 
+        // Release mouse capture to prevent input hijacking
+        if (m_InputHandler) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Releasing mouse capture");
+            m_InputHandler->setCaptureActive(false);
+        }
+
         // Interrupt any pending connection attempt immediately
         LiInterruptConnection();
 
