@@ -710,19 +710,12 @@ Item {
                 Window.window.toolBar.visible = false
             }
 
-            // CRITICAL: Show fullscreen to cover taskbar during transition
-            // This ensures the transition screen covers the entire screen, even if
-            // the user's windowed mode doesn't cover the taskbar.
-            // Note: previousVisibility is passed from AppView, so we don't capture it here
-            // CRITICAL: Only call showFullScreen() if window is visible and valid
-            // This prevents calling showFullScreen() on a window that's being restored
-            if (Window.window && Window.window.visible && Window.window.enabled) {
+            // CRITICAL: Set window to fullscreen for the transition screen.
+            // This is NOT user-configurable - the transition screen is always fullscreen.
+            // The user's display mode preference is only used for the actual streaming session.
+            if (Window.window) {
                 console.log("StreamSegue: Setting window to fullscreen for transition")
                 Window.window.showFullScreen()
-            } else {
-                console.log("StreamSegue: Skipping fullscreen transition - window state:",
-                            "visible=" + (Window.window ? Window.window.visible : "null"),
-                            "enabled=" + (Window.window ? Window.window.enabled : "null"))
             }
         })
 

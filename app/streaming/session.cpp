@@ -2275,11 +2275,10 @@ bool Session::startConnectionAsync()
     if (m_InterruptCalled.load()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting and cleaning up");
 
-        // Call LiStopConnection() to clean up client-side state.
-        // This will now send RTSP TEARDOWN to properly notify the server
-        // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
-        // RTSP response" errors on subsequent connection attempts.
-        LiStopConnection();
+        // CRITICAL: Do NOT call LiStopConnection() here!
+        // LiStartConnection() has not been called yet, so there's nothing to clean up.
+        // Calling LiStopConnection() without LiStartConnection() will crash.
+        // The cleanup will be handled by requestCancel() which already called LiInterruptConnection().
 
         return false;
     }
