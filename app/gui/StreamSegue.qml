@@ -509,17 +509,29 @@ Item {
                     if (targetVisibility === Window.Maximized) {
                         console.log("  Qt.callLater (error exit): calling showMaximized()")
                         Window.window.showMaximized()
+                        console.log("  Qt.callLater (error exit): showMaximized() completed, Window.window =", Window.window ? "valid" : "null")
                     } else if (targetVisibility === Window.FullScreen) {
                         console.log("  Qt.callLater (error exit): calling showFullScreen()")
                         Window.window.showFullScreen()
+                        console.log("  Qt.callLater (error exit): showFullScreen() completed, Window.window =", Window.window ? "valid" : "null")
                     } else {
                         console.log("  Qt.callLater (error exit): calling showNormal()")
                         Window.window.showNormal()
+                        console.log("  Qt.callLater (error exit): showNormal() completed, Window.window =", Window.window ? "valid" : "null")
                     }
+
+                    console.log("  Qt.callLater (error exit): calling raise()")
                     Window.window.raise()
+                    console.log("  Qt.callLater (error exit): raise() completed, Window.window =", Window.window ? "valid" : "null")
+
+                    console.log("  Qt.callLater (error exit): calling requestActivate()")
                     Window.window.requestActivate()
+                    console.log("  Qt.callLater (error exit): requestActivate() completed, Window.window =", Window.window ? "valid" : "null")
+
+                    console.log("  Qt.callLater (error exit): AFTER restore - window state complete")
                 } catch (e) {
                     console.log("  Qt.callLater (error exit): Exception during window restoration:", e)
+                    console.log("  Qt.callLater (error exit): After exception, Window.window =", Window.window ? "valid" : "null")
                 }
 
                 // Now start the timer to show the error dialog after window is restored
@@ -687,36 +699,42 @@ Item {
     // but we still need to know if errorDialog should be shown
     property bool shouldShowErrorDialog: false
 
-    Timer {
-        id: errorDialogTimer
-        interval: 50
-        onTriggered: {
-            // CRITICAL: Only check Window.window (global singleton), not stackView (component property)
-            // stackView becomes inaccessible when component is popped or deactivated
-            // Use shouldShowErrorDialog flag instead of checking stackView
-            if (!Window.window) {
-                console.log("  errorDialogTimer: Window.window is null, skipping dialog but popping stackView")
-                // CRITICAL FIX: Even if Window.window is null, we must pop the stackView
-                // to prevent the app from being stuck on "Quitting..." screen
-                if (stackView) {
-                    stackView.pop()
+    // Use a hidden Item to host the Timer, avoiding Window.window access issues
+    Item {
+        id: timerHost
+        visible: false
+
+        Timer {
+            id: errorDialogTimer
+            interval: 50
+            onTriggered: {
+                // CRITICAL: Only check Window.window (global singleton), not stackView (component property)
+                // stackView becomes inaccessible when component is popped or deactivated
+                // Use shouldShowErrorDialog flag instead of checking stackView
+                if (!Window.window) {
+                    console.log("  errorDialogTimer: Window.window is null, skipping dialog but popping stackView")
+                    // CRITICAL FIX: Even if Window.window is null, we must pop the stackView
+                    // to prevent the app from being stuck on "Quitting..." screen
+                    if (stackView) {
+                        stackView.pop()
+                    }
+                    return
                 }
-                return
-            }
-            if (!shouldShowErrorDialog) {
-                console.log("  errorDialogTimer: shouldShowErrorDialog is false, skipping dialog")
-                return
-            }
-            if (!errorDialog.text) {
-                console.log("  errorDialogTimer: no error text, skipping dialog")
-                return
+                if (!shouldShowErrorDialog) {
+                    console.log("  errorDialogTimer: shouldShowErrorDialog is false, skipping dialog")
+                    return
+                }
+                if (!errorDialog.text) {
+                    console.log("  errorDialogTimer: no error text, skipping dialog")
+                    return
             }
             console.log("  errorDialogTimer: showing error dialog")
             Window.window.requestActivate()
             Window.window.raise()
             errorDialog.open()
         }
-    }
+        } // Timer
+    } // Item (timerHost)
 
     ErrorMessageDialog {
         id: errorDialog
