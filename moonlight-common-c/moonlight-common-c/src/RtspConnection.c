@@ -661,6 +661,7 @@ static bool requestTeardown(int* error) {
 // Cleanup RTSP session resources - called from LiStopConnection
 void cleanupRtspSession(void) {
     int error;
+    bool teardownSuccess = false;
 
     Limelog("Sending RTSP TEARDOWN to clean up server session...");
 
@@ -670,6 +671,16 @@ void cleanupRtspSession(void) {
         Limelog("RTSP TEARDOWN failed: %d (server may have already cleaned up)\n", error);
     } else {
         Limelog("RTSP TEARDOWN sent successfully\n");
+        teardownSuccess = true;
+    }
+
+    // FIX: If TEARDOWN failed and we don't have a Session ID, it means the cancellation
+    // happened before RTSP handshake completed. The server may have an inconsistent
+    // encryption context. Wait for server to auto-clean stale session state.
+    // This prevents "Failed to decrypt RTSP response" on subsequent connections.
+    if (!teardownSuccess && !hasSessionId) {
+        Limelog("TEARDOWN failed without Session ID - waiting 2s for server auto-cleanup...\n");
+        PltSleepMs(2000);
     }
 
     // Cleanup local RTSP state
