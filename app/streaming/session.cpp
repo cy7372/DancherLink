@@ -11,7 +11,6 @@
 #include <QThreadPool>
 
 #include <Limelight.h>
-#include <Rtsp.h>  // For RTSP_ERROR_SESSION_REUSE
 #include "SDL_compat.h"
 #include "utils.h"
 #include <string>
@@ -82,66 +81,6 @@ enum SdlUserEventCode {
 #include <cstring>  // For memset
 
 // Defined in moonlight-common-c/src/RtspConnection.c
-extern "C" {
-    extern char rtspTargetUrl[256];
-    extern uint16_t RtspPortNumber;
-    extern struct sockaddr_storage RemoteAddr;
-    extern int AddrLen;  // SOCKADDR_LEN is int on Windows
-}
-
-// Helper function to parse RTSP URL and set up connection state for early cleanup
-static void setupRtspConnectionState(const QString& rtspSessionUrl)
-{
-    if (rtspSessionUrl.isEmpty()) {
-        return;
-    }
-
-    // Copy RTSP URL to global variable
-    QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
-    qstrncpy(rtspTargetUrl, rtspUrlBytes.constData(), sizeof(rtspTargetUrl));
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);
-
-    // Parse RTSP URL to extract host and port
-    // Format: rtspenc://192.168.0.13:48010 or rtsp://192.168.0.13:48010
-    QUrl url(rtspSessionUrl);
-    if (!url.isValid() || url.host().isEmpty() || !url.port()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to parse RTSP URL for early cleanup: %s", rtspSessionUrl);
-        return;
-    }
-
-    // Set RTSP port number
-    RtspPortNumber = static_cast<uint16_t>(url.port());
-
-    // Set RemoteAddr (IPv4 or IPv6)
-    // Use quint32 and Q_IPV6ADDR types from Qt which are always available
-    QHostAddress hostAddr(url.host());
-    if (hostAddr.protocol() == QAbstractSocket::IPv4Protocol) {
-        // Zero out the structure first
-        memset(&RemoteAddr, 0, sizeof(RemoteAddr));
-
-        // Cast to sockaddr_in and set fields
-        sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&RemoteAddr);
-        addr4->sin_family = AF_INET;
-        addr4->sin_port = htons(RtspPortNumber);
-        // Use Qt's toIPv4Address() which returns quint32, then convert to network byte order
-        addr4->sin_addr.s_addr = htonl(hostAddr.toIPv4Address());
-        AddrLen = sizeof(sockaddr_in);
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RemoteAddr set for early cleanup: %s:%u", url.host().toStdString().c_str(), RtspPortNumber);
-    }
-    else if (hostAddr.protocol() == QAbstractSocket::IPv6Protocol) {
-        // Zero out the structure first
-        memset(&RemoteAddr, 0, sizeof(RemoteAddr));
-
-        // Cast to sockaddr_in6 and set fields
-        sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&RemoteAddr);
-        addr6->sin6_family = AF_INET6;
-        addr6->sin6_port = htons(RtspPortNumber);
-        Q_IPV6ADDR ipv6Addr = hostAddr.toIPv6Address();
-        memcpy(addr6->sin6_addr.s6_addr, ipv6Addr.c, 16);
-        AddrLen = sizeof(sockaddr_in6);
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RemoteAddr (IPv6) set for early cleanup: %s:%u", url.host().toStdString().c_str(), RtspPortNumber);
-    }
-}
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QQuickOpenGLUtils>
@@ -2216,14 +2155,6 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    // CRITICAL: Copy RTSP URL to global variable immediately after HTTP request returns.
-    // This allows LiStopConnection() to send TEARDOWN even if user cancels before
-    // LiStartConnection() is called. Without this, server session state leaks and causes
-    // "Failed to decrypt RTSP response" errors on subsequent connection attempts.
-    if (!rtspSessionUrl.isEmpty()) {
-        setupRtspConnectionState(rtspSessionUrl);
-    }
-
     QByteArray hostnameStr = m_Computer->activeAddress.address().toLatin1();
     QByteArray siAppVersion = m_Computer->appVersion.toLatin1();
 
@@ -2283,102 +2214,22 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    // Retry loop for handling server session reuse after early cancellation.
-    // When the server reuses a previous session with an already-incremented
-    // AES-GCM IV counter, we need to request a fresh /resume to get a new session.
-    int err;
-    int retryCount = 0;
-    const int MAX_RETRIES = 2;
+    // Start the connection to the streaming server
+    int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
+                                &m_VideoCallbacks, &m_AudioCallbacks,
+                                nullptr, 0, nullptr, 0);
 
-    do {
-        err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
-                                    &m_VideoCallbacks, &m_AudioCallbacks,
-                                    nullptr, 0, nullptr, 0);
+    // CRITICAL: Check interrupt flag after LiStartConnection.
+    // If interrupt() was called during LiStartConnection initialization,
+    // we need to clean up client state.
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
 
-        // CRITICAL: Check interrupt flag after LiStartConnection.
-        // If interrupt() was called during LiStartConnection initialization,
-        // we need to clean up client state.
-        if (m_InterruptCalled.load()) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
+        // Call LiStopConnection() to clean up client-side state.
+        LiStopConnection();
 
-            // Call LiStopConnection() to clean up client-side state.
-            // This will now send RTSP TEARDOWN to properly notify the server
-            // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
-            // RTSP response" errors on subsequent connection attempts.
-            LiStopConnection();
-
-            return false;
-        }
-
-        // Check for session reuse error - this happens when the server reuses
-        // a previous session with an already-incremented AES-GCM IV counter
-        if (err == RTSP_ERROR_SESSION_REUSE) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Server session reuse detected (attempt %d/%d), requesting fresh session...",
-                        retryCount + 1, MAX_RETRIES);
-
-            // Clean up current connection state
-            LiStopConnection();
-
-            // FIX: Reset video callback state that was modified by fixupMissingCallbacks()
-            // during the failed LiStartConnection call. The fixupMissingCallbacks() function
-            // directly modifies the caller's callback structure, filling in NULL function
-            // pointers with fake implementations. This causes the CAPABILITY_PULL_RENDERER
-            // validation to fail on retry because submitDecodeUnit was set to fakeDrSubmitDecodeUnit.
-            // We need to restore it to nullptr before the next LiStartConnection call.
-            if (m_VideoCallbacks.capabilities & CAPABILITY_PULL_RENDERER) {
-                m_VideoCallbacks.submitDecodeUnit = nullptr;
-            }
-
-            // CRITICAL FIX: Wait for server to clean up pending RTSP session.
-            // foundation-sunshine server has a bug where it discards new launch_session
-            // if launch_event still has a pending session. The pending session timeout is
-            // config::stream.ping_timeout (typically 10s). However, we can force cleanup
-            // by calling /cancel first, which clears the pending launch_event.
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling /cancel to clear server pending session...");
-            try {
-                NvHTTP cancelHttp(m_Computer);
-                cancelHttp.quitApp();
-            } catch (...) {
-                // Ignore errors - server may have already cleaned up
-            }
-
-            // Brief delay to ensure server processes the cancellation
-            SDL_Delay(500);
-
-            // Request a fresh /resume from the server
-            QString freshRtspSessionUrl;
-            try {
-                NvHTTP http(m_Computer);
-                http.startApp(m_Computer->currentGameId != 0 ? "resume" : "launch",
-                              m_Computer->isNvidiaServerSoftware,
-                              m_App.id, &m_StreamConfig,
-                              enableGameOptimizations,
-                              m_Preferences->playAudioOnHost,
-                              m_InputHandler->getAttachedGamepadMask(),
-                              !m_Preferences->multiController,
-                              freshRtspSessionUrl);
-            } catch (const GfeHttpResponseException& e) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to get fresh session: %s", e.toQString().toStdString().c_str());
-                break;  // Can't retry further
-            } catch (const QtNetworkReplyException& e) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to get fresh session: %s", e.toQString().toStdString().c_str());
-                break;  // Can't retry further
-            }
-
-            if (!freshRtspSessionUrl.isEmpty()) {
-                // Update RTSP URL for the retry attempt
-                setupRtspConnectionState(freshRtspSessionUrl);
-                rtspSessionUrlStr = freshRtspSessionUrl.toLatin1();
-                hostInfo.rtspSessionUrl = rtspSessionUrlStr.data();
-
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Got fresh RTSP session, retrying connection...");
-                retryCount++;
-            } else {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Server returned empty RTSP URL, cannot retry");
-                break;
-            }
-        }
-    } while (err == RTSP_ERROR_SESSION_REUSE && retryCount < MAX_RETRIES);
+        return false;
+    }
 
     if (err != 0) {
         // We already displayed an error dialog in the stage failure listener.
