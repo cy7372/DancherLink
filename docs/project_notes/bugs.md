@@ -101,3 +101,29 @@
   - 更新日志 `%TEMP%\DancherLink_Update.log` 可以帮助诊断安装问题
 
 ---
+
+### 2026-04-04 - "Failed to decrypt RTSP response" 快速重连错误
+- **症状**: 早期取消后（HTTP /resume 响应和 RTSP 握手完成之间取消）快速重连时，收到"Failed to decrypt RTSP response"错误
+- **根本原因**:
+  - foundation-sunshine 服务器在客户端快速重连时复用了之前的 session
+  - 服务器的 `rtsp_iv_counter` 已经递增，而客户端期望从 0 开始
+  - AES-GCM 加密的 IV 不匹配导致认证标签验证失败
+  - 日志证据：`Failed to decrypt RTSP response (seq=1, iv[0-3]=01000000, iv[10-11]=HR)`
+- **解决方案**:
+  1. 添加新错误码 `RTSP_ERROR_SESSION_REUSE -3`
+  2. 修改 `unsealRtspMessage()` 在 AES-GCM 解密失败时返回此错误码
+  3. 在 `session.cpp` 中实现重试机制：
+     - 检测到 `RTSP_ERROR_SESSION_REUSE` 时调用 `LiStopConnection()` 清理
+     - 请求新的 `/resume` 获取 fresh session
+     - 重试连接（最多 2 次）
+  4. 更新所有 RTSP 事务函数传播错误码
+- **涉及文件**:
+  - `moonlight-common-c/moonlight-common-c/src/Rtsp.h` - 添加错误码
+  - `moonlight-common-c/moonlight-common-c/src/RtspConnection.c` - 修改解密错误处理
+  - `app/streaming/session.cpp` - 实现重试逻辑
+- **预防**:
+  - 服务器端应确保在连接关闭时正确清理 session 状态
+  - 客户端应处理服务器 session 复用的边界情况
+  - 详细的加密错误日志有助于诊断 IV 不匹配问题
+
+---

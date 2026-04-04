@@ -152,15 +152,15 @@ static char* sealRtspMessage(PRTSP_MESSAGE request, int* messageLen) {
     return (char*)encryptedMessage;
 }
 
-static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE response) {
+static int unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE response) {
     char* decryptedMessage;
     int decryptedMessageLen;
-    bool success;
+    int success;
 
     // If the server just closed the connection without responding with anything,
     // there's no point in proceeding any further trying to parse it.
     if (rawMessageLen == 0) {
-        return false;
+        return RTSP_ERROR_MALFORMED;
     }
 
     if (encryptedRtspEnabled) {
@@ -172,7 +172,7 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
 
         if (rawMessageLen <= (int)sizeof(ENC_RTSP_HEADER)) {
             Limelog("RTSP encrypted header too small\n");
-            return false;
+            return RTSP_ERROR_MALFORMED;
         }
 
         encryptedMessage = (PENC_RTSP_HEADER)rawMessage;
@@ -180,17 +180,17 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
 
         if (!(typeAndLen & ENCRYPTED_RTSP_BIT)) {
             Limelog("Rejecting unencrypted RTSP message\n");
-            return false;
+            return RTSP_ERROR_MALFORMED;
         }
 
         len = typeAndLen & ~ENCRYPTED_RTSP_BIT;
         if (len + sizeof(ENC_RTSP_HEADER) > (uint32_t)rawMessageLen) {
             Limelog("Rejecting partial encrypted RTSP message\n");
-            return false;
+            return RTSP_ERROR_MALFORMED;
         }
         else if (len + sizeof(ENC_RTSP_HEADER) < (uint32_t)rawMessageLen) {
             Limelog("Rejecting encrypted RTSP message with excess data\n");
-            return false;
+            return RTSP_ERROR_MALFORMED;
         }
 
         // Populate the IV in little endian byte order
@@ -207,7 +207,7 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
         decryptedMessageLen = rawMessageLen - sizeof(ENC_RTSP_HEADER);
         decryptedMessage = (char*)malloc(decryptedMessageLen);
         if (decryptedMessage == NULL) {
-            return false;
+            return RTSP_ERROR_NO_MEMORY;
         }
 
         success = PltDecryptMessage(decryptionCtx, ALGORITHM_AES_GCM, 0,
@@ -218,11 +218,14 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
                                     (uint8_t*)decryptedMessage, &decryptedMessageLen);
         if (!success) {
             // FIX: Log detailed debug info for decryption failures to help diagnose
-            // server session reuse issues after early cancellation
+            // server session reuse issues after early cancellation.
+            // Return RTSP_ERROR_SESSION_REUSE to indicate the caller should request
+            // a fresh session from the server and retry.
             Limelog("Failed to decrypt RTSP response (seq=%u, iv[0-3]=%02x%02x%02x%02x, iv[10-11]=%c%c)\n",
                     seq, iv[0], iv[1], iv[2], iv[3], iv[10], iv[11]);
+            Limelog("Server appears to be reusing a previous session. Request fresh session and retry.\n");
             free(decryptedMessage);
-            return false;
+            return RTSP_ERROR_SESSION_REUSE;
         }
     }
     else {
@@ -231,11 +234,11 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
     }
 
     if (parseRtspMessage(response, decryptedMessage, decryptedMessageLen) == RTSP_ERROR_SUCCESS) {
-        success = true;
+        success = RTSP_ERROR_SUCCESS;
     }
     else {
         Limelog("Failed to parse RTSP response\n");
-        success = false;
+        success = RTSP_ERROR_MALFORMED;
     }
 
     if (decryptedMessage != rawMessage) {
@@ -246,7 +249,7 @@ static bool unsealRtspMessage(char* rawMessage, int rawMessageLen, PRTSP_MESSAGE
 }
 
 // Send RTSP message and get response over ENet
-static bool transactRtspMessageEnet(PRTSP_MESSAGE request, PRTSP_MESSAGE response, bool expectingPayload, int* error) {
+static int transactRtspMessageEnet(PRTSP_MESSAGE request, PRTSP_MESSAGE response, bool expectingPayload, int* error) {
     ENetEvent event;
     char* serializedMessage;
     int messageLen;
@@ -254,7 +257,7 @@ static bool transactRtspMessageEnet(PRTSP_MESSAGE request, PRTSP_MESSAGE respons
     ENetPacket* packet;
     char* payload;
     int payloadLength;
-    bool ret;
+    int ret;
     char* responseBuffer;
 
     // RTSP encryption is not supported using ENet due to our special handling
@@ -262,7 +265,7 @@ static bool transactRtspMessageEnet(PRTSP_MESSAGE request, PRTSP_MESSAGE respons
     LC_ASSERT(!encryptedRtspEnabled);
 
     *error = -1;
-    ret = false;
+    ret = RTSP_ERROR_MALFORMED;
     responseBuffer = NULL;
 
     // We're going to handle the payload separately, so temporarily set the payload to NULL
@@ -349,7 +352,7 @@ static bool transactRtspMessageEnet(PRTSP_MESSAGE request, PRTSP_MESSAGE respons
 
     if (parseRtspMessage(response, responseBuffer, offset) == RTSP_ERROR_SUCCESS) {
         // Successfully parsed response
-        ret = true;
+        ret = RTSP_ERROR_SUCCESS;
     }
     else {
         Limelog("Failed to parse RTSP response\n");
@@ -374,9 +377,9 @@ Exit:
 }
 
 // Send RTSP message and get response over TCP
-static bool transactRtspMessageTcp(PRTSP_MESSAGE request, PRTSP_MESSAGE response, int* error) {
+static int transactRtspMessageTcp(PRTSP_MESSAGE request, PRTSP_MESSAGE response, int* error) {
     SOCK_RET err;
-    bool ret;
+    int ret;
     int offset;
     char* serializedMessage = NULL;
     int messageLen;
@@ -385,7 +388,7 @@ static bool transactRtspMessageTcp(PRTSP_MESSAGE request, PRTSP_MESSAGE response
     int connectRetries;
 
     *error = -1;
-    ret = false;
+    ret = RTSP_ERROR_MALFORMED;
     responseBuffer = NULL;
     connectRetries = 0;
 
@@ -515,10 +518,10 @@ Exit:
     return ret;
 }
 
-static bool transactRtspMessage(PRTSP_MESSAGE request, PRTSP_MESSAGE response, bool expectingPayload, int* error) {
+static int transactRtspMessage(PRTSP_MESSAGE request, PRTSP_MESSAGE response, bool expectingPayload, int* error) {
     if (ConnectionInterrupted) {
         *error = -1;
-        return false;
+        return RTSP_ERROR_MALFORMED;
     }
 
     if (useEnet) {
@@ -530,9 +533,9 @@ static bool transactRtspMessage(PRTSP_MESSAGE request, PRTSP_MESSAGE response, b
 }
 
 // Send RTSP OPTIONS request
-static bool requestOptions(PRTSP_MESSAGE response, int* error) {
+static int requestOptions(PRTSP_MESSAGE response, int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
 
     *error = -1;
 
@@ -546,9 +549,9 @@ static bool requestOptions(PRTSP_MESSAGE response, int* error) {
 }
 
 // Send RTSP DESCRIBE request
-static bool requestDescribe(PRTSP_MESSAGE response, int* error) {
+static int requestDescribe(PRTSP_MESSAGE response, int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
 
     *error = -1;
 
@@ -561,7 +564,7 @@ static bool requestDescribe(PRTSP_MESSAGE response, int* error) {
             ret = transactRtspMessage(&request, response, true, error);
         }
         else {
-            ret = false;
+            ret = RTSP_ERROR_MALFORMED;
         }
         freeMessage(&request);
     }
@@ -570,9 +573,9 @@ static bool requestDescribe(PRTSP_MESSAGE response, int* error) {
 }
 
 // Send RTSP SETUP request
-static bool setupStream(PRTSP_MESSAGE response, char* target, int* error) {
+static int setupStream(PRTSP_MESSAGE response, char* target, int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
     char* transportValue;
 
     *error = -1;
@@ -581,7 +584,7 @@ static bool setupStream(PRTSP_MESSAGE response, char* target, int* error) {
     if (ret) {
         if (hasSessionId) {
             if (!addOption(&request, "Session", sessionIdString)) {
-                ret = false;
+                ret = RTSP_ERROR_MALFORMED;
                 goto FreeMessage;
             }
         }
@@ -602,7 +605,7 @@ static bool setupStream(PRTSP_MESSAGE response, char* target, int* error) {
             ret = transactRtspMessage(&request, response, false, error);
         }
         else {
-            ret = false;
+            ret = RTSP_ERROR_MALFORMED;
         }
 
     FreeMessage:
@@ -613,19 +616,19 @@ static bool setupStream(PRTSP_MESSAGE response, char* target, int* error) {
 }
 
 // Send RTSP PLAY request
-static bool playStream(PRTSP_MESSAGE response, char* target, int* error) {
+static int playStream(PRTSP_MESSAGE response, char* target, int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
 
     *error = -1;
 
     ret = initializeRtspRequest(&request, "PLAY", target);
-    if (ret != 0) {
+    if (ret) {
         if (addOption(&request, "Session", sessionIdString)) {
             ret = transactRtspMessage(&request, response, false, error);
         }
         else {
-            ret = false;
+            ret = RTSP_ERROR_MALFORMED;
         }
         freeMessage(&request);
     }
@@ -634,9 +637,9 @@ static bool playStream(PRTSP_MESSAGE response, char* target, int* error) {
 }
 
 // Send RTSP TEARDOWN request to cleanly terminate session
-static bool requestTeardown(int* error) {
+static int requestTeardown(int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
 
     *error = -1;
 
@@ -647,7 +650,7 @@ static bool requestTeardown(int* error) {
                 hasSessionId, sessionIdString ? sessionIdString : "(null)");
         if (hasSessionId) {
             if (!addOption(&request, "Session", sessionIdString)) {
-                ret = false;
+                ret = RTSP_ERROR_MALFORMED;
                 goto FreeMessage;
             }
         }
@@ -670,7 +673,8 @@ void cleanupRtspSession(void) {
 
     // Send TEARDOWN to notify server to clean up
     // We use a short timeout and ignore failures since this is best-effort cleanup
-    if (!requestTeardown(&error)) {
+    int teardownRet = requestTeardown(&error);
+    if (teardownRet != RTSP_ERROR_SUCCESS) {
         Limelog("RTSP TEARDOWN failed: %d (server may have already cleaned up)\n", error);
     } else {
         Limelog("RTSP TEARDOWN sent successfully\n");
@@ -712,9 +716,9 @@ void cleanupRtspSession(void) {
 }
 
 // Send RTSP ANNOUNCE message
-static bool sendVideoAnnounce(PRTSP_MESSAGE response, int* error) {
+static int sendVideoAnnounce(PRTSP_MESSAGE response, int* error) {
     RTSP_MESSAGE request;
-    bool ret;
+    int ret;
     int payloadLength;
     char payloadLengthStr[16];
 
@@ -723,7 +727,7 @@ static bool sendVideoAnnounce(PRTSP_MESSAGE response, int* error) {
     ret = initializeRtspRequest(&request, "ANNOUNCE",
                                 APP_VERSION_AT_LEAST(7, 1, 431) ? controlStreamId : "streamid=video");
     if (ret) {
-        ret = false;
+        ret = RTSP_ERROR_MALFORMED;
 
         if (!addOption(&request, "Session", sessionIdString) ||
             !addOption(&request, "Content-type", "application/sdp")) {
@@ -1150,9 +1154,9 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         RTSP_MESSAGE response;
         int error = -1;
 
-        if (!requestOptions(&response, &error)) {
+        ret = requestOptions(&response, &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP OPTIONS request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1170,9 +1174,15 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         RTSP_MESSAGE response;
         int error = -1;
 
-        if (!requestDescribe(&response, &error)) {
-            Limelog("RTSP DESCRIBE request failed: %d\n", error);
-            ret = error;
+        ret = requestDescribe(&response, &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
+            // Special handling for session reuse: propagate the error code
+            // so the caller knows to request a fresh session and retry
+            if (ret == RTSP_ERROR_SESSION_REUSE) {
+                Limelog("Server session reuse detected, caller should request fresh session\n");
+            } else {
+                Limelog("RTSP DESCRIBE request failed: %d\n", error);
+            }
             goto Exit;
         }
 
@@ -1273,11 +1283,11 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         int error = -1;
         char* strtokCtx = NULL;
 
-        if (!setupStream(&response,
+        ret = setupStream(&response,
                          AppVersionQuad[0] >= 5 ? "streamid=audio/0/0" : "streamid=audio",
-                         &error)) {
+                         &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP SETUP streamid=audio request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1342,11 +1352,11 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         int error = -1;
         char* pingPayload;
 
-        if (!setupStream(&response,
+        ret = setupStream(&response,
                          AppVersionQuad[0] >= 5 ? "streamid=video/0/0" : "streamid=video",
-                         &error)) {
+                         &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP SETUP streamid=video request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1384,11 +1394,11 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         int error = -1;
         char* connectData;
 
-        if (!setupStream(&response,
+        ret = setupStream(&response,
                          controlStreamId,
-                         &error)) {
+                         &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP SETUP streamid=control request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1427,9 +1437,9 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         RTSP_MESSAGE response;
         int error = -1;
 
-        if (!sendVideoAnnounce(&response, &error)) {
+        ret = sendVideoAnnounce(&response, &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP ANNOUNCE request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1448,9 +1458,9 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         RTSP_MESSAGE response;
         int error = -1;
 
-        if (!playStream(&response, "/", &error)) {
+        ret = playStream(&response, "/", &error);
+        if (ret != RTSP_ERROR_SUCCESS) {
             Limelog("RTSP PLAY request failed: %d\n", error);
-            ret = error;
             goto Exit;
         }
 
@@ -1468,9 +1478,9 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
             RTSP_MESSAGE response;
             int error = -1;
 
-            if (!playStream(&response, "streamid=video", &error)) {
+            ret = playStream(&response, "streamid=video", &error);
+            if (ret != RTSP_ERROR_SUCCESS) {
                 Limelog("RTSP PLAY streamid=video request failed: %d\n", error);
-                ret = error;
                 goto Exit;
             }
 
@@ -1488,9 +1498,9 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
             RTSP_MESSAGE response;
             int error = -1;
 
-            if (!playStream(&response, "streamid=audio", &error)) {
+            ret = playStream(&response, "streamid=audio", &error);
+            if (ret != RTSP_ERROR_SUCCESS) {
                 Limelog("RTSP PLAY streamid=audio request failed: %d\n", error);
-                ret = error;
                 goto Exit;
             }
 

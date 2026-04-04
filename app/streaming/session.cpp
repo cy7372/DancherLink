@@ -11,6 +11,7 @@
 #include <QThreadPool>
 
 #include <Limelight.h>
+#include <Rtsp.h>  // For RTSP_ERROR_SESSION_REUSE
 #include "SDL_compat.h"
 #include "utils.h"
 #include <string>
@@ -2283,24 +2284,76 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
-                                &m_VideoCallbacks, &m_AudioCallbacks,
-                                nullptr, 0, nullptr, 0);
+    // Retry loop for handling server session reuse after early cancellation.
+    // When the server reuses a previous session with an already-incremented
+    // AES-GCM IV counter, we need to request a fresh /resume to get a new session.
+    int err;
+    int retryCount = 0;
+    const int MAX_RETRIES = 2;
 
-    // CRITICAL: Check interrupt flag after LiStartConnection.
-    // If interrupt() was called during LiStartConnection initialization,
-    // we need to clean up client state.
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
+    do {
+        err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
+                                    &m_VideoCallbacks, &m_AudioCallbacks,
+                                    nullptr, 0, nullptr, 0);
 
-        // Call LiStopConnection() to clean up client-side state.
-        // This will now send RTSP TEARDOWN to properly notify the server
-        // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
-        // RTSP response" errors on subsequent connection attempts.
-        LiStopConnection();
+        // CRITICAL: Check interrupt flag after LiStartConnection.
+        // If interrupt() was called during LiStartConnection initialization,
+        // we need to clean up client state.
+        if (m_InterruptCalled.load()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
 
-        return false;
-    }
+            // Call LiStopConnection() to clean up client-side state.
+            // This will now send RTSP TEARDOWN to properly notify the server
+            // and reset AES-GCM sequence numbers, preventing "Failed to decrypt
+            // RTSP response" errors on subsequent connection attempts.
+            LiStopConnection();
+
+            return false;
+        }
+
+        // Check for session reuse error - this happens when the server reuses
+        // a previous session with an already-incremented AES-GCM IV counter
+        if (err == RTSP_ERROR_SESSION_REUSE) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Server session reuse detected (attempt %d/%d), requesting fresh session...",
+                        retryCount + 1, MAX_RETRIES);
+
+            // Clean up current connection state
+            LiStopConnection();
+
+            // Request a fresh /resume from the server
+            QString freshRtspSessionUrl;
+            try {
+                NvHTTP http(m_Computer);
+                http.startApp(m_Computer->currentGameId != 0 ? "resume" : "launch",
+                              m_Computer->isNvidiaServerSoftware,
+                              m_App.id, &m_StreamConfig,
+                              enableGameOptimizations,
+                              m_Preferences->playAudioOnHost,
+                              m_InputHandler->getAttachedGamepadMask(),
+                              !m_Preferences->multiController,
+                              freshRtspSessionUrl);
+            } catch (const GfeHttpResponseException& e) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to get fresh session: %s", e.toQString().toStdString().c_str());
+                break;  // Can't retry further
+            } catch (const QtNetworkReplyException& e) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to get fresh session: %s", e.toQString().toStdString().c_str());
+                break;  // Can't retry further
+            }
+
+            if (!freshRtspSessionUrl.isEmpty()) {
+                // Update RTSP URL for the retry attempt
+                setupRtspConnectionState(freshRtspSessionUrl);
+                rtspSessionUrlStr = freshRtspSessionUrl.toLatin1();
+                hostInfo.rtspSessionUrl = rtspSessionUrlStr.data();
+
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Got fresh RTSP session, retrying connection...");
+                retryCount++;
+            } else {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Server returned empty RTSP URL, cannot retry");
+                break;
+            }
+        }
+    } while (err == RTSP_ERROR_SESSION_REUSE && retryCount < MAX_RETRIES);
 
     if (err != 0) {
         // We already displayed an error dialog in the stage failure listener.
