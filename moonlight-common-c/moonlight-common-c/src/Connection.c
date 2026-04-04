@@ -130,7 +130,12 @@ void LiStopConnection(void) {
     // If we have an RTSP URL but haven't reached STAGE_RTSP_HANDSHAKE yet
     // (e.g., user cancelled during HTTP resume/launch), still send TEARDOWN
     // to clean up the server-side session state.
-    if (stage <= STAGE_RTSP_HANDSHAKE && stage >= STAGE_NAME_RESOLUTION) {
+    //
+    // FIX: Also handle stage == STAGE_NONE (0) when cancel happens before
+    // LiStartConnection() is called but after HTTP resume/launch returns.
+    // Without this, server session state leaks and causes "Failed to decrypt
+    // RTSP response" errors on subsequent connection attempts.
+    if (stage <= STAGE_RTSP_HANDSHAKE && stage >= STAGE_NONE) {
         if (rtspTargetUrl[0] != '\0') {
             Limelog("Sending RTSP TEARDOWN for early cancellation cleanup...");
             cleanupRtspSession();
