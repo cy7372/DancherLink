@@ -123,6 +123,9 @@ public:
     QVector<int> latencySamples;          // Current batch of samples
     QDateTime lastLatencyUpdate;          // Last successful update time
 
+    // Cancellation cooldown (ephemeral, not serialized)
+    qint64 cancelCooldownUntil = 0;       // Timestamp when cooldown expires (ms since epoch)
+
     // Synchronization
     mutable CopySafeReadWriteLock lock;
 

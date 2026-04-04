@@ -84,73 +84,69 @@ This shows the server was reusing a session with an already-incremented counter.
 2. Consider implementing session ID tracking to detect reuse earlier
 3. Add metrics to track how often retry is needed
 
-## Update 2026-04-04: Video Callback Corruption Fix
+## Update 2026-04-04: Cancellation Cooldown (Final Solution)
 
-### Problem Discovered
+### Problem with Retry Approach
 
-The retry mechanism was triggering correctly, but failing on the first retry with:
-```
-CAPABILITY_PULL_RENDERER cannot be set with a submitDecodeUnit callback
-```
+The retry mechanism was removed because it's not the right approach. The correct solution is **prevention + cooling period**, not post-failure retry.
 
 ### Root Cause
 
-`LiStartConnection()` corrupts `m_VideoCallbacks` state on failure. The `LiStopConnection()` cleanup doesn't reset this structure, so the retry attempt used corrupted callback state with mismatched `capabilities` flags and `submitDecodeUnit` callback.
+When the user cancels a connection attempt quickly (between HTTP /resume and RTSP handshake completion), the server doesn't have enough time to clean up its RTSP session state. If the user immediately reconnects, the server reuses the previous session with an already-incremented AES-GCM IV counter, causing decryption failure.
 
-### Fix Applied (v1.0.16.504)
+### Final Solution (v1.0.16.505)
 
-Save the initial `m_VideoCallbacks` state before the retry loop, then restore it before each retry:
+**1. Prevention:** `/cancel` API is called when user cancels, telling the server to clean up.
 
+**2. Cooldown:** After cancellation, a 3-second cooldown period is enforced before allowing a new connection attempt.
+
+### Changes Made
+
+#### 1. NvComputer.h - Added cooldown field
 ```cpp
-// Save the initial video callback state for retry attempts.
-DECODER_RENDERER_CALLBACKS savedVideoCallbacks = m_VideoCallbacks;
+// Cancellation cooldown (ephemeral, not serialized)
+qint64 cancelCooldownUntil = 0;  // Timestamp when cooldown expires (ms since epoch)
+```
 
-while (true) {
-    if (retryCount > 0) {
-        // Restore video callbacks to saved state before retry.
-        m_VideoCallbacks = savedVideoCallbacks;
-        SDL_Delay(100);
-    }
-
-    err = LiStartConnection(...);
-
-    if (err == -3 && retryCount < maxRetries) {
-        LiStopConnection();
-        retryCount++;
-        continue;
-    }
-    break;
+#### 2. session.cpp - requestCancel() sets cooldown
+```cpp
+// Set cancellation cooldown timestamp (3 seconds)
+if (m_Computer) {
+    m_Computer->cancelCooldownUntil = SDL_GetTicks() + 3000;
 }
 ```
 
-This ensures each retry attempt uses a clean callback state.
+#### 3. session.cpp - startConnectionAsync() enforces cooldown
+```cpp
+// Check if cooldown is active and wait if necessary
+if (m_Computer && m_Computer->cancelCooldownUntil > 0) {
+    Uint32 remainingMs = cooldownEnd - currentTick;
+    if (currentTick < cooldownEnd) {
+        SDL_Delay(remainingMs);  // Block until cooldown expires
+    }
+    m_Computer->cancelCooldownUntil = 0;  // Clear flag
+}
+```
+
+### Why Cooldown Works
+
+- **3 seconds is enough** for the server to purge its session state
+- **Blocking wait** ensures the user cannot accidentally reconnect too quickly
+- **Simple and reliable** - no complex retry logic or state management
+- **User-friendly** - shows a brief pause instead of multiple failed attempts
 
 ### Files Modified
 
-- `app/streaming/session.cpp` (lines 2244-2290)
-
-### Launch vs Resume Strategy
-
-**Question**: After `/cancel`, should we use `resume` instead of `launch`?
-
-**Current Behavior**: `requestCancel()` clears `currentGameId = 0`, forcing the next attempt to use `launch`.
-
-**Rationale**:
-- `/cancel` API should terminate the running app on the server
-- Using `launch` prevents "No running app to resume" (503) errors
-- The retry mechanism handles RTSP session reuse automatically
-
-**Trade-off**: If `/cancel` doesn't fully terminate the app, `launch` may create a conflicting session. However, the RTSP retry mechanism handles this case.
-
-**Recommendation**: Keep current strategy (`launch` after cancel) + retry mechanism is sufficient.
+- `app/backend/nvcomputer.h` - Added `cancelCooldownUntil` field
+- `app/streaming/session.cpp` - Set cooldown in `requestCancel()`, enforce in `startConnectionAsync()`
 
 ### Testing
 
-Build version: 1.0.16.504-beta
+Build version: 1.0.16.505-beta
 
 Test scenario:
 1. Start streaming
-2. Cancel early (between HTTP /resume and RTSP handshake)
-3. Immediately reconnect
-4. Expected: Connection succeeds after 1-2 retries
-5. Previous: Retry failed with CAPABILITY_PULL_RENDERER error
+2. Cancel early (during connection handshake)
+3. Immediately try to reconnect
+4. Expected: System waits ~3 seconds before attempting new connection
+5. Result: Server has cleaned up session, connection succeeds

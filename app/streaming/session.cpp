@@ -2134,6 +2134,26 @@ bool Session::startConnectionAsync()
         return false;
     }
 
+    // CRITICAL: Check cancellation cooldown.
+    // If the user canceled a previous attempt too recently, wait for the
+    // cooldown period to expire before allowing a new connection.
+    // This gives the server time to clean up its RTSP session state.
+    if (m_Computer && m_Computer->cancelCooldownUntil > 0) {
+        Uint32 currentTick = SDL_GetTicks();
+        Uint32 cooldownEnd = (Uint32)m_Computer->cancelCooldownUntil;
+
+        if (currentTick < cooldownEnd) {
+            Uint32 remainingMs = cooldownEnd - currentTick;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Cancellation cooldown active, waiting %u ms...", remainingMs);
+            SDL_Delay(remainingMs);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Cooldown expired, proceeding with connection");
+        } else {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Cancellation cooldown has expired");
+        }
+        // Clear the cooldown flag after checking
+        m_Computer->cancelCooldownUntil = 0;
+    }
+
     // The UI should have ensured the old game was already quit
     // if we decide to stream a different game.
     Q_ASSERT(m_Computer->currentGameId == 0 ||
@@ -2241,53 +2261,10 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    // CRITICAL: Implement retry logic for RTSP_ERROR_SESSION_REUSE (-3).
-    // When the server reuses a previous RTSP session after early cancellation,
-    // the AES-GCM IV counter mismatch causes decryption failure.
-    // Retry count: 0 = first attempt, then up to 2 retries.
-    int err;
-    int retryCount = 0;
-    const int maxRetries = 2;
-
-    // Save the initial video callback state for retry attempts.
-    // LiStartConnection may corrupt m_VideoCallbacks on failure, so we need
-    // to restore it to a clean state before each retry.
-    DECODER_RENDERER_CALLBACKS savedVideoCallbacks = m_VideoCallbacks;
-
-    while (true) {
-        if (retryCount > 0) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Retrying LiStartConnection (attempt %d/%d) after session reuse error...", retryCount, maxRetries);
-
-            // CRITICAL FIX: Restore video callbacks to saved state before retry.
-            // This prevents CAPABILITY_PULL_RENDERER mismatch errors on retry attempts.
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Restoring video callbacks from saved state...");
-            m_VideoCallbacks = savedVideoCallbacks;
-
-            // Small delay to allow server to clean up session state
-            SDL_Delay(100);
-        }
-
-        // Start the connection to the streaming server
-        err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
+    // Start the connection to the streaming server
+    int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 nullptr, 0, nullptr, 0);
-
-        // Check if this is a session reuse error that warrants a retry
-        if (err == -3 && retryCount < maxRetries) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP_ERROR_SESSION_REUSE (-3) detected, cleaning up and retrying...");
-            // Clean up client-side state before retrying
-            LiStopConnection();
-            retryCount++;
-            continue;
-        }
-
-        // Either success, different error, or max retries exceeded
-        break;
-    }
-
-    if (retryCount > 0 && err == 0) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection succeeded after %d retries", retryCount);
-    }
 
     // CRITICAL: Check interrupt flag after LiStartConnection.
     // If interrupt() was called during LiStartConnection initialization,
@@ -2647,6 +2624,15 @@ void Session::requestCancel()
             } catch (const std::exception& e) {
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call failed (non-fatal): %s", e.what());
             }
+        }
+
+        // CRITICAL: Set cancellation cooldown timestamp.
+        // This prevents the user from reconnecting too quickly after cancellation,
+        // giving the server time to clean up its RTSP session state.
+        // Cooldown period: 3 seconds (enough for server to purge session)
+        if (m_Computer) {
+            m_Computer->cancelCooldownUntil = SDL_GetTicks() + 3000;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Set cancellation cooldown for 3 seconds (until tick %u)", (Uint32)m_Computer->cancelCooldownUntil);
         }
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (fast path) ======");
