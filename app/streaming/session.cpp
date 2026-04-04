@@ -2141,6 +2141,17 @@ bool Session::startConnectionAsync()
         return false;
     }
 
+    // CRITICAL: Copy RTSP URL to global variable immediately after HTTP request returns.
+    // This allows LiStopConnection() to send TEARDOWN even if user cancels before
+    // LiStartConnection() is called. Without this, server session state leaks and causes
+    // "Failed to decrypt RTSP response" errors on subsequent connection attempts.
+    if (!rtspSessionUrl.isEmpty()) {
+        extern char rtspTargetUrl[256];
+        QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
+        PltSafeStrcpy(rtspTargetUrl, sizeof(rtspTargetUrl), rtspUrlBytes.constData());
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);
+    }
+
     QByteArray hostnameStr = m_Computer->activeAddress.address().toLatin1();
     QByteArray siAppVersion = m_Computer->appVersion.toLatin1();
 
