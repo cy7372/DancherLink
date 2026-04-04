@@ -2241,10 +2241,42 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    // Start the connection to the streaming server
-    int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
+    // CRITICAL: Implement retry logic for RTSP_ERROR_SESSION_REUSE (-3).
+    // When the server reuses a previous RTSP session after early cancellation,
+    // the AES-GCM IV counter mismatch causes decryption failure.
+    // Retry count: 0 = first attempt, then up to 2 retries.
+    int err;
+    int retryCount = 0;
+    const int maxRetries = 2;
+
+    while (true) {
+        if (retryCount > 0) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Retrying LiStartConnection (attempt %d/%d) after session reuse error...", retryCount, maxRetries);
+            // Small delay to allow server to clean up session state
+            SDL_Delay(100);
+        }
+
+        // Start the connection to the streaming server
+        err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 nullptr, 0, nullptr, 0);
+
+        // Check if this is a session reuse error that warrants a retry
+        if (err == -3 && retryCount < maxRetries) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP_ERROR_SESSION_REUSE (-3) detected, cleaning up and retrying...");
+            // Clean up client-side state before retrying
+            LiStopConnection();
+            retryCount++;
+            continue;
+        }
+
+        // Either success, different error, or max retries exceeded
+        break;
+    }
+
+    if (retryCount > 0 && err == 0) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection succeeded after %d retries", retryCount);
+    }
 
     // CRITICAL: Check interrupt flag after LiStartConnection.
     // If interrupt() was called during LiStartConnection initialization,
