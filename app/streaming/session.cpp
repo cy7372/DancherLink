@@ -2249,9 +2249,20 @@ bool Session::startConnectionAsync()
     int retryCount = 0;
     const int maxRetries = 2;
 
+    // Save the initial video callback state for retry attempts.
+    // LiStartConnection may corrupt m_VideoCallbacks on failure, so we need
+    // to restore it to a clean state before each retry.
+    DECODER_RENDERER_CALLBACKS savedVideoCallbacks = m_VideoCallbacks;
+
     while (true) {
         if (retryCount > 0) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Retrying LiStartConnection (attempt %d/%d) after session reuse error...", retryCount, maxRetries);
+
+            // CRITICAL FIX: Restore video callbacks to saved state before retry.
+            // This prevents CAPABILITY_PULL_RENDERER mismatch errors on retry attempts.
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Restoring video callbacks from saved state...");
+            m_VideoCallbacks = savedVideoCallbacks;
+
             // Small delay to allow server to clean up session state
             SDL_Delay(100);
         }
