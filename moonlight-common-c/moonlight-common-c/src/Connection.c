@@ -67,6 +67,10 @@ void LiInterruptConnection(void) {
 
 // Stop the connection by undoing the step at the current stage and those before it
 void LiStopConnection(void) {
+    // DEBUG: Log stage value and rtspTargetUrl status at entry
+    Limelog("LiStopConnection ENTER: stage=%d, rtspTargetUrl[0]='%c' (\\0=%d)\n",
+            stage, rtspTargetUrl[0], rtspTargetUrl[0] == '\0' ? 1 : 0);
+
     // Disable termination callbacks now
     alreadyTerminated = true;
 
@@ -135,11 +139,18 @@ void LiStopConnection(void) {
     // LiStartConnection() is called but after HTTP resume/launch returns.
     // Without this, server session state leaks and causes "Failed to decrypt
     // RTSP response" errors on subsequent connection attempts.
+    Limelog("TEARDOWN check: stage=%d, STAGE_RTSP_HANDSHAKE=%d, STAGE_NONE=%d\n",
+            stage, STAGE_RTSP_HANDSHAKE, STAGE_NONE);
+    Limelog("TEARDOWN check: rtspTargetUrl='%s'\n", rtspTargetUrl);
     if (stage <= STAGE_RTSP_HANDSHAKE && stage >= STAGE_NONE) {
         if (rtspTargetUrl[0] != '\0') {
             Limelog("Sending RTSP TEARDOWN for early cancellation cleanup...");
             cleanupRtspSession();
+        } else {
+            Limelog("SKIP TEARDOWN: rtspTargetUrl is empty\n");
         }
+    } else {
+        Limelog("SKIP TEARDOWN: stage condition failed (stage=%d)\n", stage);
     }
 
     if (stage == STAGE_NAME_RESOLUTION) {
