@@ -405,11 +405,7 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
-                // DEBUG: Log Qt Window enum values
-                console.log("  Qt.callLater: DEBUG - Window.Windowed=" + Window.Windowed +
-                            " Window.Maximized=" + Window.Maximized +
-                            " Window.FullScreen=" + Window.FullScreen)
-
+                // Note: We only distinguish between "fullscreen" (3 or 4) and "non-fullscreen" (0, 1, 2, or other)
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
@@ -417,10 +413,7 @@ Item {
                     // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                     targetVisibility = Window.FullScreen
                 }
-
-                console.log("  Qt.callLater: targetVisibility=" + targetVisibility +
-                            " savedPreviousVisibility=" + savedPreviousVisibility +
-                            " (Window.Maximized=" + Window.Maximized + " Window.FullScreen=" + Window.FullScreen + ")")
+                // For any other value (including 5, undefined states), default to Window.Windowed
 
                 // CRITICAL: Check window state before applying changes
                 // Window may have been destroyed or hidden by the user
@@ -503,7 +496,6 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
-                // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
@@ -511,6 +503,7 @@ Item {
                     // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
                     targetVisibility = Window.FullScreen
                 }
+                // For any other value (including 5, undefined states), default to Window.Windowed
 
                 try {
                     if (targetVisibility === Window.Maximized) {
@@ -702,7 +695,12 @@ Item {
             // stackView becomes inaccessible when component is popped or deactivated
             // Use shouldShowErrorDialog flag instead of checking stackView
             if (!Window.window) {
-                console.log("  errorDialogTimer: Window.window is null, skipping dialog")
+                console.log("  errorDialogTimer: Window.window is null, skipping dialog but popping stackView")
+                // CRITICAL FIX: Even if Window.window is null, we must pop the stackView
+                // to prevent the app from being stuck on "Quitting..." screen
+                if (stackView) {
+                    stackView.pop()
+                }
                 return
             }
             if (!shouldShowErrorDialog) {

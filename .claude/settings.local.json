@@ -11,7 +11,8 @@
       "Bash(.\\\\scripts\\\\build-arch.bat release:*)",
       "Bash(scripts/build-arch.bat release:*)",
       "Bash(echo Checking build directory...:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(pwsh -File \"scripts\\\\Build.ps1\")"
     ]
   }
 }
