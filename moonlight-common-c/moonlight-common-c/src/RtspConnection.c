@@ -639,6 +639,9 @@ static bool requestTeardown(int* error) {
 
     ret = initializeRtspRequest(&request, "TEARDOWN", rtspTargetUrl);
     if (ret) {
+        // DEBUG: Log hasSessionId and sessionIdString
+        Limelog("TEARDOWN request: hasSessionId=%d, sessionIdString='%s'\n",
+                hasSessionId, sessionIdString ? sessionIdString : "(null)");
         if (hasSessionId) {
             if (!addOption(&request, "Session", sessionIdString)) {
                 ret = false;
