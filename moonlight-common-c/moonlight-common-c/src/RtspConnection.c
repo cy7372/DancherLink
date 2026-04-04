@@ -674,15 +674,6 @@ void cleanupRtspSession(void) {
         teardownSuccess = true;
     }
 
-    // FIX: If TEARDOWN failed and we don't have a Session ID, it means the cancellation
-    // happened before RTSP handshake completed. The server may have an inconsistent
-    // encryption context. Wait for server to auto-clean stale session state.
-    // This prevents "Failed to decrypt RTSP response" on subsequent connections.
-    if (!teardownSuccess && !hasSessionId) {
-        Limelog("TEARDOWN failed without Session ID - waiting 2s for server auto-cleanup...\n");
-        PltSleepMs(2000);
-    }
-
     // Cleanup local RTSP state
     if (useEnet) {
         if (peer != NULL) {
@@ -709,6 +700,16 @@ void cleanupRtspSession(void) {
     if (decryptionCtx != NULL) {
         PltDestroyCryptoContext(decryptionCtx);
         decryptionCtx = NULL;
+    }
+
+    // FIX: Close RTSP socket to ensure server cleans up session state.
+    // Without this, the server may think the client is still connected
+    // and reuse the old encryption context, causing "Failed to decrypt
+    // RTSP response" errors on subsequent connections.
+    if (sock != INVALID_SOCKET) {
+        Limelog("Closing RTSP socket...\n");
+        closeSocket(sock);
+        sock = INVALID_SOCKET;
     }
 }
 
