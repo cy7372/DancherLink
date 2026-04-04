@@ -405,7 +405,11 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
-                // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
+                // DEBUG: Log Qt Window enum values
+                console.log("  Qt.callLater: DEBUG - Window.Windowed=" + Window.Windowed +
+                            " Window.Maximized=" + Window.Maximized +
+                            " Window.FullScreen=" + Window.FullScreen)
+
                 var targetVisibility = Window.Windowed
                 if (savedPreviousVisibility === Window.Maximized) {
                     targetVisibility = Window.Maximized
@@ -415,7 +419,8 @@ Item {
                 }
 
                 console.log("  Qt.callLater: targetVisibility=" + targetVisibility +
-                            " savedPreviousVisibility=" + savedPreviousVisibility)
+                            " savedPreviousVisibility=" + savedPreviousVisibility +
+                            " (Window.Maximized=" + Window.Maximized + " Window.FullScreen=" + Window.FullScreen + ")")
 
                 // CRITICAL: Check window state before applying changes
                 // Window may have been destroyed or hidden by the user
