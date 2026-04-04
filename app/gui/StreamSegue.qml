@@ -318,6 +318,8 @@ Item {
         console.log("  Window.window:", Window.window)
         console.log("  Window.window.visible:", Window.window ? Window.window.visible : "null")
         console.log("  Window.window.visibility:", Window.window ? Window.window.visibility : "null")
+        console.log("  previousVisibility:", previousVisibility,
+                    "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
 
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
@@ -344,6 +346,9 @@ Item {
             // We need these saved values in the Qt.callLater callback to restore the window.
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
+
+            console.log("  sessionFinished (cancel): saved previousVisibility =", savedPreviousVisibility,
+                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
 
             // CRITICAL: This is the fundamental fix for the intermittent window restoration issue.
             //
@@ -465,6 +470,9 @@ Item {
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
+            console.log("  sessionFinished (error): saved previousVisibility =", savedPreviousVisibility,
+                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+
             // Set the flag to indicate we should show the error dialog
             shouldShowErrorDialog = true
 
@@ -527,6 +535,9 @@ Item {
             // Same fix as the cancelRequested path.
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
+
+            console.log("  sessionFinished (normal): saved previousVisibility =", savedPreviousVisibility,
+                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
 
             stackView.pop()
 

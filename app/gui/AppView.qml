@@ -367,7 +367,11 @@ CenteredGridView {
         function launchOrResumeSelectedApp(quitExistingApp)
         {
             // For initial launch, capture the current window visibility
-            launchOrResumeSelectedAppWithVisibility(quitExistingApp, stackView.Window.visibility)
+            var capturedVisibility = stackView.Window.visibility
+            console.log("AppView: launchOrResumeSelectedApp - capturing previousVisibility:",
+                        capturedVisibility,
+                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+            launchOrResumeSelectedAppWithVisibility(quitExistingApp, capturedVisibility)
         }
 
         onClicked: {
