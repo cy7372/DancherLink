@@ -2291,13 +2291,6 @@ bool Session::startConnectionAsync()
     const int MAX_RETRIES = 2;
 
     do {
-        // Debug: Log callback state before each LiStartConnection call
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "  [DEBUG] m_VideoCallbacks.capabilities=0x%x, submitDecodeUnit=%p (CAPABILITY_PULL_RENDERER=0x%x)",
-                    m_VideoCallbacks.capabilities,
-                    (void*)m_VideoCallbacks.submitDecodeUnit,
-                    CAPABILITY_PULL_RENDERER);
-
         err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                     &m_VideoCallbacks, &m_AudioCallbacks,
                                     nullptr, 0, nullptr, 0);
@@ -2325,6 +2318,16 @@ bool Session::startConnectionAsync()
 
             // Clean up current connection state
             LiStopConnection();
+
+            // FIX: Reset video callback state that was modified by fixupMissingCallbacks()
+            // during the failed LiStartConnection call. The fixupMissingCallbacks() function
+            // directly modifies the caller's callback structure, filling in NULL function
+            // pointers with fake implementations. This causes the CAPABILITY_PULL_RENDERER
+            // validation to fail on retry because submitDecodeUnit was set to fakeDrSubmitDecodeUnit.
+            // We need to restore it to nullptr before the next LiStartConnection call.
+            if (m_VideoCallbacks.capabilities & CAPABILITY_PULL_RENDERER) {
+                m_VideoCallbacks.submitDecodeUnit = nullptr;
+            }
 
             // Request a fresh /resume from the server
             QString freshRtspSessionUrl;
