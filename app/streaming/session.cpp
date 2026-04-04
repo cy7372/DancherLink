@@ -248,6 +248,19 @@ void Session::clStageFailed(int stage, int errorCode)
 
 void Session::clConnectionTerminated(int errorCode)
 {
+    // CRITICAL: Check if the user initiated this termination. If so, suppress
+    // the error dialog and silently exit. This prevents "Connection terminated: -102"
+    // errors when the user presses Back during connection establishment.
+    if (s_ActiveSession && s_ActiveSession->m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Connection terminated during user-initiated interruption, suppressing error dialog");
+        // Push a quit event to the main loop without showing an error
+        SDL_Event event;
+        event.type = SDL_QUIT;
+        event.quit.timestamp = SDL_GetTicks();
+        SDL_PushEvent(&event);
+        return;
+    }
+
     unsigned int portFlags = LiGetPortFlagsFromTerminationErrorCode(errorCode);
     s_ActiveSession->m_PortTestResults = LiTestClientConnectivity(CONN_TEST_SERVER, 443, portFlags);
 
@@ -2548,28 +2561,13 @@ void Session::requestCancel()
         // calling LiStopConnection() in DeferredSessionCleanupTask would crash.
         m_LiStopConnectionCalled.store(true);
 
-        // CRITICAL: Call /cancel API to clean up server-side pending session.
-        // This prevents the server from reusing the old session with an incremented
-        // AES-GCM IV counter, which causes "Failed to decrypt RTSP response" errors.
-        // This is the ROOT FIX for the RTSP session reuse bug.
-        if (m_Computer && m_Computer->activeHttpsPort > 0) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling /cancel API to clean up server pending session...");
-            try {
-                NvHTTP http(m_Computer);
-                http.cancelPendingSession();
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call completed");
-            } catch (const std::exception& e) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call failed (non-fatal): %s", e.what());
-            }
-        }
-
-        // Release mouse capture to prevent input hijacking
-        if (m_InputHandler) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Releasing mouse capture");
-            m_InputHandler->setCaptureActive(false);
-        }
-
-        // Interrupt any pending connection attempt immediately
+        // CRITICAL: Interrupt LiStartConnection() FIRST before calling /cancel API.
+        // LiInterruptConnection() sets an atomic flag that causes LiStartConnection()
+        // to fail fast with RTSP_ERROR_INTERRUPTED, rather than continuing to run
+        // and receiving a server termination (which causes crashes).
+        // After LiStartConnection() is interrupted, we call /cancel to clean up
+        // the server-side pending session and prevent RTSP session reuse bugs.
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiInterruptConnection() to halt LiStartConnection...");
         LiInterruptConnection();
 
         // Hide the SDL window immediately if it exists
@@ -2583,6 +2581,21 @@ void Session::requestCancel()
         event.type = SDL_QUIT;
         event.quit.timestamp = SDL_GetTicks();
         SDL_PushEvent(&event);
+
+        // CRITICAL: Call /cancel API AFTER interrupting the client connection.
+        // This ensures LiStartConnection() has already been halted before the
+        // server processes the cancellation and sends termination messages.
+        // The order is: 1) Set interrupt flag, 2) LiInterruptConnection(), 3) /cancel API
+        if (m_Computer && m_Computer->activeHttpsPort > 0) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling /cancel API to clean up server pending session...");
+            try {
+                NvHTTP http(m_Computer);
+                http.cancelPendingSession();
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call completed");
+            } catch (const std::exception& e) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  /cancel API call failed (non-fatal): %s", e.what());
+            }
+        }
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (fast path) ======");
     } else {
