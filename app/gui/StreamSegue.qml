@@ -465,6 +465,9 @@ Item {
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
+            // Set the flag to indicate we should show the error dialog
+            shouldShowErrorDialog = true
+
             // Use Qt.callLater to restore window before showing the error dialog
             Qt.callLater(function() {
                 console.log("  Qt.callLater (error exit): restoring window state")
@@ -662,21 +665,33 @@ Item {
         }
     }
 
+    // CRITICAL: Track whether we should show the error dialog
+    // This is needed because stackView becomes inaccessible after component is popped,
+    // but we still need to know if errorDialog should be shown
+    property bool shouldShowErrorDialog: false
+
     Timer {
         id: errorDialogTimer
         interval: 50
         onTriggered: {
-            // CRITICAL: Check if stackView and Window.window are still valid
-            // The StreamSegue component may have been destroyed by the user
-            // pressing back or other navigation actions before this timer fires
-            if (!stackView || !Window.window) {
-                console.log("  errorDialogTimer: stackView or Window.window is null, skipping dialog")
+            // CRITICAL: Only check Window.window (global singleton), not stackView (component property)
+            // stackView becomes inaccessible when component is popped or deactivated
+            // Use shouldShowErrorDialog flag instead of checking stackView
+            if (!Window.window) {
+                console.log("  errorDialogTimer: Window.window is null, skipping dialog")
                 return
             }
-            if (Window.window) {
-                Window.window.requestActivate()
-                Window.window.raise()
+            if (!shouldShowErrorDialog) {
+                console.log("  errorDialogTimer: shouldShowErrorDialog is false, skipping dialog")
+                return
             }
+            if (!errorDialog.text) {
+                console.log("  errorDialogTimer: no error text, skipping dialog")
+                return
+            }
+            console.log("  errorDialogTimer: showing error dialog")
+            Window.window.requestActivate()
+            Window.window.raise()
             errorDialog.open()
         }
     }
@@ -684,16 +699,21 @@ Item {
     ErrorMessageDialog {
         id: errorDialog
         onClosed: {
+            console.log("  errorDialog.onClosed: quitAfter=", quitAfter)
             if (quitAfter) {
                 Qt.quit()
             } else {
-                // CRITICAL: Check if stackView is still valid before popping
-                // The component may have been destroyed by other navigation actions
-                if (stackView) {
-                    stackView.pop()
-                } else {
-                    console.log("  errorDialog.onClosed: stackView is null, skipping pop")
-                }
+                // Reset the flag before popping
+                shouldShowErrorDialog = false
+                // CRITICAL: Use Qt.callLater to ensure dialog is fully closed before popping
+                Qt.callLater(function() {
+                    if (stackView) {
+                        console.log("  errorDialog.onClosed: popping stackView")
+                        stackView.pop()
+                    } else {
+                        console.log("  errorDialog.onClosed: stackView is null, skipping pop")
+                    }
+                })
             }
         }
     }
