@@ -29,9 +29,10 @@ scripts\build-arch.bat release
 
 ## 本地分发
 
-- 订阅 URL: `\\{host}\Users\{user}\Programs\DancherLink-qt\server\updates.json`
-- 更新清单: `server/updates.json`
+- 订阅 URL: `\\{host}\Users\{user}\Release\DancherLink\updates.json`
+- 更新清单: `server/updates.json` (自动复制到 C:\Users\CyYu\Release\DancherLink)
 - 版本脚本: `server/update_version.py`
+- **发布目录**: `C:\Users\CyYu\Release\DancherLink`
 
 ## 代码规范
 
