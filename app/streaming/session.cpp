@@ -1783,13 +1783,25 @@ private:
         // to complete if it was called. This prevents "RTSP handshake failed" errors
         // on the next connection attempt after an interrupt.
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  About to call LiStopConnection()...");
-        if (m_Session && m_Session->m_InterruptCalled.load()) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Waiting for interrupt cleanup to complete...");
-            SDL_Delay(100);
+
+        // Check if LiStopConnection() was already called in startConnectionAsync()
+        // to prevent duplicate RTSP TEARDOWN requests
+        if (m_Session && m_Session->m_LiStopConnectionCalled.load()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() was already called in startConnectionAsync(), skipping duplicate call");
+        } else {
+            if (m_Session && m_Session->m_InterruptCalled.load()) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Waiting for interrupt cleanup to complete...");
+                SDL_Delay(100);
+            }
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiStopConnection() NOW...");
+            LiStopConnection();
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() returned.");
+
+            // Mark that LiStopConnection() has been called
+            if (m_Session) {
+                m_Session->m_LiStopConnectionCalled.store(true);
+            }
         }
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling LiStopConnection() NOW...");
-        LiStopConnection();
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() returned.");
 
         // End the session log
         LogManager::instance()->endSessionLog();
@@ -2226,7 +2238,13 @@ bool Session::startConnectionAsync()
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
 
         // Call LiStopConnection() to clean up client-side state.
-        LiStopConnection();
+        // Use exchange(true) to ensure we only call LiStopConnection() once,
+        // preventing duplicate RTSP TEARDOWN requests.
+        if (!m_LiStopConnectionCalled.exchange(true)) {
+            LiStopConnection();
+        } else {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() was already called, skipping duplicate call");
+        }
 
         return false;
     }

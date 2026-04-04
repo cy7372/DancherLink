@@ -84,6 +84,8 @@ Item {
         // Guard: Check if session exists and hasn't already requested cancellation
         if (session && !cancelRequested) {
             cancelRequested = true
+            // Record the cancel timestamp for reconnect cooldown
+            lastCancelTime = Date.now()
             console.log("====== Calling session.requestCancel() ======")
             session.requestCancel()
             console.log("====== session.requestCancel() completed ======")
@@ -104,6 +106,13 @@ Item {
     // - Monitor power off / laptop lid close (if enabled in settings)
     // - Game-side quit
     property bool cancelRequested: false
+
+    // CRITICAL: Track last cancel timestamp to implement reconnect cooldown.
+    // This prevents users from reconnecting too quickly after manually canceling,
+    // which would hit the server-side session reuse bug (foundation-sunshine).
+    // Server needs ~10s to clean up pending session state.
+    property int lastCancelTime: 0
+    readonly property int reconnectCooldownMs: 5000  // 5s cooldown after manual cancel
 
     focus: true
 
