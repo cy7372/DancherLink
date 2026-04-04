@@ -32,18 +32,25 @@ constexpr int ICON_SIZE = 64;
 
 // HACK: Remove once proper Dark Mode support lands in SDL
 #ifdef Q_OS_WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN  // Exclude winsock.h from windows.h, we'll use winsock2.h instead
+#endif
 #include <windows.h>
 #include <commctrl.h>
 #include <shobjidl.h>
 #include <SDL_syswm.h>
 #include <dwmapi.h>
 #include <powersetting.h>
+#include <wtsapi32.h>  // WTSRegisterSessionNotification (not included by lean windows.h)
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE_OLD
 #define DWMWA_USE_IMMERSIVE_DARK_MODE_OLD 19
 #endif
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
+// Now we can safely include winsock2.h for socket types
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #endif
 
 
@@ -56,11 +63,6 @@ enum SdlUserEventCode {
     SDL_CODE_GAMECONTROLLER_SET_ADAPTIVE_TRIGGERS = 105,
     SDL_CODE_RESOLUTION_DIALOG_RESULT = 106
 };
-
-#ifdef Q_OS_WIN32
-#include <imm.h>
-#include <wtsapi32.h>
-#endif
 
 #include <openssl/rand.h>
 
@@ -76,10 +78,68 @@ enum SdlUserEventCode {
 #include <QCursor>
 #include <QScreen>
 #include <atomic>
+#include <cstring>  // For memset
 
 // Defined in moonlight-common-c/src/RtspConnection.c
 extern "C" {
     extern char rtspTargetUrl[256];
+    extern uint16_t RtspPortNumber;
+    extern struct sockaddr_storage RemoteAddr;
+    extern int AddrLen;  // SOCKADDR_LEN is int on Windows
+}
+
+// Helper function to parse RTSP URL and set up connection state for early cleanup
+static void setupRtspConnectionState(const QString& rtspSessionUrl)
+{
+    if (rtspSessionUrl.isEmpty()) {
+        return;
+    }
+
+    // Copy RTSP URL to global variable
+    QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
+    qstrncpy(rtspTargetUrl, rtspUrlBytes.constData(), sizeof(rtspTargetUrl));
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);
+
+    // Parse RTSP URL to extract host and port
+    // Format: rtspenc://192.168.0.13:48010 or rtsp://192.168.0.13:48010
+    QUrl url(rtspSessionUrl);
+    if (!url.isValid() || url.host().isEmpty() || !url.port()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Failed to parse RTSP URL for early cleanup: %s", rtspSessionUrl);
+        return;
+    }
+
+    // Set RTSP port number
+    RtspPortNumber = static_cast<uint16_t>(url.port());
+
+    // Set RemoteAddr (IPv4 or IPv6)
+    // Use quint32 and Q_IPV6ADDR types from Qt which are always available
+    QHostAddress hostAddr(url.host());
+    if (hostAddr.protocol() == QAbstractSocket::IPv4Protocol) {
+        // Zero out the structure first
+        memset(&RemoteAddr, 0, sizeof(RemoteAddr));
+
+        // Cast to sockaddr_in and set fields
+        sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&RemoteAddr);
+        addr4->sin_family = AF_INET;
+        addr4->sin_port = htons(RtspPortNumber);
+        // Use Qt's toIPv4Address() which returns quint32, then convert to network byte order
+        addr4->sin_addr.s_addr = htonl(hostAddr.toIPv4Address());
+        AddrLen = sizeof(sockaddr_in);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RemoteAddr set for early cleanup: %s:%u", url.host().toStdString().c_str(), RtspPortNumber);
+    }
+    else if (hostAddr.protocol() == QAbstractSocket::IPv6Protocol) {
+        // Zero out the structure first
+        memset(&RemoteAddr, 0, sizeof(RemoteAddr));
+
+        // Cast to sockaddr_in6 and set fields
+        sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&RemoteAddr);
+        addr6->sin6_family = AF_INET6;
+        addr6->sin6_port = htons(RtspPortNumber);
+        Q_IPV6ADDR ipv6Addr = hostAddr.toIPv6Address();
+        memcpy(addr6->sin6_addr.s6_addr, ipv6Addr.c, 16);
+        AddrLen = sizeof(sockaddr_in6);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RemoteAddr (IPv6) set for early cleanup: %s:%u", url.host().toStdString().c_str(), RtspPortNumber);
+    }
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -2151,9 +2211,7 @@ bool Session::startConnectionAsync()
     // LiStartConnection() is called. Without this, server session state leaks and causes
     // "Failed to decrypt RTSP response" errors on subsequent connection attempts.
     if (!rtspSessionUrl.isEmpty()) {
-        QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
-        qstrncpy(rtspTargetUrl, rtspUrlBytes.constData(), sizeof(rtspTargetUrl));
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);
+        setupRtspConnectionState(rtspSessionUrl);
     }
 
     QByteArray hostnameStr = m_Computer->activeAddress.address().toLatin1();
