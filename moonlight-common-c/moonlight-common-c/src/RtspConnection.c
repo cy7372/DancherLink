@@ -1032,8 +1032,13 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
     if (StreamConfig.bitrate >= HIGH_AUDIO_BITRATE_THRESHOLD &&
             (AudioCallbacks.capabilities & CAPABILITY_SLOW_OPUS_DECODER) == 0 &&
             (StreamConfig.streamingRemotely != STREAM_CFG_REMOTE || CHANNEL_COUNT_FROM_AUDIO_CONFIGURATION(StreamConfig.audioConfiguration) <= 2)) {
+        // FIX: If rtspTargetUrl is already set (e.g., from early cancellation setup), preserve it
+        // to avoid overwriting with "rtsp://0.0.0.0:port" when RemoteAddr is not set.
+        if (rtspTargetUrl[0] != '\0') {
+            Limelog("Preserving existing rtspTargetUrl for early cancellation: %s", rtspTargetUrl);
+        }
         // If we have an RTSP URL string and it was successfully parsed and copied, use that string
-        if (serverInfo->rtspSessionUrl == NULL ||
+        else if (serverInfo->rtspSessionUrl == NULL ||
                 !parseUrlAddrFromRtspUrlString(serverInfo->rtspSessionUrl, urlAddr, sizeof(urlAddr)) ||
                 !PltSafeStrcpy(rtspTargetUrl, sizeof(rtspTargetUrl), serverInfo->rtspSessionUrl)) {
             // If an RTSP URL string was not provided or failed to parse, we will construct one now as best we can.
@@ -1046,8 +1051,14 @@ int performRtspHandshake(PSERVER_INFORMATION serverInfo) {
         }
     }
     else {
-        PltSafeStrcpy(urlAddr, sizeof(urlAddr), "0.0.0.0");
-        snprintf(rtspTargetUrl, sizeof(rtspTargetUrl), "rtsp%s://%s:%u", useEnet ? "ru" : "", urlAddr, RtspPortNumber);
+        // FIX: Preserve existing rtspTargetUrl for early cancellation scenario
+        if (rtspTargetUrl[0] != '\0') {
+            Limelog("Preserving existing rtspTargetUrl for early cancellation: %s", rtspTargetUrl);
+        }
+        else {
+            PltSafeStrcpy(urlAddr, sizeof(urlAddr), "0.0.0.0");
+            snprintf(rtspTargetUrl, sizeof(rtspTargetUrl), "rtsp%s://%s:%u", useEnet ? "ru" : "", urlAddr, RtspPortNumber);
+        }
     }
 
     switch (AppVersionQuad[0]) {
