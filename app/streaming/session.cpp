@@ -2329,6 +2329,22 @@ bool Session::startConnectionAsync()
                 m_VideoCallbacks.submitDecodeUnit = nullptr;
             }
 
+            // CRITICAL FIX: Wait for server to clean up pending RTSP session.
+            // foundation-sunshine server has a bug where it discards new launch_session
+            // if launch_event still has a pending session. The pending session timeout is
+            // config::stream.ping_timeout (typically 10s). However, we can force cleanup
+            // by calling /cancel first, which clears the pending launch_event.
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Calling /cancel to clear server pending session...");
+            try {
+                NvHTTP cancelHttp(m_Computer);
+                cancelHttp.quitApp();
+            } catch (...) {
+                // Ignore errors - server may have already cleaned up
+            }
+
+            // Brief delay to ensure server processes the cancellation
+            SDL_Delay(500);
+
             // Request a fresh /resume from the server
             QString freshRtspSessionUrl;
             try {
