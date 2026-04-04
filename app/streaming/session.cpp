@@ -77,6 +77,11 @@ enum SdlUserEventCode {
 #include <QScreen>
 #include <atomic>
 
+// Defined in moonlight-common-c/src/RtspConnection.c
+extern "C" {
+    extern char rtspTargetUrl[256];
+}
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QQuickOpenGLUtils>
 #endif
@@ -2146,7 +2151,6 @@ bool Session::startConnectionAsync()
     // LiStartConnection() is called. Without this, server session state leaks and causes
     // "Failed to decrypt RTSP response" errors on subsequent connection attempts.
     if (!rtspSessionUrl.isEmpty()) {
-        extern char rtspTargetUrl[256];
         QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
         qstrncpy(rtspTargetUrl, rtspUrlBytes.constData(), sizeof(rtspTargetUrl));
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);

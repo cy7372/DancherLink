@@ -19,18 +19,10 @@ unset(CMAKE_POSITION_INDEPENDENT_CODE_BACKUP)
 aux_source_directory(src SRC_LIST)
 aux_source_directory(reedsolomon SRC_LIST)
 
-# Build shared library by default, but allows user override
-if (NOT DEFINED BUILD_SHARED_LIBS)
-  set(BUILD_SHARED_LIBS ON)
-  set(BUILD_SHARED_LIBS_OVERRIDE ON)
-endif()
+# Build as static library to avoid DLL export issues with global variables
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build moonlight-common-c as static library" FORCE)
 
 add_library(moonlight-common-c ${SRC_LIST})
-
-if (BUILD_SHARED_LIBS_OVERRIDE)
-  unset(BUILD_SHARED_LIBS)
-  unset(BUILD_SHARED_LIBS_OVERRIDE)
-endif()
 
 target_link_libraries(moonlight-common-c PRIVATE enet)
 
