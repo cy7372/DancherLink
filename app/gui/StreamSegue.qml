@@ -615,6 +615,13 @@ Item {
         id: errorDialogTimer
         interval: 50
         onTriggered: {
+            // CRITICAL: Check if stackView and Window.window are still valid
+            // The StreamSegue component may have been destroyed by the user
+            // pressing back or other navigation actions before this timer fires
+            if (!stackView || !Window.window) {
+                console.log("  errorDialogTimer: stackView or Window.window is null, skipping dialog")
+                return
+            }
             if (Window.window) {
                 Window.window.requestActivate()
                 Window.window.raise()
@@ -629,7 +636,13 @@ Item {
             if (quitAfter) {
                 Qt.quit()
             } else {
-                stackView.pop()
+                // CRITICAL: Check if stackView is still valid before popping
+                // The component may have been destroyed by other navigation actions
+                if (stackView) {
+                    stackView.pop()
+                } else {
+                    console.log("  errorDialog.onClosed: stackView is null, skipping pop")
+                }
             }
         }
     }

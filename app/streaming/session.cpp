@@ -2462,6 +2462,13 @@ void Session::setQtWindowToolStyle(bool toolStyle)
                 hr = pTaskbarList->AddTab(hwnd);
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                             "Added Qt window back to taskbar via ITaskbarList, hr=0x%08X", hr);
+
+                // CRITICAL: Also call SetForegroundWindow to ensure window is visible
+                // This is needed because raise()/requestActivate() from QML may not be enough
+                // on Windows to bring the window to the front
+                SetForegroundWindow(hwnd);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Called SetForegroundWindow to bring window to front");
             }
         } else {
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
