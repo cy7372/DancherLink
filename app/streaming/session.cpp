@@ -1784,10 +1784,10 @@ private:
         // on the next connection attempt after an interrupt.
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  About to call LiStopConnection()...");
 
-        // Check if LiStopConnection() was already called in startConnectionAsync()
-        // to prevent duplicate RTSP TEARDOWN requests
+        // Check if LiStopConnection() was already called or if we're in fast path
+        // (connection never started) to prevent duplicate calls and unnecessary delays
         if (m_Session && m_Session->m_LiStopConnectionCalled.load()) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() was already called in startConnectionAsync(), skipping duplicate call");
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() was already called or fast path, skipping duplicate call and delays");
         } else {
             if (m_Session && m_Session->m_InterruptCalled.load()) {
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Waiting for interrupt cleanup to complete...");
@@ -1808,8 +1808,10 @@ private:
 
         // Give the window manager and graphics driver a moment to cleanup resources
         // before we potentially create a new window and D3D device in the next session.
-        // After interrupt, we need additional delay to ensure network sockets are released
-        if (m_Session && m_Session->m_InterruptCalled.load()) {
+        // After interrupt, we need additional delay to ensure network sockets are released.
+        // CRITICAL: Skip this delay if LiStopConnection() was never actually called
+        // (e.g., fast path cancellation before LiStartConnection completed).
+        if (m_Session && m_Session->m_InterruptCalled.load() && m_Session->m_LiStopConnectionCalled.load()) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Post-LiStopConnection cleanup delay...");
             SDL_Delay(200);
         }
@@ -2540,6 +2542,11 @@ void Session::requestCancel()
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  requestCancel() already called, ignoring duplicate");
             return;
         }
+
+        // CRITICAL: Mark that LiStopConnection() should NOT be called later.
+        // Since LiStartConnection() was never called (or not yet completed),
+        // calling LiStopConnection() in DeferredSessionCleanupTask would crash.
+        m_LiStopConnectionCalled.store(true);
 
         // Release mouse capture to prevent input hijacking
         if (m_InputHandler) {
