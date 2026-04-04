@@ -2148,7 +2148,7 @@ bool Session::startConnectionAsync()
     if (!rtspSessionUrl.isEmpty()) {
         extern char rtspTargetUrl[256];
         QByteArray rtspUrlBytes = rtspSessionUrl.toLatin1();
-        PltSafeStrcpy(rtspTargetUrl, sizeof(rtspTargetUrl), rtspUrlBytes.constData());
+        qstrncpy(rtspTargetUrl, rtspUrlBytes.constData(), sizeof(rtspTargetUrl));
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  RTSP URL saved for early cancellation cleanup: %s", rtspTargetUrl);
     }
 
