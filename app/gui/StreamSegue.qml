@@ -384,11 +384,18 @@ Item {
 
                 // Restore window style first (Windows only)
                 // Use the saved session reference (captured before pop)
-                if (savedSession) {
-                    console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
-                    savedSession.restoreWindowStyle()
+                // CRITICAL: Check savedSession is still valid before calling methods on it
+                // The session may have been destroyed if stackView.pop() triggered cleanup
+                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
+                    try {
+                        console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
+                        savedSession.restoreWindowStyle()
+                    } catch (e) {
+                        console.log("  Qt.callLater: savedSession.restoreWindowStyle() failed:", e)
+                        console.log("  Qt.callLater: Session may have been destroyed, skipping")
+                    }
                 } else {
-                    console.log("  Qt.callLater: savedSession is null, skipping restoreWindowStyle()")
+                    console.log("  Qt.callLater: savedSession is null or invalid, skipping restoreWindowStyle()")
                 }
 
                 // Apply the desired window state based on previous visibility
@@ -480,8 +487,13 @@ Item {
 
                 // Restore window style first (Windows only)
                 // Use the saved session reference (captured before pop)
-                if (savedSession) {
-                    savedSession.restoreWindowStyle()
+                // CRITICAL: Check savedSession is still valid before calling methods on it
+                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
+                    try {
+                        savedSession.restoreWindowStyle()
+                    } catch (e) {
+                        console.log("  Qt.callLater (normal exit): savedSession.restoreWindowStyle() failed:", e)
+                    }
                 }
 
                 // Apply the desired window state based on previous visibility
