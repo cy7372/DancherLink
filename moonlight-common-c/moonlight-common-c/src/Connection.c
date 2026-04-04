@@ -239,6 +239,11 @@ int LiStartConnection(PSERVER_INFORMATION serverInfo, PSTREAM_CONFIGURATION stre
     void* audioContext, int arFlags) {
     int err;
 
+    // Debug: Log callback state at entry
+    Limelog("  [DEBUG] LiStartConnection: drCallbacks=%p, capabilities=0x%x, submitDecodeUnit=%p\n",
+            (void*)drCallbacks, drCallbacks ? drCallbacks->capabilities : 0,
+            drCallbacks ? (void*)drCallbacks->submitDecodeUnit : NULL);
+
     if (drCallbacks != NULL && (drCallbacks->capabilities & CAPABILITY_PULL_RENDERER) && drCallbacks->submitDecodeUnit) {
         Limelog("CAPABILITY_PULL_RENDERER cannot be set with a submitDecodeUnit callback\n");
         LC_ASSERT(false);

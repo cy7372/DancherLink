@@ -2291,6 +2291,13 @@ bool Session::startConnectionAsync()
     const int MAX_RETRIES = 2;
 
     do {
+        // Debug: Log callback state before each LiStartConnection call
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "  [DEBUG] m_VideoCallbacks.capabilities=0x%x, submitDecodeUnit=%p (CAPABILITY_PULL_RENDERER=0x%x)",
+                    m_VideoCallbacks.capabilities,
+                    (void*)m_VideoCallbacks.submitDecodeUnit,
+                    CAPABILITY_PULL_RENDERER);
+
         err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                     &m_VideoCallbacks, &m_AudioCallbacks,
                                     nullptr, 0, nullptr, 0);
