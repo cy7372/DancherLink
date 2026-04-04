@@ -438,18 +438,6 @@ Item {
                             "visibility:", Window.window.visibility,
                             "height:", Window.window.height, "width:", Window.window.width)
 
-                // CRITICAL: Force window to be visible if it's still hidden after restoration
-                // This handles edge cases where showMaximized()/showNormal() doesn't make the window visible
-                if (!Window.window.visible) {
-                    console.log("  Qt.callLater: WARNING - Window is still hidden after restoration!")
-                    console.log("  Qt.callLater: Forcing window visibility...")
-                    Window.window.visible = true
-                    Window.window.raise()
-                    Window.window.requestActivate()
-                    console.log("  Qt.callLater: After force visible - visible:", Window.window.visible,
-                                "visibility:", Window.window.visibility)
-                }
-
                 console.log("  Qt.callLater: window restoration complete")
             })
 
@@ -534,13 +522,9 @@ Item {
                 console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
                             "visibility:", Window.window.visibility)
 
-                // CRITICAL: Force window to be visible if it's still hidden after restoration
-                if (!Window.window.visible) {
-                    console.log("  Qt.callLater (normal exit): WARNING - Window is still hidden, forcing visible")
-                    Window.window.visible = true
-                    Window.window.raise()
-                    Window.window.requestActivate()
-                }
+                // CRITICAL: Log window state AFTER restoration
+                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
+                            "visibility:", Window.window.visibility)
 
                 console.log("  Qt.callLater (normal exit): window restoration complete")
 
