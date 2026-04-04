@@ -479,9 +479,10 @@ Item {
             // Use Qt.callLater to restore window before showing the error dialog
             Qt.callLater(function() {
                 console.log("  Qt.callLater (error exit): restoring window state")
+                console.log("  Qt.callLater (error exit): mainWindow =", mainWindow ? "valid" : "null")
 
-                if (!Window.window) {
-                    console.log("  Qt.callLater (error exit): Window.window is null")
+                if (!mainWindow) {
+                    console.log("  Qt.callLater (error exit): mainWindow is null")
                     return
                 }
 
@@ -496,42 +497,42 @@ Item {
 
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
-                var targetVisibility = Window.Windowed
-                if (savedPreviousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                var targetVisibility = mainWindow.Windowed
+                if (savedPreviousVisibility === mainWindow.Maximized) {
+                    targetVisibility = mainWindow.Maximized
+                } else if (savedPreviousVisibility === mainWindow.FullScreen || savedPreviousVisibility === 4) {
                     // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
-                    targetVisibility = Window.FullScreen
+                    targetVisibility = mainWindow.FullScreen
                 }
-                // For any other value (including 5, undefined states), default to Window.Windowed
+                // For any other value (including 5, undefined states), default to mainWindow.Windowed
 
                 try {
-                    if (targetVisibility === Window.Maximized) {
+                    if (targetVisibility === mainWindow.Maximized) {
                         console.log("  Qt.callLater (error exit): calling showMaximized()")
-                        Window.window.showMaximized()
-                        console.log("  Qt.callLater (error exit): showMaximized() completed, Window.window =", Window.window ? "valid" : "null")
-                    } else if (targetVisibility === Window.FullScreen) {
+                        mainWindow.showMaximized()
+                        console.log("  Qt.callLater (error exit): showMaximized() completed, mainWindow =", mainWindow ? "valid" : "null")
+                    } else if (targetVisibility === mainWindow.FullScreen) {
                         console.log("  Qt.callLater (error exit): calling showFullScreen()")
-                        Window.window.showFullScreen()
-                        console.log("  Qt.callLater (error exit): showFullScreen() completed, Window.window =", Window.window ? "valid" : "null")
+                        mainWindow.showFullScreen()
+                        console.log("  Qt.callLater (error exit): showFullScreen() completed, mainWindow =", mainWindow ? "valid" : "null")
                     } else {
                         console.log("  Qt.callLater (error exit): calling showNormal()")
-                        Window.window.showNormal()
-                        console.log("  Qt.callLater (error exit): showNormal() completed, Window.window =", Window.window ? "valid" : "null")
+                        mainWindow.showNormal()
+                        console.log("  Qt.callLater (error exit): showNormal() completed, mainWindow =", mainWindow ? "valid" : "null")
                     }
 
                     console.log("  Qt.callLater (error exit): calling raise()")
-                    Window.window.raise()
-                    console.log("  Qt.callLater (error exit): raise() completed, Window.window =", Window.window ? "valid" : "null")
+                    mainWindow.raise()
+                    console.log("  Qt.callLater (error exit): raise() completed, mainWindow =", mainWindow ? "valid" : "null")
 
                     console.log("  Qt.callLater (error exit): calling requestActivate()")
-                    Window.window.requestActivate()
-                    console.log("  Qt.callLater (error exit): requestActivate() completed, Window.window =", Window.window ? "valid" : "null")
+                    mainWindow.requestActivate()
+                    console.log("  Qt.callLater (error exit): requestActivate() completed, mainWindow =", mainWindow ? "valid" : "null")
 
                     console.log("  Qt.callLater (error exit): AFTER restore - window state complete")
                 } catch (e) {
                     console.log("  Qt.callLater (error exit): Exception during window restoration:", e)
-                    console.log("  Qt.callLater (error exit): After exception, Window.window =", Window.window ? "valid" : "null")
+                    console.log("  Qt.callLater (error exit): After exception, mainWindow =", mainWindow ? "valid" : "null")
                 }
 
                 // Now start the timer to show the error dialog after window is restored
@@ -558,10 +559,11 @@ Item {
 
             Qt.callLater(function() {
                 console.log("  Qt.callLater (normal exit): restoring window state after pop")
+                console.log("  Qt.callLater (normal exit): mainWindow =", mainWindow ? "valid" : "null")
 
-                // CRITICAL: Check if Window.window exists and is valid
-                if (!Window.window) {
-                    console.log("  Qt.callLater (normal exit): Window.window is null")
+                // CRITICAL: Check if mainWindow exists and is valid
+                if (!mainWindow) {
+                    console.log("  Qt.callLater (normal exit): mainWindow is null")
                     return
                 }
 
@@ -579,46 +581,42 @@ Item {
                 // Apply the desired window state based on previous visibility
                 // Use the saved previousVisibility value (captured before pop)
                 // Note: Qt.WindowFullScreen (4) is borderless fullscreen, different from Window.FullScreen (3)
-                var targetVisibility = Window.Windowed
-                if (savedPreviousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                var targetVisibility = mainWindow.Windowed
+                if (savedPreviousVisibility === mainWindow.Maximized) {
+                    targetVisibility = mainWindow.Maximized
+                } else if (savedPreviousVisibility === mainWindow.FullScreen || savedPreviousVisibility === 4) {
                     // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
-                    targetVisibility = Window.FullScreen
+                    targetVisibility = mainWindow.FullScreen
                 }
 
                 // CRITICAL: Check window state before applying changes
                 try {
-                    if (targetVisibility === Window.Maximized) {
+                    if (targetVisibility === mainWindow.Maximized) {
                         console.log("  Qt.callLater (normal exit): calling showMaximized()")
-                        Window.window.showMaximized()
-                    } else if (targetVisibility === Window.FullScreen) {
+                        mainWindow.showMaximized()
+                    } else if (targetVisibility === mainWindow.FullScreen) {
                         console.log("  Qt.callLater (normal exit): calling showFullScreen()")
-                        Window.window.showFullScreen()
+                        mainWindow.showFullScreen()
                     } else {
                         console.log("  Qt.callLater (normal exit): calling showNormal()")
-                        Window.window.showNormal()
+                        mainWindow.showNormal()
                     }
 
-                    Window.window.raise()
-                    Window.window.requestActivate()
+                    mainWindow.raise()
+                    mainWindow.requestActivate()
                 } catch (e) {
                     console.log("  Qt.callLater (normal exit): Exception during window restoration:", e)
                     try {
-                        Window.window.showNormal()
-                        Window.window.raise()
+                        mainWindow.showNormal()
+                        mainWindow.raise()
                     } catch (e2) {
                         console.log("  Qt.callLater (normal exit): Fallback failed:", e2)
                     }
                 }
 
                 // CRITICAL: Log window state AFTER restoration
-                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
-                            "visibility:", Window.window.visibility)
-
-                // CRITICAL: Log window state AFTER restoration
-                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
-                            "visibility:", Window.window.visibility)
+                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", mainWindow.visible,
+                            "visibility:", mainWindow.visibility)
 
                 console.log("  Qt.callLater (normal exit): window restoration complete")
 
@@ -699,6 +697,10 @@ Item {
     // but we still need to know if errorDialog should be shown
     property bool shouldShowErrorDialog: false
 
+    // Store a reference to the main window at component creation time
+    // This avoids Window.window becoming null when the component is popped
+    property var mainWindow: Window.window
+
     // Use a hidden Item to host the Timer, avoiding Window.window access issues
     Item {
         id: timerHost
@@ -708,12 +710,10 @@ Item {
             id: errorDialogTimer
             interval: 50
             onTriggered: {
-                // CRITICAL: Only check Window.window (global singleton), not stackView (component property)
-                // stackView becomes inaccessible when component is popped or deactivated
-                // Use shouldShowErrorDialog flag instead of checking stackView
-                if (!Window.window) {
-                    console.log("  errorDialogTimer: Window.window is null, skipping dialog but popping stackView")
-                    // CRITICAL FIX: Even if Window.window is null, we must pop the stackView
+                // Use stored mainWindow reference instead of Window.window
+                if (!mainWindow) {
+                    console.log("  errorDialogTimer: mainWindow is null, skipping dialog but popping stackView")
+                    // CRITICAL FIX: Even if mainWindow is null, we must pop the stackView
                     // to prevent the app from being stuck on "Quitting..." screen
                     if (stackView) {
                         stackView.pop()
@@ -729,8 +729,8 @@ Item {
                     return
             }
             console.log("  errorDialogTimer: showing error dialog")
-            Window.window.requestActivate()
-            Window.window.raise()
+            mainWindow.requestActivate()
+            mainWindow.raise()
             errorDialog.open()
         }
         } // Timer
