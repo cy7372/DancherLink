@@ -2126,11 +2126,8 @@ public:
 // Called in a non-main thread
 bool Session::startConnectionAsync()
 {
-    // CRITICAL: Check interrupt flag at the start of connection attempt.
-    // If interrupt() was called while we were in exec() preamble, we should
-    // abort the connection immediately rather than proceeding with launch.
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called, aborting connection attempt");
+    // Check interrupt flag at the start of connection attempt
+    if (shouldAbortConnection()) {
         return false;
     }
 
@@ -2247,17 +2244,8 @@ bool Session::startConnectionAsync()
                                                                          false);
     }
 
-    // CRITICAL: Check interrupt flag before starting the connection.
-    // If interrupt() was called during the HTTP launch/resume request,
-    // we should abort before calling LiStartConnection().
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during HTTP request, aborting and cleaning up");
-
-        // CRITICAL: Do NOT call LiStopConnection() here!
-        // LiStartConnection() has not been called yet, so there's nothing to clean up.
-        // Calling LiStopConnection() without LiStartConnection() will crash.
-        // The cleanup will be handled by requestCancel() which already called LiInterruptConnection().
-
+    // Check interrupt flag before starting the connection
+    if (shouldAbortConnection()) {
         return false;
     }
 
@@ -2266,21 +2254,14 @@ bool Session::startConnectionAsync()
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 nullptr, 0, nullptr, 0);
 
-    // CRITICAL: Check interrupt flag after LiStartConnection.
-    // If interrupt() was called during LiStartConnection initialization,
-    // we need to clean up client state.
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called during LiStartConnection, aborting and cleaning up");
-
-        // Call LiStopConnection() to clean up client-side state.
-        // Use exchange(true) to ensure we only call LiStopConnection() once,
-        // preventing duplicate RTSP TEARDOWN requests.
+    // Check interrupt flag after LiStartConnection
+    if (shouldAbortConnection()) {
+        // Clean up client-side state
         if (!m_LiStopConnectionCalled.exchange(true)) {
             LiStopConnection();
         } else {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  LiStopConnection() was already called, skipping duplicate call");
         }
-
         return false;
     }
 
@@ -2518,6 +2499,37 @@ void Session::start()
 }
 
 // =============================================================================
+// Helper Methods - Connection Lifecycle Management
+// =============================================================================
+
+bool Session::shouldAbortConnection() const
+{
+    if (m_InterruptCalled.load()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() detected, aborting connection");
+        return true;
+    }
+    return false;
+}
+
+void Session::cleanupBeforeConnection()
+{
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Cleaning up before connection...");
+    delete m_InputHandler;
+    m_InputHandler = nullptr;
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+}
+
+void Session::cleanupAndExit()
+{
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Cleaning up and exiting...");
+    delete m_InputHandler;
+    m_InputHandler = nullptr;
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+}
+
+// =============================================================================
 // Session::interrupt() - Universal Session Interrupt
 // =============================================================================
 // This is the universal method to interrupt/terminate a streaming session
@@ -2626,13 +2638,10 @@ void Session::requestCancel()
             }
         }
 
-        // CRITICAL: Set cancellation cooldown timestamp.
-        // This prevents the user from reconnecting too quickly after cancellation,
-        // giving the server time to clean up its RTSP session state.
-        // Cooldown period: 6 seconds (balanced cleanup time for GFE/Sunshine)
+        // Set cancellation cooldown timestamp
         if (m_Computer) {
-            m_Computer->cancelCooldownUntil = SDL_GetTicks() + 6000;
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Set cancellation cooldown for 6 seconds (until tick %u)", (Uint32)m_Computer->cancelCooldownUntil);
+            m_Computer->cancelCooldownUntil = SDL_GetTicks() + CANCEL_COOLDOWN_MS;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Set cancellation cooldown for %d ms (until tick %u)", CANCEL_COOLDOWN_MS, (Uint32)m_Computer->cancelCooldownUntil);
         }
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "====== requestCancel() complete (fast path) ======");
@@ -2683,17 +2692,6 @@ void Session::requestSessionExit()
     SDL_PushEvent(&event);
 }
 
-// =============================================================================
-// Session::cancelInitialization() - Deprecated: Use requestCancel() instead
-// =============================================================================
-// Legacy function kept for backward compatibility.
-// New code should use requestCancel() for all cancellation requests.
-// =============================================================================
-void Session::cancelInitialization()
-{
-    requestCancel();
-}
-
 // -----------------------------------------------------------------------------
 // Session::exec() - Main Session Loop
 // -----------------------------------------------------------------------------
@@ -2712,25 +2710,16 @@ void Session::exec()
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_InterruptCalled = %d", m_InterruptCalled.load());
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  m_ConnectionStartedEmitted = %d", m_ConnectionStartedEmitted);
 
-    // CRITICAL: Check if interrupt() was called before we entered exec().
-    // If so, the user has already requested to cancel the session.
-    // We should skip window display and go straight to cleanup.
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called before exec(), skipping to cleanup");
-        delete m_InputHandler;
-        m_InputHandler = nullptr;
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+    // Check if interrupt was called before exec - skip to cleanup
+    if (shouldAbortConnection()) {
+        cleanupBeforeConnection();
         return;
     }
 
-    // If the connection failed, clean up and abort the connection.
+    // Connection failed - clean up and exit
     if (!m_AsyncConnectionSuccess) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Connection failed, cleaning up...");
-        delete m_InputHandler;
-        m_InputHandler = nullptr;
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+        cleanupBeforeConnection();
         return;
     }
 
@@ -2773,10 +2762,7 @@ void Session::exec()
         // Check for SDL_QUIT event (may be pushed by interrupt())
         if (pendingEvent.type == SDL_QUIT) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  SDL_QUIT event detected during exec() preamble, skipping to cleanup");
-            delete m_InputHandler;
-            m_InputHandler = nullptr;
-            SDL_QuitSubSystem(SDL_INIT_VIDEO);
-            QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+            cleanupBeforeConnection();
             return;
         }
     }
@@ -2804,29 +2790,15 @@ void Session::exec()
         m_MicThread->start();
     }
 
-    // CRITICAL: Process ALL pending Qt events (including user input) before creating SDL window.
-    // This is essential for Back key cancellation to work during the transition phase.
-    //
-    // Flow:
-    // 1. User presses Back key during transition screen
-    // 2. Qt queues the key event
-    // 3. QML Keys.onBackPressed handler calls session.interrupt()
-    // 4. interrupt() sets m_InterruptCalled = 1 and pushes SDL_QUIT
-    // 5. We process events here to ensure the interrupt() call is processed
-    // 6. We check m_InterruptCalled and skip SDL window creation
-    //
-    // We use AllEvents (not ExcludeUserInputEvents) to ensure Back key events are processed.
+    // Process ALL pending Qt events (including user input) before creating SDL window
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Processing pending Qt events (including user input) before SDL window creation");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
     QCoreApplication::sendPostedEvents();
 
     // Re-check interrupt flag after processing Qt events
-    if (m_InterruptCalled.load()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() was called via QML Back key handler, skipping to cleanup");
-        delete m_InputHandler;
-        m_InputHandler = nullptr;
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-        QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
+    if (shouldAbortConnection()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  interrupt() called via QML Back key, skipping to cleanup");
+        cleanupBeforeConnection();
         return;
     }
 

@@ -156,7 +156,6 @@ public:
     Q_INVOKABLE void start();
     Q_INVOKABLE void requestCancel();
     Q_INVOKABLE void interrupt(); // Deprecated: Use requestCancel()
-    Q_INVOKABLE void cancelInitialization(); // Deprecated: Use requestCancel()
     Q_INVOKABLE void requestSessionExit();
     Q_INVOKABLE void waitForHostOnline();
     Q_PROPERTY(QStringList launchWarnings MEMBER m_LaunchWarnings NOTIFY launchWarningsChanged);
@@ -218,9 +217,18 @@ signals:
     void launchWarningsChanged();
 
 private:
+    // Cancellation cooldown constants
+    static constexpr int CANCEL_COOLDOWN_MS = 6000;      // 6 seconds cooldown after user cancellation
+    static constexpr int RESOLUTION_CHANGE_DEBOUNCE_MS = 200;
+
     void exec();
 
     bool startConnectionAsync();
+
+    // Helper methods for connection lifecycle
+    bool shouldAbortConnection() const;
+    void cleanupAndExit();
+    void cleanupBeforeConnection();
 
     bool validateLaunch(SDL_Window* testWindow);
 
@@ -363,7 +371,6 @@ private:
     int m_InitialDesktopHeight;
 
     // Resolution change debounce - track pending resolution and timestamp
-    static constexpr int RESOLUTION_CHANGE_DEBOUNCE_MS = 200;
     int m_PendingResolutionWidth = 0;
     int m_PendingResolutionHeight = 0;
     Uint32 m_LastResolutionChangeTime = 0;
