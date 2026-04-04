@@ -222,6 +222,95 @@ Item {
     // =============================================================================
     property int previousVisibility: -1
 
+    // CRITICAL: Helper function to restore window to a previous state.
+    // This is used in sessionFinished() to restore the window after streaming ends.
+    //
+    // Parameters:
+    // - savedSession: Session reference captured before stackView.pop()
+    // - savedPreviousVisibility: Window visibility state to restore
+    // - postRestoreCallback: Optional callback to execute after window restoration
+    //
+    // The function uses Qt.callLater to ensure the QML stack is stable before
+    // manipulating the window, preventing race conditions during component destruction.
+    function restoreWindowToPreviousState(savedSession, savedPreviousVisibility, postRestoreCallback) {
+        Qt.callLater(function() {
+            console.log("  Qt.callLater: restoring window to state", savedPreviousVisibility)
+            console.log("  Qt.callLater: Window.window exists:", !!Window.window)
+
+            if (!Window.window) {
+                console.log("  Qt.callLater: Window.window is null, aborting")
+                console.error("  ERROR: Window.window is null!")
+                return
+            }
+
+            // Restore window style first (Windows only)
+            if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
+                try {
+                    console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
+                    savedSession.restoreWindowStyle()
+                } catch (e) {
+                    console.log("  Qt.callLater: savedSession.restoreWindowStyle() failed:", e)
+                }
+            }
+
+            // Apply the desired window state based on previous visibility
+            var targetVisibility = Window.Windowed
+            if (savedPreviousVisibility === Window.Maximized) {
+                targetVisibility = Window.Maximized
+            } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
+                targetVisibility = Window.FullScreen
+            }
+
+            try {
+                if (targetVisibility === Window.Maximized) {
+                    console.log("  Qt.callLater: calling showMaximized()")
+                    Window.window.showMaximized()
+                } else if (targetVisibility === Window.FullScreen) {
+                    console.log("  Qt.callLater: calling showFullScreen()")
+                    Window.window.showFullScreen()
+                } else {
+                    console.log("  Qt.callLater: calling showNormal()")
+                    Window.window.showNormal()
+                }
+
+                console.log("  Qt.callLater: calling raise() and requestActivate()")
+                Window.window.raise()
+                Window.window.requestActivate()
+            } catch (e) {
+                console.log("  Qt.callLater: Exception during window restoration:", e)
+                try {
+                    console.log("  Qt.callLater: fallback showNormal()")
+                    Window.window.showNormal()
+                    Window.window.raise()
+                } catch (e2) {
+                    console.log("  Qt.callLater: Fallback also failed:", e2)
+                }
+            }
+
+            console.log("  Qt.callLater: AFTER restore - visible:", Window.window.visible,
+                        "visibility:", Window.window.visibility)
+            console.log("  Qt.callLater: window restoration complete")
+
+            // Execute post-restore callback if provided
+            if (typeof postRestoreCallback === "function") {
+                console.log("  Qt.callLater: executing post-restore callback")
+                postRestoreCallback()
+            }
+        })
+    }
+
+    // CRITICAL: Helper function to make window visible immediately (synchronous).
+    // This should be called BEFORE stackView.pop() to prevent the window from
+    // entering WindowHidden (visibility: 5) state during the transition.
+    function makeWindowVisibleImmediately() {
+        if (Window.window) {
+            console.log("  Pre-pop restore: calling showNormal() to make window visible")
+            Window.window.showNormal()
+            Window.window.raise()
+            Window.window.requestActivate()
+        }
+    }
+
     onRestartRequested: {
         // Save the current window visibility BEFORE showing fullscreen
         // This ensures we can restore to the correct state after streaming ends
@@ -354,28 +443,12 @@ Item {
             console.log("  Before pop: stackView.depth =", stackView.depth)
             console.log("  Before pop: savedPreviousVisibility =", previousVisibility)
 
-            // CRITICAL FIX: Restore window visibility BEFORE popping the stack.
-            // This prevents the window from entering WindowHidden (visibility: 5) state
-            // during the transition, which was causing the "window disappears" issue.
-            //
-            // Problem: When stackView.pop() is called, the window can enter a hidden state
-            // before Qt.callLater executes. If the callback runs too late or the window
-            // reference becomes invalid, the user sees an empty screen.
-            //
-            // Solution: Make the window visible synchronously BEFORE pop(), then use
-            // Qt.callLater to apply the final window state after the stack stabilizes.
-
             // Save values before pop
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
             // CRITICAL: Restore window visibility BEFORE pop to prevent hidden state
-            if (Window.window) {
-                console.log("  Pre-pop restore: calling showNormal() to make window visible")
-                Window.window.showNormal()
-                Window.window.raise()
-                Window.window.requestActivate()
-            }
+            makeWindowVisibleImmediately()
 
             console.log("  sessionFinished (cancel): saved previousVisibility =", savedPreviousVisibility,
                         "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
@@ -383,70 +456,8 @@ Item {
             // Now pop the stack - window is already visible so user won't see a flash
             stackView.pop()
 
-            // Use Qt.callLater to apply the final window state after the stack pop completes.
-            Qt.callLater(function() {
-                console.log("  Qt.callLater: applying final window state after pop")
-                console.log("  Qt.callLater: Window.window exists:", !!Window.window)
-                console.log("  Qt.callLater: stackView.depth =", stackView.depth)
-                console.log("  Qt.callLater: stackView.currentItem:", stackView.currentItem ? stackView.currentItem.objectName : "null")
-
-                // CRITICAL: Check if Window.window exists and is valid
-                if (!Window.window) {
-                    console.log("  Qt.callLater: Window.window is null, aborting")
-                    console.error("  ERROR: Window.window is null! This may cause the app to appear to have exited.")
-                    return
-                }
-
-                // Restore window style first (Windows only)
-                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
-                    try {
-                        console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
-                        savedSession.restoreWindowStyle()
-                    } catch (e) {
-                        console.log("  Qt.callLater: savedSession.restoreWindowStyle() failed:", e)
-                    }
-                } else {
-                    console.log("  Qt.callLater: savedSession is null or invalid, skipping restoreWindowStyle()")
-                }
-
-                // Apply the desired window state based on previous visibility
-                var targetVisibility = Window.Windowed
-                if (savedPreviousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
-                    targetVisibility = Window.FullScreen
-                }
-
-                try {
-                    if (targetVisibility === Window.Maximized) {
-                        console.log("  Qt.callLater: calling showMaximized()")
-                        Window.window.showMaximized()
-                    } else if (targetVisibility === Window.FullScreen) {
-                        console.log("  Qt.callLater: calling showFullScreen()")
-                        Window.window.showFullScreen()
-                    } else {
-                        console.log("  Qt.callLater: calling showNormal()")
-                        Window.window.showNormal()
-                    }
-
-                    console.log("  Qt.callLater: calling raise() and requestActivate()")
-                    Window.window.raise()
-                    Window.window.requestActivate()
-                } catch (e) {
-                    console.log("  Qt.callLater: Exception during window restoration:", e)
-                    try {
-                        console.log("  Qt.callLater: fallback showNormal()")
-                        Window.window.showNormal()
-                        Window.window.raise()
-                    } catch (e2) {
-                        console.log("  Qt.callLater: Fallback also failed:", e2)
-                    }
-                }
-
-                console.log("  Qt.callLater: AFTER restore - visible:", Window.window.visible,
-                            "visibility:", Window.window.visibility)
-                console.log("  Qt.callLater: window restoration complete")
-            })
+            // Use helper function to restore window state after stack stabilizes
+            restoreWindowToPreviousState(savedSession, savedPreviousVisibility)
 
             return
         }
@@ -459,7 +470,7 @@ Item {
             // Update text to show exiting state, then restore and show error
             stageText = qsTr("Quitting %1...").arg(appName)
 
-            // CRITICAL: Save session reference and previousVisibility for window restoration.
+            // Save session reference and previousVisibility for window restoration.
             // We cannot pop() here because we need errorDialog to be shown first.
             // The stackView.pop() will be called in errorDialog.onClosed() after user dismisses the dialog.
             var savedSession = session
@@ -472,70 +483,10 @@ Item {
             shouldShowErrorDialog = true
 
             // CRITICAL: Restore window visibility BEFORE the error dialog flow.
-            // This prevents the window from entering WindowHidden (visibility: 5) state
-            // during the transition, which was causing the "window disappears" issue.
-            if (Window.window) {
-                console.log("  Pre-error-dialog restore: calling showNormal() to make window visible")
-                Window.window.showNormal()
-                Window.window.raise()
-                Window.window.requestActivate()
-            }
+            makeWindowVisibleImmediately()
 
-            // Use Qt.callLater to apply final window state before showing the error dialog
-            Qt.callLater(function() {
-                console.log("  Qt.callLater (error exit): applying final window state")
-                console.log("  Qt.callLater (error exit): Window.window =", Window.window ? "valid" : "null")
-
-                if (!Window.window) {
-                    console.log("  Qt.callLater (error exit): Window.window is null")
-                    return
-                }
-
-                // Restore window style first (Windows only)
-                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
-                    try {
-                        savedSession.restoreWindowStyle()
-                    } catch (e) {
-                        console.log("  Qt.callLater (error exit): savedSession.restoreWindowStyle() failed:", e)
-                    }
-                }
-
-                // Apply the desired window state based on previous visibility
-                var targetVisibility = Window.Windowed
-                if (savedPreviousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
-                    targetVisibility = Window.FullScreen
-                }
-
-                try {
-                    if (targetVisibility === Window.Maximized) {
-                        console.log("  Qt.callLater (error exit): calling showMaximized()")
-                        Window.window.showMaximized()
-                    } else if (targetVisibility === Window.FullScreen) {
-                        console.log("  Qt.callLater (error exit): calling showFullScreen()")
-                        Window.window.showFullScreen()
-                    } else {
-                        console.log("  Qt.callLater (error exit): calling showNormal()")
-                        Window.window.showNormal()
-                    }
-
-                    console.log("  Qt.callLater (error exit): calling raise()")
-                    Window.window.raise()
-                    console.log("  Qt.callLater (error exit): calling requestActivate()")
-                    Window.window.requestActivate()
-                    console.log("  Qt.callLater (error exit): AFTER restore - window state complete")
-                } catch (e) {
-                    console.log("  Qt.callLater (error exit): Exception during window restoration:", e)
-                    try {
-                        Window.window.showNormal()
-                        Window.window.raise()
-                    } catch (e2) {
-                        console.log("  Qt.callLater (error exit): Fallback failed:", e2)
-                    }
-                }
-
-                // Now start the timer to show the error dialog after window is restored
+            // Use helper function to restore window state, then show error dialog
+            restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
                 errorDialogTimer.start()
             })
         }
@@ -547,7 +498,7 @@ Item {
             stageLabel.visible = true
             hintText.visible = false
 
-            // CRITICAL: Save session reference and previousVisibility BEFORE popping.
+            // Save session reference and previousVisibility BEFORE popping.
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
@@ -555,72 +506,14 @@ Item {
                         "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
 
             // CRITICAL: Restore window visibility BEFORE pop to prevent hidden state
-            if (Window.window) {
-                console.log("  Pre-pop restore (normal): calling showNormal() to make window visible")
-                Window.window.showNormal()
-                Window.window.raise()
-                Window.window.requestActivate()
-            }
+            makeWindowVisibleImmediately()
 
             // Now pop the stack - window is already visible so user won't see a flash
             stackView.pop()
 
-            Qt.callLater(function() {
-                console.log("  Qt.callLater (normal exit): applying final window state after pop")
-                console.log("  Qt.callLater (normal exit): mainWindow =", Window.window ? "valid" : "null")
-
-                // CRITICAL: Check if mainWindow exists and is valid
-                if (!Window.window) {
-                    console.log("  Qt.callLater (normal exit): Window.window is null")
-                    return
-                }
-
-                // Restore window style first (Windows only)
-                if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
-                    try {
-                        savedSession.restoreWindowStyle()
-                    } catch (e) {
-                        console.log("  Qt.callLater (normal exit): savedSession.restoreWindowStyle() failed:", e)
-                    }
-                }
-
-                // Apply the desired window state based on previous visibility
-                var targetVisibility = Window.Windowed
-                if (savedPreviousVisibility === Window.Maximized) {
-                    targetVisibility = Window.Maximized
-                } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
-                    targetVisibility = Window.FullScreen
-                }
-
-                try {
-                    if (targetVisibility === Window.Maximized) {
-                        console.log("  Qt.callLater (normal exit): calling showMaximized()")
-                        Window.window.showMaximized()
-                    } else if (targetVisibility === Window.FullScreen) {
-                        console.log("  Qt.callLater (normal exit): calling showFullScreen()")
-                        Window.window.showFullScreen()
-                    } else {
-                        console.log("  Qt.callLater (normal exit): calling showNormal()")
-                        Window.window.showNormal()
-                    }
-
-                    Window.window.raise()
-                    Window.window.requestActivate()
-                } catch (e) {
-                    console.log("  Qt.callLater (normal exit): Exception during window restoration:", e)
-                    try {
-                        Window.window.showNormal()
-                        Window.window.raise()
-                    } catch (e2) {
-                        console.log("  Qt.callLater (normal exit): Fallback failed:", e2)
-                    }
-                }
-
-                console.log("  Qt.callLater (normal exit): AFTER restore - visible:", Window.window.visible,
-                            "visibility:", Window.window.visibility)
-                console.log("  Qt.callLater (normal exit): window restoration complete")
-
-                // Start auto-update check after window is restored
+            // Use helper function to restore window state, then start auto-update check
+            restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
+                console.log("  Post-restore: starting auto-update check")
                 AutoUpdateChecker.start(false)
             })
 
