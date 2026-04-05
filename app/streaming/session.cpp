@@ -2271,15 +2271,11 @@ bool Session::startConnectionAsync()
     }
 
 #ifdef Q_OS_WIN32
-    // Windows-specific setup before emitting connectionStarted()
-    if (m_Window) {
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
-            SetForegroundWindow(info.info.win.window);
-            SetActiveWindow(info.info.win.window);
-        }
-    }
+    // NOTE: m_Window is null here because the actual SDL streaming window hasn't
+    // been created yet (that happens in exec()). The test window from initialize()
+    // was already destroyed. The SDL window activation is done in exec() after
+    // the Qt window is hidden, which is the correct time to set foreground.
+    //
     // setQtWindowToolStyle uses Qt APIs that must be called from the main thread.
     // Use BlockingQueuedConnection to ensure the style is set before we continue.
     // NOTE: We use m_QtWindow as the target object because it has the correct
@@ -3112,6 +3108,23 @@ void Session::exec()
     }
 
 #ifdef Q_OS_WIN32
+    // CRITICAL: Activate the SDL streaming window after hiding Qt window.
+    // When we hide the Qt window, Windows gives focus to whatever window is
+    // next in Z-order (often the desktop or another app), NOT our SDL window.
+    // We must explicitly set the SDL window as foreground to ensure:
+    // 1. The streaming window receives keyboard/mouse input immediately
+    // 2. The user doesn't need to click to activate the stream
+    if (m_Window) {
+        SDL_SysWMinfo sdlInfo;
+        SDL_VERSION(&sdlInfo.version);
+        if (SDL_GetWindowWMInfo(m_Window, &sdlInfo) && sdlInfo.subsystem == SDL_SYSWM_WINDOWS) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Activating SDL streaming window (hwnd=%p)", sdlInfo.info.win.window);
+            SetForegroundWindow(sdlInfo.info.win.window);
+            SetActiveWindow(sdlInfo.info.win.window);
+            SetFocus(sdlInfo.info.win.window);
+        }
+    }
+
     HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
         // Enable system events to catch power broadcast messages

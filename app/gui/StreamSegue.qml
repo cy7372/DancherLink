@@ -586,20 +586,10 @@ Item {
                 Window.window.header.visible = false
             }
 
-            // CRITICAL: showNormal() → resize to screen → showFullScreen().
-            //
-            // After a screen resolution change (e.g. foldable device fold/unfold),
-            // Qt caches stale window geometry from the previous resolution.
-            // showNormal() resets window state but NOT the cached geometry,
-            // so showFullScreen() would inherit the wrong base size.
-            //
-            // The fix: explicitly set width/height to current Screen dimensions
-            // between showNormal() and showFullScreen(). This clears the stale
-            // cache and ensures fullscreen uses the correct screen size.
-            // All calls happen in the same event loop iteration — no flash.
-            Window.window.showNormal()
-            Window.window.width = Screen.width
-            Window.window.height = Screen.height
+            // Go directly from maximized to fullscreen.
+            // No showNormal() — it restores stale "normal" geometry that
+            // Windows may reject (e.g. taskbar reduces work area), causing
+            // setGeometry warnings and breaking showFullScreen().
             Window.window.showFullScreen()
         }
 
