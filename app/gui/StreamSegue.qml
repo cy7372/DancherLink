@@ -666,8 +666,8 @@ Item {
 
     StackView.onDeactivating: {
         // Show the toolbar again when popped off the stack
-        if (Window.window && Window.window.toolBar) {
-            Window.window.toolBar.visible = true
+        if (Window.window && Window.window.header) {
+            Window.window.header.visible = true
         }
 
         // Re-enable GUI gamepad usage now
@@ -705,23 +705,22 @@ Item {
 
         console.log("StreamSegue: StackView.onActivated - signals already connected, proceeding with initialization")
 
-        // Use Qt.callLater to ensure the component is fully attached to the window
-        // before we try to access Window.window. StackView.onActivated can fire
-        // before the component is in the window hierarchy.
-        Qt.callLater(function() {
-            // Hide the toolbar before we start loading
-            if (Window.window && Window.window.toolBar) {
-                Window.window.toolBar.visible = false
+        // CRITICAL: Hide the toolbar and go fullscreen IMMEDIATELY (not deferred).
+        // Previously this used Qt.callLater(), which deferred by one event loop iteration.
+        // That caused a race condition: StreamSegue rendered at the previous windowed size
+        // (with toolbar taking 60px + footer 32px) for one visible frame, making the
+        // content appear to fill only a small portion of the screen.
+        //
+        // Use Window.window.header (Q_PROPERTY) instead of .toolBar (id from main.qml)
+        // to ensure reliable cross-component access.
+        if (Window.window) {
+            if (Window.window.header) {
+                Window.window.header.visible = false
             }
 
-            // CRITICAL: Set window to fullscreen for the transition screen.
-            // This is NOT user-configurable - the transition screen is always fullscreen.
-            // The user's display mode preference is only used for the actual streaming session.
-            if (Window.window) {
-                console.log("StreamSegue: Setting window to fullscreen for transition")
-                Window.window.showFullScreen()
-            }
-        })
+            console.log("StreamSegue: Setting window to fullscreen for transition")
+            Window.window.showFullScreen()
+        }
 
         // Kick off the stream
         spinnerTimer.start()
