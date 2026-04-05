@@ -686,49 +686,31 @@ Item {
 
         console.log("StreamSegue: StackView.onActivated - signals already connected, proceeding with initialization")
 
-        // CRITICAL: Hide the toolbar and go fullscreen IMMEDIATELY (not deferred).
-        // Previously this used Qt.callLater(), which deferred by one event loop iteration.
-        // That caused a race condition: StreamSegue rendered at the previous windowed size
-        // (with toolbar taking 60px + footer 32px) for one visible frame, making the
-        // content appear to fill only a small portion of the screen.
-        //
-        // Use Window.window.header (Q_PROPERTY) instead of .toolBar (id from main.qml)
-        // to ensure reliable cross-component access.
         if (Window.window) {
+            // Hide toolbar
             if (Window.window.header) {
                 Window.window.header.visible = false
             }
 
-            console.log("StreamSegue: Setting window to fullscreen for transition")
+            // CRITICAL: showNormal() → showFullScreen() in the same frame.
+            //
+            // After a screen resolution change (e.g. foldable device fold/unfold),
+            // the window may carry stale geometry from the previous resolution.
+            // Calling showFullScreen() alone inherits this stale state, causing
+            // the fullscreen window to cover only part of the screen.
+            //
+            // showNormal() forces Qt to recalculate the window geometry from
+            // scratch (resetting internal cached state), and showFullScreen()
+            // then uses the correct current screen dimensions.
+            // Both calls happen within the same event loop iteration, so only
+            // the final fullscreen state is rendered — no visual flash.
+            Window.window.showNormal()
             Window.window.showFullScreen()
-
-            // Foldable screen fix: Re-apply fullscreen after a short delay.
-            // On foldable devices, when the screen resolution changes (fold/unfold),
-            // Qt's internal QScreen geometry may not be fully updated at the time
-            // showFullScreen() is called. The delayed re-application ensures Qt uses
-            // the correct screen geometry after processing WM_DISPLAYCHANGE.
-            fullscreenRefreshTimer.start()
         }
 
         // Kick off the stream
         spinnerTimer.start()
         streamLoader.active = true
-    }
-
-    // Timer to re-apply fullscreen for foldable screen resolution changes.
-    // When the screen resolution changes (e.g., foldable device fold/unfold),
-    // the initial showFullScreen() may use stale screen geometry. This timer
-    // fires after Qt has processed the display change event, re-applying
-    // fullscreen with the correct geometry.
-    Timer {
-        id: fullscreenRefreshTimer
-        interval: 100
-        onTriggered: {
-            if (Window.window && Window.window.visibility === Window.FullScreen) {
-                console.log("StreamSegue: Re-applying fullscreen for foldable screen geometry refresh")
-                Window.window.showFullScreen()
-            }
-        }
     }
 
     Timer {
