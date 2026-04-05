@@ -222,24 +222,60 @@ Item {
     // =============================================================================
     property int previousVisibility: -1
 
-    // CRITICAL: Helper function to restore window to a previous state.
-    // This is used in sessionFinished() to restore the window after streaming ends.
+    // Helper to compute the target visibility from savedPreviousVisibility.
+    // Avoids duplicating this logic across multiple functions.
+    function computeTargetVisibility(savedPreviousVisibility) {
+        if (savedPreviousVisibility === Window.Maximized) {
+            return Window.Maximized
+        } else if (savedPreviousVisibility === Window.FullScreen) {
+            return Window.FullScreen
+        }
+        return Window.Windowed
+    }
+
+    // Helper to apply a target visibility to a window object.
+    function applyVisibilityToWindow(win, targetVisibility) {
+        if (!win) return
+        try {
+            if (targetVisibility === Window.Maximized) {
+                win.showMaximized()
+            } else if (targetVisibility === Window.FullScreen) {
+                win.showFullScreen()
+            } else {
+                win.showNormal()
+            }
+            win.raise()
+            win.requestActivate()
+        } catch (e) {
+            console.log("  applyVisibilityToWindow: Exception:", e)
+            try { win.showNormal(); win.raise() } catch (e2) {}
+        }
+    }
+
+    // CRITICAL: Restore window to a previous state after streaming ends.
+    //
+    // Uses the stored mainWindow reference (captured at component creation time)
+    // instead of Window.window attached property, because Window.window becomes
+    // null after stackView.pop() removes this component from the window hierarchy.
     //
     // Parameters:
     // - savedSession: Session reference captured before stackView.pop()
     // - savedPreviousVisibility: Window visibility state to restore
     // - postRestoreCallback: Optional callback to execute after window restoration
-    //
-    // The function uses Qt.callLater to ensure the QML stack is stable before
-    // manipulating the window, preventing race conditions during component destruction.
     function restoreWindowToPreviousState(savedSession, savedPreviousVisibility, postRestoreCallback) {
         Qt.callLater(function() {
-            console.log("  Qt.callLater: restoring window to state", savedPreviousVisibility)
-            console.log("  Qt.callLater: Window.window exists:", !!Window.window)
+            // Use stored mainWindow reference instead of Window.window.
+            // Window.window becomes null after stackView.pop() removes
+            // this component from the window hierarchy, causing the old
+            // code to silently skip restoration entirely.
+            var win = mainWindow
+            console.log("  Qt.callLater: restoring window to state", savedPreviousVisibility,
+                        "(0=Hidden, 2=Windowed, 4=Maximized, 5=FullScreen)")
+            console.log("  Qt.callLater: mainWindow exists:", !!win,
+                        "Window.window exists:", !!Window.window)
 
-            if (!Window.window) {
-                console.log("  Qt.callLater: Window.window is null, aborting")
-                console.error("  ERROR: Window.window is null!")
+            if (!win) {
+                console.log("  Qt.callLater: mainWindow is null, aborting")
                 return
             }
 
@@ -253,42 +289,12 @@ Item {
                 }
             }
 
-            // Apply the desired window state based on previous visibility
-            var targetVisibility = Window.Windowed
-            if (savedPreviousVisibility === Window.Maximized) {
-                targetVisibility = Window.Maximized
-            } else if (savedPreviousVisibility === Window.FullScreen || savedPreviousVisibility === 4) {
-                targetVisibility = Window.FullScreen
-            }
+            // Apply the desired window state
+            var targetVisibility = computeTargetVisibility(savedPreviousVisibility)
+            applyVisibilityToWindow(win, targetVisibility)
 
-            try {
-                if (targetVisibility === Window.Maximized) {
-                    console.log("  Qt.callLater: calling showMaximized()")
-                    Window.window.showMaximized()
-                } else if (targetVisibility === Window.FullScreen) {
-                    console.log("  Qt.callLater: calling showFullScreen()")
-                    Window.window.showFullScreen()
-                } else {
-                    console.log("  Qt.callLater: calling showNormal()")
-                    Window.window.showNormal()
-                }
-
-                console.log("  Qt.callLater: calling raise() and requestActivate()")
-                Window.window.raise()
-                Window.window.requestActivate()
-            } catch (e) {
-                console.log("  Qt.callLater: Exception during window restoration:", e)
-                try {
-                    console.log("  Qt.callLater: fallback showNormal()")
-                    Window.window.showNormal()
-                    Window.window.raise()
-                } catch (e2) {
-                    console.log("  Qt.callLater: Fallback also failed:", e2)
-                }
-            }
-
-            console.log("  Qt.callLater: AFTER restore - visible:", Window.window.visible,
-                        "visibility:", Window.window.visibility)
+            console.log("  Qt.callLater: AFTER restore - visible:", win.visible,
+                        "visibility:", win.visibility)
             console.log("  Qt.callLater: window restoration complete")
 
             // Execute post-restore callback if provided
@@ -299,15 +305,22 @@ Item {
         })
     }
 
-    // CRITICAL: Helper function to make window visible immediately (synchronous).
-    // This should be called BEFORE stackView.pop() to prevent the window from
-    // entering WindowHidden (visibility: 5) state during the transition.
-    function makeWindowVisibleImmediately() {
-        if (Window.window) {
-            console.log("  Pre-pop restore: calling showNormal() to make window visible")
-            Window.window.showNormal()
-            Window.window.raise()
-            Window.window.requestActivate()
+    // CRITICAL: Show the window in the TARGET state before stackView.pop().
+    //
+    // Previously this always called showNormal(), which caused two problems:
+    // 1) On Windows 11, showNormal() on a hidden-fullscreen window may not
+    //    properly exit fullscreen mode — the window appears but stays fullscreen.
+    // 2) The deferred restoreWindowToPreviousState() callback used Window.window
+    //    which becomes null after pop(), so the target state was never applied.
+    //
+    // Now we directly apply the target state (e.g., showMaximized) so the window
+    // transitions from hidden-fullscreen to the correct final state in one step.
+    function makeWindowVisibleInTargetState(targetVisibility) {
+        var win = Window.window
+        if (win) {
+            console.log("  Pre-pop restore: showing window in target state", targetVisibility,
+                        "(0=Hidden, 2=Windowed, 4=Maximized, 5=FullScreen)")
+            applyVisibilityToWindow(win, targetVisibility)
         }
     }
 
@@ -422,7 +435,7 @@ Item {
         console.log("  Window.window.visible:", Window.window ? Window.window.visible : "null")
         console.log("  Window.window.visibility:", Window.window ? Window.window.visibility : "null")
         console.log("  previousVisibility:", previousVisibility,
-                    "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+                    "(Qt6: 0=Hidden, 1=Auto, 2=Windowed, 3=Minimized, 4=Maximized, 5=FullScreen)")
 
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
@@ -447,16 +460,18 @@ Item {
             var savedSession = session
             var savedPreviousVisibility = previousVisibility
 
-            // CRITICAL: Restore window visibility BEFORE pop to prevent hidden state
-            makeWindowVisibleImmediately()
+            // CRITICAL: Show window in TARGET state directly (not showNormal first).
+            // showNormal() on a hidden-fullscreen window may not properly exit fullscreen on Windows.
+            var targetVis = computeTargetVisibility(savedPreviousVisibility)
+            makeWindowVisibleInTargetState(targetVis)
 
             console.log("  sessionFinished (cancel): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
 
             // Now pop the stack - window is already visible so user won't see a flash
             stackView.pop()
 
-            // Use helper function to restore window state after stack stabilizes
+            // Safety net: ensure window state is correct after pop
             restoreWindowToPreviousState(savedSession, savedPreviousVisibility)
 
             return
@@ -477,13 +492,14 @@ Item {
             var savedPreviousVisibility = previousVisibility
 
             console.log("  sessionFinished (error): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
 
             // Set the flag to indicate we should show the error dialog
             shouldShowErrorDialog = true
 
-            // CRITICAL: Restore window visibility BEFORE the error dialog flow.
-            makeWindowVisibleImmediately()
+            // CRITICAL: Show window in target state directly.
+            var targetVis2 = computeTargetVisibility(savedPreviousVisibility)
+            makeWindowVisibleInTargetState(targetVis2)
 
             // Use helper function to restore window state, then show error dialog
             restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
@@ -503,15 +519,18 @@ Item {
             var savedPreviousVisibility = previousVisibility
 
             console.log("  sessionFinished (normal): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Windowed, 1=Minimized, 2=Maximized, 3=FullScreen)")
+                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
 
-            // CRITICAL: Restore window visibility BEFORE pop to prevent hidden state
-            makeWindowVisibleImmediately()
+            // CRITICAL: Show window in TARGET state directly (not showNormal first).
+            // This avoids the bug where showNormal() on a hidden-fullscreen window
+            // leaves the window stuck in fullscreen on Windows 11.
+            var targetVis3 = computeTargetVisibility(savedPreviousVisibility)
+            makeWindowVisibleInTargetState(targetVis3)
 
-            // Now pop the stack - window is already visible so user won't see a flash
+            // Now pop the stack - window is already visible in correct state
             stackView.pop()
 
-            // Use helper function to restore window state, then start auto-update check
+            // Safety net: ensure window state after pop (uses mainWindow reference)
             restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
                 console.log("  Post-restore: starting auto-update check")
                 AutoUpdateChecker.start(false)
@@ -522,64 +541,26 @@ Item {
     }
 
     function restoreWindowState() {
-        if (!Window.window) {
-            console.log("  restoreWindowState(): Window.window is null, returning")
+        var win = mainWindow || Window.window
+        if (!win) {
+            console.log("  restoreWindowState(): no window reference, returning")
             return
         }
 
-        console.log("  restoreWindowState(): current visibility=" + Window.window.visibility +
+        console.log("  restoreWindowState(): current visibility=" + win.visibility +
                     " previousVisibility=" + previousVisibility)
 
         // We only do this if the window isn't minimized, to avoid restoring
         // a window that the user explicitly minimized during the stream.
-        if (Window.window.visibility !== Window.Minimized) {
+        if (win.visibility !== Window.Minimized) {
             // Restore window style first (Windows only)
             if (session) {
                 session.restoreWindowStyle()
             }
 
-            // Apply the desired window state based on previous visibility
-            var targetVisibility = Window.Windowed
-
-            if (previousVisibility === Window.Maximized) {
-                targetVisibility = Window.Maximized
-            } else if (previousVisibility === Window.FullScreen || previousVisibility === 4) {
-                // Handle both Window.FullScreen (3) and Window.WindowFullScreen (4, borderless fullscreen)
-                targetVisibility = Window.FullScreen
-            }
-            // For Windowed or -1 (not set), default to Windowed
-
+            var targetVisibility = computeTargetVisibility(previousVisibility)
             console.log("  restoreWindowState(): targetVisibility=" + targetVisibility)
-
-            // CRITICAL: Use try-catch to handle potential window destruction
-            try {
-                if (targetVisibility === Window.Maximized) {
-                    console.log("  restoreWindowState(): calling showMaximized()")
-                    Window.window.showMaximized()
-                } else if (targetVisibility === Window.FullScreen) {
-                    console.log("  restoreWindowState(): calling showFullScreen()")
-                    Window.window.showFullScreen()
-                } else {
-                    console.log("  restoreWindowState(): calling showNormal()")
-                    Window.window.showNormal()
-                }
-
-                // CRITICAL: Explicitly raise and activate the window to ensure it's visible
-                // This is necessary because stackView.pop() may happen before the window
-                // has a chance to be shown
-                console.log("  restoreWindowState(): calling raise() and requestActivate()")
-                Window.window.raise()
-                Window.window.requestActivate()
-            } catch (e) {
-                console.log("  restoreWindowState(): Exception during window restoration:", e)
-                // Fallback: try to show normal
-                try {
-                    Window.window.showNormal()
-                    Window.window.raise()
-                } catch (e2) {
-                    console.log("  restoreWindowState(): Fallback failed:", e2)
-                }
-            }
+            applyVisibilityToWindow(win, targetVisibility)
         } else {
             console.log("  restoreWindowState(): window is minimized, skipping restoration")
         }
@@ -620,12 +601,12 @@ Item {
                 if (!errorDialog.text) {
                     console.log("  errorDialogTimer: no error text, skipping dialog")
                     return
+                }
+                console.log("  errorDialogTimer: showing error dialog")
+                mainWindow.requestActivate()
+                mainWindow.raise()
+                errorDialog.open()
             }
-            console.log("  errorDialogTimer: showing error dialog")
-            mainWindow.requestActivate()
-            mainWindow.raise()
-            errorDialog.open()
-        }
         } // Timer
     } // Item (timerHost)
 
