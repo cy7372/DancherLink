@@ -222,34 +222,33 @@ Item {
     // =============================================================================
     property int previousVisibility: -1
 
-    // Helper to compute the target visibility from savedPreviousVisibility.
-    // Avoids duplicating this logic across multiple functions.
     function computeTargetVisibility(savedPreviousVisibility) {
-        if (savedPreviousVisibility === Window.Maximized) {
-            return Window.Maximized
-        } else if (savedPreviousVisibility === Window.FullScreen) {
-            return Window.FullScreen
-        }
-        return Window.Windowed
+        return savedPreviousVisibility === Window.Maximized ? Window.Maximized :
+               savedPreviousVisibility === Window.FullScreen ? Window.FullScreen :
+               Window.Windowed
     }
 
-    // Helper to apply a target visibility to a window object.
     function applyVisibilityToWindow(win, targetVisibility) {
         if (!win) return
         try {
-            if (targetVisibility === Window.Maximized) {
-                win.showMaximized()
-            } else if (targetVisibility === Window.FullScreen) {
-                win.showFullScreen()
-            } else {
-                win.showNormal()
-            }
+            if (targetVisibility === Window.Maximized) win.showMaximized()
+            else if (targetVisibility === Window.FullScreen) win.showFullScreen()
+            else win.showNormal()
             win.raise()
             win.requestActivate()
         } catch (e) {
             console.log("  applyVisibilityToWindow: Exception:", e)
             try { win.showNormal(); win.raise() } catch (e2) {}
         }
+    }
+
+    // Common pattern: save session, show window in target state, then restore after pop.
+    // Eliminates the 3x repetition in sessionFinished()'s exit paths.
+    function prepareAndRestore(savedPrevVis, postRestoreCallback) {
+        var savedSession = session
+        var targetVis = computeTargetVisibility(savedPrevVis)
+        makeWindowVisibleInTargetState(targetVis)
+        restoreWindowToPreviousState(savedSession, savedPrevVis, postRestoreCallback)
     }
 
     // CRITICAL: Restore window to a previous state after streaming ends.
@@ -325,17 +324,9 @@ Item {
     }
 
     onRestartRequested: {
-        // Save the current window visibility BEFORE showing fullscreen
-        // This ensures we can restore to the correct state after streaming ends
         if (Window.window) {
             previousVisibility = Window.window.visibility
-        }
-
-        // Reset the UI state to show we are working
-        if (Window.window) {
             Window.window.show()
-
-            // Always show the splash screen in fullscreen mode
             Window.window.showFullScreen()
         }
     }
@@ -453,27 +444,8 @@ Item {
         // User canceled via back key - just restore and return
         if (cancelRequested) {
             console.log("  User canceled, restoring window BEFORE pop")
-            console.log("  Before pop: stackView.depth =", stackView.depth)
-            console.log("  Before pop: savedPreviousVisibility =", previousVisibility)
-
-            // Save values before pop
-            var savedSession = session
-            var savedPreviousVisibility = previousVisibility
-
-            // CRITICAL: Show window in TARGET state directly (not showNormal first).
-            // showNormal() on a hidden-fullscreen window may not properly exit fullscreen on Windows.
-            var targetVis = computeTargetVisibility(savedPreviousVisibility)
-            makeWindowVisibleInTargetState(targetVis)
-
-            console.log("  sessionFinished (cancel): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
-
-            // Now pop the stack - window is already visible so user won't see a flash
+            prepareAndRestore(previousVisibility)
             stackView.pop()
-
-            // Safety net: ensure window state is correct after pop
-            restoreWindowToPreviousState(savedSession, savedPreviousVisibility)
-
             return
         }
 
@@ -484,85 +456,24 @@ Item {
         else if (errorDialog.text) {
             // Update text to show exiting state, then restore and show error
             stageText = qsTr("Quitting %1...").arg(appName)
-
-            // Save session reference and previousVisibility for window restoration.
-            // We cannot pop() here because we need errorDialog to be shown first.
-            // The stackView.pop() will be called in errorDialog.onClosed() after user dismisses the dialog.
-            var savedSession = session
-            var savedPreviousVisibility = previousVisibility
-
-            console.log("  sessionFinished (error): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
-
-            // Set the flag to indicate we should show the error dialog
             shouldShowErrorDialog = true
-
-            // CRITICAL: Show window in target state directly.
-            var targetVis2 = computeTargetVisibility(savedPreviousVisibility)
-            makeWindowVisibleInTargetState(targetVis2)
-
-            // Use helper function to restore window state, then show error dialog
-            restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
+            // Cannot pop() here — errorDialog.onClosed() handles it after user dismisses
+            prepareAndRestore(previousVisibility, function() {
                 errorDialogTimer.start()
             })
         }
         else {
             // Normal exit - update text to show exiting state for a smooth transition
-            // User sees: "Starting..." → "Quitting..." → back to main view
             stageText = qsTr("Quitting %1...").arg(appName)
             stageSpinner.visible = true
             stageLabel.visible = true
             hintText.visible = false
 
-            // Save session reference and previousVisibility BEFORE popping.
-            var savedSession = session
-            var savedPreviousVisibility = previousVisibility
-
-            console.log("  sessionFinished (normal): saved previousVisibility =", savedPreviousVisibility,
-                        "(0=Hidden, 1=Auto, 2=Windowed, 3=Min, 4=Max, 5=FS)")
-
-            // CRITICAL: Show window in TARGET state directly (not showNormal first).
-            // This avoids the bug where showNormal() on a hidden-fullscreen window
-            // leaves the window stuck in fullscreen on Windows 11.
-            var targetVis3 = computeTargetVisibility(savedPreviousVisibility)
-            makeWindowVisibleInTargetState(targetVis3)
-
-            // Now pop the stack - window is already visible in correct state
-            stackView.pop()
-
-            // Safety net: ensure window state after pop (uses mainWindow reference)
-            restoreWindowToPreviousState(savedSession, savedPreviousVisibility, function() {
-                console.log("  Post-restore: starting auto-update check")
+            prepareAndRestore(previousVisibility, function() {
                 AutoUpdateChecker.start(false)
             })
-
+            stackView.pop()
             return
-        }
-    }
-
-    function restoreWindowState() {
-        var win = mainWindow || Window.window
-        if (!win) {
-            console.log("  restoreWindowState(): no window reference, returning")
-            return
-        }
-
-        console.log("  restoreWindowState(): current visibility=" + win.visibility +
-                    " previousVisibility=" + previousVisibility)
-
-        // We only do this if the window isn't minimized, to avoid restoring
-        // a window that the user explicitly minimized during the stream.
-        if (win.visibility !== Window.Minimized) {
-            // Restore window style first (Windows only)
-            if (session) {
-                session.restoreWindowStyle()
-            }
-
-            var targetVisibility = computeTargetVisibility(previousVisibility)
-            console.log("  restoreWindowState(): targetVisibility=" + targetVisibility)
-            applyVisibilityToWindow(win, targetVisibility)
-        } else {
-            console.log("  restoreWindowState(): window is minimized, skipping restoration")
         }
     }
 
@@ -575,40 +486,20 @@ Item {
     // This avoids Window.window becoming null when the component is popped
     property var mainWindow: Window.window
 
-    // Use a hidden Item to host the Timer, avoiding Window.window access issues
-    Item {
-        id: timerHost
-        visible: false
-
-        Timer {
-            id: errorDialogTimer
-            interval: 50
-            onTriggered: {
-                // Use stored mainWindow reference instead of Window.window
-                if (!mainWindow) {
-                    console.log("  errorDialogTimer: mainWindow is null, skipping dialog but popping stackView")
-                    // CRITICAL FIX: Even if mainWindow is null, we must pop the stackView
-                    // to prevent the app from being stuck on "Quitting..." screen
-                    if (stackView) {
-                        stackView.pop()
-                    }
-                    return
-                }
-                if (!shouldShowErrorDialog) {
-                    console.log("  errorDialogTimer: shouldShowErrorDialog is false, skipping dialog")
-                    return
-                }
-                if (!errorDialog.text) {
-                    console.log("  errorDialogTimer: no error text, skipping dialog")
-                    return
-                }
-                console.log("  errorDialogTimer: showing error dialog")
-                mainWindow.requestActivate()
-                mainWindow.raise()
-                errorDialog.open()
+    Timer {
+        id: errorDialogTimer
+        interval: 50
+        onTriggered: {
+            if (!mainWindow) {
+                if (stackView) stackView.pop()
+                return
             }
-        } // Timer
-    } // Item (timerHost)
+            if (!shouldShowErrorDialog || !errorDialog.text) return
+            mainWindow.requestActivate()
+            mainWindow.raise()
+            errorDialog.open()
+        }
+    }
 
     ErrorMessageDialog {
         id: errorDialog
@@ -654,22 +545,25 @@ Item {
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
 
-        // Safely disconnect signals only if session still exists
-        // Session may be destroyed before this handler runs
-        // Use try-catch because session may be a dangling pointer (C++ destroyed but QML ref exists)
+        // Disconnect all session signals. Session may be destroyed already
+        // (C++ object gone but QML reference still exists), hence try-catch.
+        var signals = [
+            ["stageStarting", stageStarting],
+            ["stageFailed", stageFailed],
+            ["connectionStarted", connectionStarted],
+            ["displayLaunchError", displayLaunchError],
+            ["quitStarting", quitStarting],
+            ["sessionFinished", sessionFinished],
+            ["sessionRestartRequested", restartRequested],
+            ["hostReady", hostReady],
+            ["readyForDeletion", sessionReadyForDeletion]
+        ]
         try {
-            if (session && session.stageStarting) session.stageStarting.disconnect(stageStarting)
-            if (session && session.stageFailed) session.stageFailed.disconnect(stageFailed)
-            if (session && session.connectionStarted) session.connectionStarted.disconnect(connectionStarted)
-            if (session && session.displayLaunchError) session.displayLaunchError.disconnect(displayLaunchError)
-            if (session && session.quitStarting) session.quitStarting.disconnect(quitStarting)
-            if (session && session.sessionFinished) session.sessionFinished.disconnect(sessionFinished)
-            if (session && session.sessionRestartRequested) session.sessionRestartRequested.disconnect(restartRequested)
-            if (session && session.hostReady) session.hostReady.disconnect(hostReady)
-            if (session && session.readyForDeletion) session.readyForDeletion.disconnect(sessionReadyForDeletion)
-        } catch (e) {
-            // Session may be destroyed already
-        }
+            for (var i = 0; i < signals.length; i++) {
+                if (session && session[signals[i][0]])
+                    session[signals[i][0]].disconnect(signals[i][1])
+            }
+        } catch (e) {}
 
         // Note: session.interrupt() is called in Keys.onBackPressed when user presses back,
         // or by sessionFinished()/quitAppCompleted() flow when streaming ends normally.
@@ -692,19 +586,20 @@ Item {
                 Window.window.header.visible = false
             }
 
-            // CRITICAL: showNormal() → showFullScreen() in the same frame.
+            // CRITICAL: showNormal() → resize to screen → showFullScreen().
             //
             // After a screen resolution change (e.g. foldable device fold/unfold),
-            // the window may carry stale geometry from the previous resolution.
-            // Calling showFullScreen() alone inherits this stale state, causing
-            // the fullscreen window to cover only part of the screen.
+            // Qt caches stale window geometry from the previous resolution.
+            // showNormal() resets window state but NOT the cached geometry,
+            // so showFullScreen() would inherit the wrong base size.
             //
-            // showNormal() forces Qt to recalculate the window geometry from
-            // scratch (resetting internal cached state), and showFullScreen()
-            // then uses the correct current screen dimensions.
-            // Both calls happen within the same event loop iteration, so only
-            // the final fullscreen state is rendered — no visual flash.
+            // The fix: explicitly set width/height to current Screen dimensions
+            // between showNormal() and showFullScreen(). This clears the stale
+            // cache and ensures fullscreen uses the correct screen size.
+            // All calls happen in the same event loop iteration — no flash.
             Window.window.showNormal()
+            Window.window.width = Screen.width
+            Window.window.height = Screen.height
             Window.window.showFullScreen()
         }
 
