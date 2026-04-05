@@ -701,11 +701,34 @@ Item {
 
             console.log("StreamSegue: Setting window to fullscreen for transition")
             Window.window.showFullScreen()
+
+            // Foldable screen fix: Re-apply fullscreen after a short delay.
+            // On foldable devices, when the screen resolution changes (fold/unfold),
+            // Qt's internal QScreen geometry may not be fully updated at the time
+            // showFullScreen() is called. The delayed re-application ensures Qt uses
+            // the correct screen geometry after processing WM_DISPLAYCHANGE.
+            fullscreenRefreshTimer.start()
         }
 
         // Kick off the stream
         spinnerTimer.start()
         streamLoader.active = true
+    }
+
+    // Timer to re-apply fullscreen for foldable screen resolution changes.
+    // When the screen resolution changes (e.g., foldable device fold/unfold),
+    // the initial showFullScreen() may use stale screen geometry. This timer
+    // fires after Qt has processed the display change event, re-applying
+    // fullscreen with the correct geometry.
+    Timer {
+        id: fullscreenRefreshTimer
+        interval: 100
+        onTriggered: {
+            if (Window.window && Window.window.visibility === Window.FullScreen) {
+                console.log("StreamSegue: Re-applying fullscreen for foldable screen geometry refresh")
+                Window.window.showFullScreen()
+            }
+        }
     }
 
     Timer {
