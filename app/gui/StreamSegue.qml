@@ -31,34 +31,45 @@ Item {
     }
 
     // =============================================================================
+    // Session Signal Management
+    // =============================================================================
+    // Single source of truth for session signals and their handlers.
+    // Used by Component.onCompleted (connect) and StackView.onDeactivating (disconnect).
+    // Adding a new signal? Just add one entry here — both sides stay in sync.
+    readonly property var sessionSignals: [
+        ["stageStarting",                 stageStarting],
+        ["stageFailed",                   stageFailed],
+        ["connectionStarted",             connectionStarted],
+        ["displayLaunchError",            displayLaunchError],
+        ["quitStarting",                  quitStarting],
+        ["sessionFinished",               sessionFinished],
+        ["sessionRestartRequested",       restartRequested],
+        ["resolutionChangedDuringRestart", onResolutionChangedDuringRestart],
+        ["hostReady",                     hostReady],
+        ["readyForDeletion",              sessionReadyForDeletion]
+    ]
+
+    function onResolutionChangedDuringRestart(width, height) {
+        console.log("Resolution changed to " + width + "x" + height +
+                    " during restart - restarting debounce timer")
+        waitingForResolutionDebouncing = true
+        debounceResolutionWidth = width
+        debounceResolutionHeight = height
+        resolutionDebounceTimer.restart()
+    }
+
+    // =============================================================================
     // Component Lifecycle
     // =============================================================================
     Component.onCompleted: {
         // CRITICAL: Connect signals IMMEDIATELY when component is created.
         // This is earlier than StackView.onActivated and eliminates the race condition
         // where user presses Back button before signals are connected.
-        //
-        // The session object is already assigned by AppView.createStreamSegue() before
-        // createObject() returns, so session is guaranteed to be valid here.
         if (session) {
             console.log("StreamSegue: Component.onCompleted - connecting signals early")
-            session.stageStarting.connect(stageStarting)
-            session.stageFailed.connect(stageFailed)
-            session.connectionStarted.connect(connectionStarted)
-            session.displayLaunchError.connect(displayLaunchError)
-            session.quitStarting.connect(quitStarting)
-            session.sessionFinished.connect(sessionFinished)
-            session.sessionRestartRequested.connect(restartRequested)
-            session.resolutionChangedDuringRestart.connect(function(width, height) {
-                console.log("Resolution changed to " + width + "x" + height +
-                            " during restart - restarting debounce timer")
-                waitingForResolutionDebouncing = true
-                debounceResolutionWidth = width
-                debounceResolutionHeight = height
-                resolutionDebounceTimer.restart()
-            })
-            session.hostReady.connect(hostReady)
-            session.readyForDeletion.connect(sessionReadyForDeletion)
+            for (var i = 0; i < sessionSignals.length; i++) {
+                session[sessionSignals[i][0]].connect(sessionSignals[i][1])
+            }
         } else {
             console.error("StreamSegue: session is null in Component.onCompleted")
         }
@@ -75,28 +86,13 @@ Item {
     // - main.qml goBack(): call stackView.currentItem.requestCancel()
     // =============================================================================
     function requestCancel() {
-        console.log("====== requestCancel() called ======")
-        console.log("  session:", session)
-        console.log("  cancelRequested:", cancelRequested)
-        console.log("  focus:", focus)
-        console.log("  Item.visible:", visible)
-
-        // Guard: Check if session exists and hasn't already requested cancellation
         if (session && !cancelRequested) {
             cancelRequested = true
-            // Record the cancel timestamp for reconnect cooldown.
-            // CRITICAL: Update both local property AND parent AppView for persistence.
             lastCancelTime = Date.now()
             if (stackView && stackView.parent && stackView.parent.lastCancelTime !== undefined) {
                 stackView.parent.lastCancelTime = lastCancelTime
-                console.log("  Updated parent.lastCancelTime to", lastCancelTime)
             }
-            console.log("====== Calling session.requestCancel() ======")
             session.requestCancel()
-            console.log("====== session.requestCancel() completed ======")
-            // Keep the transition screen visible until sessionFinished is received.
-        } else {
-            console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
         }
     }
 
@@ -126,13 +122,9 @@ Item {
     // - Key_Escape: Windows/Linux desktop Escape key
     Keys.onPressed: {
         if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
-            console.log("====== Back/Esc key pressed handler invoked ======")
-            console.log("  key:", event.key)
             if (session && !cancelRequested) {
-                event.accepted = true  // CRITICAL: Accept the event to prevent propagation
+                event.accepted = true
                 requestCancel()
-            } else {
-                console.log("  SKIPPED: session=", session, " cancelRequested=", cancelRequested)
             }
         }
     }
@@ -263,42 +255,18 @@ Item {
     // - postRestoreCallback: Optional callback to execute after window restoration
     function restoreWindowToPreviousState(savedSession, savedPreviousVisibility, postRestoreCallback) {
         Qt.callLater(function() {
-            // Use stored mainWindow reference instead of Window.window.
-            // Window.window becomes null after stackView.pop() removes
-            // this component from the window hierarchy, causing the old
-            // code to silently skip restoration entirely.
             var win = mainWindow
-            console.log("  Qt.callLater: restoring window to state", savedPreviousVisibility,
-                        "(0=Hidden, 2=Windowed, 4=Maximized, 5=FullScreen)")
-            console.log("  Qt.callLater: mainWindow exists:", !!win,
-                        "Window.window exists:", !!Window.window)
-
-            if (!win) {
-                console.log("  Qt.callLater: mainWindow is null, aborting")
-                return
-            }
+            if (!win) return
 
             // Restore window style first (Windows only)
             if (savedSession && typeof savedSession.restoreWindowStyle === "function") {
-                try {
-                    console.log("  Qt.callLater: calling savedSession.restoreWindowStyle()")
-                    savedSession.restoreWindowStyle()
-                } catch (e) {
-                    console.log("  Qt.callLater: savedSession.restoreWindowStyle() failed:", e)
-                }
+                try { savedSession.restoreWindowStyle() } catch (e) {}
             }
 
-            // Apply the desired window state
             var targetVisibility = computeTargetVisibility(savedPreviousVisibility)
             applyVisibilityToWindow(win, targetVisibility)
 
-            console.log("  Qt.callLater: AFTER restore - visible:", win.visible,
-                        "visibility:", win.visibility)
-            console.log("  Qt.callLater: window restoration complete")
-
-            // Execute post-restore callback if provided
             if (typeof postRestoreCallback === "function") {
-                console.log("  Qt.callLater: executing post-restore callback")
                 postRestoreCallback()
             }
         })
@@ -316,16 +284,14 @@ Item {
     // transitions from hidden-fullscreen to the correct final state in one step.
     function makeWindowVisibleInTargetState(targetVisibility) {
         var win = Window.window
-        if (win) {
-            console.log("  Pre-pop restore: showing window in target state", targetVisibility,
-                        "(0=Hidden, 2=Windowed, 4=Maximized, 5=FullScreen)")
-            applyVisibilityToWindow(win, targetVisibility)
-        }
+        if (win) applyVisibilityToWindow(win, targetVisibility)
     }
 
     onRestartRequested: {
+        // Show window fullscreen during restart transition.
+        // Note: previousVisibility is NOT updated here — AppView preserves
+        // the original value captured at launch time across restarts.
         if (Window.window) {
-            previousVisibility = Window.window.visibility
             Window.window.show()
             Window.window.showFullScreen()
         }
@@ -349,11 +315,6 @@ Item {
 
     function connectionStarted()
     {
-        console.log("====== connectionStarted() called ======")
-        console.log("  connectionEstablished:", connectionEstablished)
-
-        // Mark that the connection was successfully established
-        // This affects how we handle cancellation (fast vs graceful shutdown)
         connectionEstablished = true
 
         // Hide the UI contents so the user doesn't
@@ -362,20 +323,7 @@ Item {
         stageLabel.visible = false
         hintText.visible = false
 
-        // CRITICAL: Do NOT hide the window here!
-        // The Qt window must remain visible (and focused) until Session::exec() completes.
-        // If we hide the window now, QML loses focus and Keys.onBackPressed won't work.
-        //
-        // The window will be hidden in Session::exec() after the SDL window is created,
-        // which happens AFTER we've processed any pending interrupt() calls.
-        //
-        // Previous behavior (buggy):
-        // - Hide window here -> QML loses focus -> Back key ignored -> SDL window created anyway
-        //
-        // New behavior (fixed):
-        // - Keep window visible -> QML retains focus -> Back key works -> interrupt() sets flag
-        // - Session::exec() checks interrupt flag before creating SDL window
-        console.log("  Keeping Qt window visible to allow Back key cancellation")
+        // Keep window visible — Session::exec() hides it after SDL window creation
     }
 
     function displayLaunchError(text)
@@ -416,30 +364,22 @@ Item {
 
     function sessionFinished(portTestResult)
     {
-        console.log("====== sessionFinished() called ======")
-        console.log("  cancelRequested:", cancelRequested)
-        console.log("  portTestResult:", portTestResult)
-        console.log("  errorDialog.text:", errorDialog.text)
-        console.log("  waitingForResolutionDebouncing:", waitingForResolutionDebouncing)
-        console.log("  session:", session)
-        console.log("  Window.window:", Window.window)
-        console.log("  Window.window.visible:", Window.window ? Window.window.visible : "null")
-        console.log("  Window.window.visibility:", Window.window ? Window.window.visibility : "null")
-        console.log("  previousVisibility:", previousVisibility,
-                    "(Qt6: 0=Hidden, 1=Auto, 2=Windowed, 3=Minimized, 4=Maximized, 5=FullScreen)")
+        console.log("sessionFinished: canceled=", cancelRequested,
+                    "portTest=", portTestResult,
+                    "error=", !!errorDialog.text,
+                    "debouncing=", waitingForResolutionDebouncing)
 
         if (portTestResult !== 0 && portTestResult !== -1 && errorDialog.text) {
             errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking DancherLink. Streaming over the Internet may not work while connected to this network.")
         }
 
+        // Re-enable GUI gamepad usage (unconditional, before any early return)
+        SdlGamepadKeyNavigation.enable()
+
         // Check if we're waiting for resolution debounce
         if (waitingForResolutionDebouncing) {
-            SdlGamepadKeyNavigation.enable()
             return
         }
-
-        // Re-enable GUI gamepad usage
-        SdlGamepadKeyNavigation.enable()
 
         // User canceled via back key - just restore and return
         if (cancelRequested) {
@@ -504,20 +444,12 @@ Item {
     ErrorMessageDialog {
         id: errorDialog
         onClosed: {
-            console.log("  errorDialog.onClosed: quitAfter=", quitAfter)
             if (quitAfter) {
                 Qt.quit()
             } else {
-                // Reset the flag before popping
                 shouldShowErrorDialog = false
-                // CRITICAL: Use Qt.callLater to ensure dialog is fully closed before popping
                 Qt.callLater(function() {
-                    if (stackView) {
-                        console.log("  errorDialog.onClosed: popping stackView")
-                        stackView.pop()
-                    } else {
-                        console.log("  errorDialog.onClosed: stackView is null, skipping pop")
-                    }
+                    if (stackView) stackView.pop()
                 })
             }
         }
@@ -545,23 +477,12 @@ Item {
         // Re-enable GUI gamepad usage now
         SdlGamepadKeyNavigation.enable()
 
-        // Disconnect all session signals. Session may be destroyed already
-        // (C++ object gone but QML reference still exists), hence try-catch.
-        var signals = [
-            ["stageStarting", stageStarting],
-            ["stageFailed", stageFailed],
-            ["connectionStarted", connectionStarted],
-            ["displayLaunchError", displayLaunchError],
-            ["quitStarting", quitStarting],
-            ["sessionFinished", sessionFinished],
-            ["sessionRestartRequested", restartRequested],
-            ["hostReady", hostReady],
-            ["readyForDeletion", sessionReadyForDeletion]
-        ]
+        // Disconnect all session signals using the same list as Component.onCompleted.
+        // Session may be destroyed already (C++ object gone but QML reference still exists).
         try {
-            for (var i = 0; i < signals.length; i++) {
-                if (session && session[signals[i][0]])
-                    session[signals[i][0]].disconnect(signals[i][1])
+            for (var i = 0; i < sessionSignals.length; i++) {
+                if (session && session[sessionSignals[i][0]])
+                    session[sessionSignals[i][0]].disconnect(sessionSignals[i][1])
             }
         } catch (e) {}
 

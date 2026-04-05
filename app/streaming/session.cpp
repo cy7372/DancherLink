@@ -3114,32 +3114,28 @@ void Session::exec()
     // We must explicitly set the SDL window as foreground to ensure:
     // 1. The streaming window receives keyboard/mouse input immediately
     // 2. The user doesn't need to click to activate the stream
-    if (m_Window) {
-        SDL_SysWMinfo sdlInfo;
-        SDL_VERSION(&sdlInfo.version);
-        if (SDL_GetWindowWMInfo(m_Window, &sdlInfo) && sdlInfo.subsystem == SDL_SYSWM_WINDOWS) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Activating SDL streaming window (hwnd=%p)", sdlInfo.info.win.window);
-            SetForegroundWindow(sdlInfo.info.win.window);
-            SetActiveWindow(sdlInfo.info.win.window);
-            SetFocus(sdlInfo.info.win.window);
-        }
+    SDL_SysWMinfo winInfo;
+    SDL_VERSION(&winInfo.version);
+    bool hasWinInfo = m_Window && SDL_GetWindowWMInfo(m_Window, &winInfo);
+
+    if (hasWinInfo && winInfo.subsystem == SDL_SYSWM_WINDOWS) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "  Activating SDL streaming window (hwnd=%p)", winInfo.info.win.window);
+        SetForegroundWindow(winInfo.info.win.window);
+        SetActiveWindow(winInfo.info.win.window);
+        SetFocus(winInfo.info.win.window);
     }
 
     HPOWERNOTIFY hPowerNotify = nullptr;
     if (m_Preferences->quitOnDisplaySleep) {
-        // Enable system events to catch power broadcast messages
         SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        if (SDL_GetWindowWMInfo(m_Window, &info)) {
-            hPowerNotify = RegisterPowerSettingNotification(info.info.win.window, &GUID_MONITOR_POWER_ON, DEVICE_NOTIFY_WINDOW_HANDLE);
+        if (hasWinInfo) {
+            hPowerNotify = RegisterPowerSettingNotification(winInfo.info.win.window, &GUID_MONITOR_POWER_ON, DEVICE_NOTIFY_WINDOW_HANDLE);
 
             // Also register for lid switch notifications on laptops
-            // GUID_LIDSWITCH_STATE_CHANGE is defined in WinNT.h
             static const GUID GUID_LIDSWITCH_STATE_CHANGE =
                 { 0xBA3E0F4D, 0xB817, 0x4094, { 0xA2, 0xD1, 0xD5, 0x63, 0x79, 0xE6, 0xA0, 0xF3 } };
-            RegisterPowerSettingNotification(info.info.win.window, &GUID_LIDSWITCH_STATE_CHANGE, DEVICE_NOTIFY_WINDOW_HANDLE);
+            RegisterPowerSettingNotification(winInfo.info.win.window, &GUID_LIDSWITCH_STATE_CHANGE, DEVICE_NOTIFY_WINDOW_HANDLE);
         }
     }
 #endif
